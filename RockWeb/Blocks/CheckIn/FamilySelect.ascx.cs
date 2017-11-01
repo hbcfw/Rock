@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,17 +19,24 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Web.UI;
+using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
 
 using Rock;
+using Rock.Attribute;
 using Rock.CheckIn;
 using Rock.Model;
 
 namespace RockWeb.Blocks.CheckIn
 {
-    [DisplayName("Family Select")]
-    [Category("Check-in")]
+    [DisplayName( "Family Select" )]
+    [Category( "Check-in" )]
     [Description( "Displays a list of families to select for checkin." )]
+
+    [TextField( "Title", "Title to display.", false, "Families", "Text", 5 )]
+    [TextField( "Caption", "", false, "Select Your Family", "Text", 6 )]
+    [TextField( "No Option Message", "", false, "Sorry, no one in your family is eligible to check-in at this location.", "Text", 7 )]
+
     public partial class FamilySelect : CheckInBlock
     {
         protected override void OnLoad( EventArgs e )
@@ -38,6 +45,12 @@ namespace RockWeb.Blocks.CheckIn
 
             RockPage.AddScriptLink( "~/Scripts/iscroll.js" );
             RockPage.AddScriptLink( "~/Scripts/CheckinClient/checkin-core.js" );
+
+            var bodyTag = this.Page.Master.FindControl( "bodyTag" ) as HtmlGenericControl;
+            if ( bodyTag != null )
+            {
+                bodyTag.AddCssClass( "checkin-familyselect-bg" );
+            }
 
             if ( CurrentWorkflow == null || CurrentCheckInState == null )
             {
@@ -67,6 +80,9 @@ namespace RockWeb.Blocks.CheckIn
                     }
                     else
                     {
+                        lTitle.Text = GetAttributeValue( "Title" );
+                        lCaption.Text = GetAttributeValue( "Caption" );
+
                         rSelection.DataSource = CurrentCheckInState.CheckIn.Families
                             .OrderBy( f => f.Caption )
                             .ThenBy( f => f.SubCaption )
@@ -87,6 +103,8 @@ namespace RockWeb.Blocks.CheckIn
             {
                 family.Selected = false;
                 family.People = new List<CheckInPerson>();
+                family.Action = CheckinAction.CheckIn;
+                family.CheckOutPeople = new List<CheckOutPerson>();
             }
         }
 
@@ -140,9 +158,12 @@ namespace RockWeb.Blocks.CheckIn
 
         private void ProcessSelection()
         {
-            if ( !ProcessSelection( maWarning, () => 
-                CurrentCheckInState.CheckIn.Families.All( f => f.People.Count == 0 ),
-                "<p>Sorry, no one in your family is eligible to check-in at this location.</p>" ) )            
+            if ( !ProcessSelection( maWarning, () =>
+                ( 
+                    CurrentCheckInState.CheckIn.Families.All( f => f.People.Count == 0 ) && 
+                    CurrentCheckInState.CheckIn.Families.All( f => f.Action == CheckinAction.CheckIn )
+                ),
+                string.Format( "<p>{0}</p>", GetAttributeValue( "NoOptionMessage" ) ) ) )            
             {
                 ClearSelection();
             }

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,9 +26,10 @@ namespace Rock.Model
     /// <summary>
     /// A Group Member Workflow Trigger defined a workflow that should be triggered to start when certain group member changes are made..
     /// </summary>
+    [RockDomain( "Group" )]
     [Table( "GroupMemberWorkflowTrigger" )]
     [DataContract]
-    public partial class GroupMemberWorkflowTrigger : Entity<GroupMemberWorkflowTrigger>, IOrdered
+    public partial class GroupMemberWorkflowTrigger : Entity<GroupMemberWorkflowTrigger>, IOrdered, IHasActiveFlag
     {
         #region Entity Properties
 
@@ -133,6 +134,7 @@ namespace Rock.Model
         /// <value>
         /// The type of the group.
         /// </value>
+        [LavaInclude]
         public virtual GroupType GroupType { get; set; }
 
         /// <summary>
@@ -144,6 +146,7 @@ namespace Rock.Model
         /// <remarks>
         /// NOTE: [DataMember] attribute is intentionally ommited to prevent having to serialize all group members (times out on large groups)
         /// </remarks>
+        [LavaInclude]
         public virtual Group Group { get; set; }
 
         /// <summary>

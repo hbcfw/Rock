@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -79,17 +79,23 @@ namespace Rock.Transactions
                     var template = registration.RegistrationInstance.RegistrationTemplate;
                     if ( template != null && !string.IsNullOrWhiteSpace( template.ConfirmationEmailTemplate ) )
                     {
-                        var mergeFields = new Dictionary<string, object>();
+                        var currentPersonOverride = ( registration.RegistrationInstance.ContactPersonAlias != null ) ? registration.RegistrationInstance.ContactPersonAlias.Person : null;
+
+                        var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( null, currentPersonOverride );
                         mergeFields.Add( "RegistrationInstance", registration.RegistrationInstance );
                         mergeFields.Add( "Registration", registration );
 
-                        string from = template.ConfirmationFromEmail.ResolveMergeFields( mergeFields );
-                        string fromName = template.ConfirmationFromName.ResolveMergeFields( mergeFields );
-                        string subject = template.ConfirmationSubject.ResolveMergeFields( mergeFields );
-                        string message = template.ConfirmationEmailTemplate.ResolveMergeFields( mergeFields );
-
-                        var recipients = new List<string> { registration.ConfirmationEmail };
-                        Email.Send( from, fromName, subject, recipients, message, AppRoot, ThemeRoot );
+                        var emailMessage = new RockEmailMessage();
+                        emailMessage.AddRecipient( new RecipientData( registration.ConfirmationEmail, mergeFields ) );
+                        emailMessage.AdditionalMergeFields = mergeFields;
+                        emailMessage.FromEmail = template.ConfirmationFromEmail;
+                        emailMessage.FromName = template.ConfirmationFromName;
+                        emailMessage.Subject = template.ConfirmationSubject;
+                        emailMessage.Message = template.ConfirmationEmailTemplate;
+                        emailMessage.AppRoot = AppRoot;
+                        emailMessage.ThemeRoot = ThemeRoot;
+                        emailMessage.CurrentPerson = currentPersonOverride;
+                        emailMessage.Send();
                     }
                 }
             }

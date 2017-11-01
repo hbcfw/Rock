@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -68,15 +68,13 @@ namespace Rock.Jobs
             Guid workflowTypeGuid = Guid.NewGuid();
             if ( Guid.TryParse( workflowName, out workflowTypeGuid ) )
             {
-                var rockContext = new RockContext();
-                var workflowTypeService = new WorkflowTypeService( rockContext );
-                var workflowType = workflowTypeService.Get( workflowTypeGuid );
-                if ( workflowType != null )
+                var workflowType = Web.Cache.WorkflowTypeCache.Read( workflowTypeGuid );
+                if ( workflowType != null && ( workflowType.IsActive ?? true ) )
                 {
                     var workflow = Rock.Model.Workflow.Activate( workflowType, workflowName );
 
                     List<string> workflowErrors;
-                    var processed = new Rock.Model.WorkflowService( rockContext ).Process( workflow, out workflowErrors );
+                    var processed = new Rock.Model.WorkflowService( new RockContext() ).Process( workflow, out workflowErrors );
                     context.Result = ( processed ? "Processed " : "Did not process " ) + workflow.ToString();
                 }
             }

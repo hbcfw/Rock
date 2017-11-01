@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,6 +32,7 @@ namespace Rock.Model
     /// are availble for one or more <see cref="Page">Pages</see> to use.  The logical layout is used to configure
     /// which blocks are present in each zone
     /// </summary>
+    [RockDomain( "CMS" )]
     [Table( "Layout" )]
     [DataContract]
     public partial class Layout : Model<Layout>
@@ -112,6 +113,7 @@ namespace Rock.Model
         /// <value>
         /// The <see cref="Rock.Model.Site" /> that this Layout Block is associated with.
         /// </value>
+        [LavaInclude]
         public virtual Site Site { get; set; }
 
         /// <summary>
@@ -120,6 +122,7 @@ namespace Rock.Model
         /// <value>
         /// Collection of <see cref="Rock.Model.Page">Pages</see> that use this Layout.
         /// </value>
+        [LavaInclude]
         public virtual ICollection<Page> Pages
         {
             get { return _pages ?? ( _pages = new Collection<Page>() ); }

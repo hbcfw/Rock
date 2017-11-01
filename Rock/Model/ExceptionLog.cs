@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,6 +29,7 @@ namespace Rock.Model
     /// These exceptions can include several status codes, the one most often seen is 500, but can also include 404 (when configured in Global Attributes) 
     /// and other status codes. These entities are not tracked by the <see cref="Rock.Model.Audit"/> model.
     /// </summary>
+    [RockDomain( "Core" )]
     [NotAudited]
     [Table( "ExceptionLog" )]
     [DataContract]
@@ -181,6 +182,7 @@ namespace Rock.Model
         /// <value>
         /// The <see cref="Rock.Model.Site"/> that the exception occurred on. If this did not occur on a site, this value will be null.
         /// </value>
+        [LavaInclude]
         public virtual Rock.Model.Site Site { get; set; }
 
         /// <summary>
@@ -190,6 +192,7 @@ namespace Rock.Model
         /// The <see cref="Rock.Model.Page"/> that the exception occurred on. If this exception was not thrown on a <see cref="Rock.Model.Page"/>
         /// this value will be null.
         /// </value>
+        [LavaInclude]
         public virtual Rock.Model.Page Page { get; set; }
 
         #endregion

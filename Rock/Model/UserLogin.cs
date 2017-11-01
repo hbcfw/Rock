@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,6 +31,7 @@ namespace Rock.Model
     /// <summary>
     /// Represents a user's Rock login and authentication credentials.
     /// </summary>
+    [RockDomain( "CRM" )]
     [Table( "UserLogin" )]
     [DataContract]
     public partial class UserLogin : Model<UserLogin>
@@ -128,6 +129,15 @@ namespace Rock.Model
         public bool? IsLockedOut { get; set; }
 
         /// <summary>
+        /// Gets or sets the is password change required.
+        /// </summary>
+        /// <value>
+        /// The is password change required.
+        /// </value>
+        [DataMember]
+        public bool? IsPasswordChangeRequired { get; set; }
+
+        /// <summary>
         /// Gets or sets date and time that the UserLogin was last locked out.
         /// </summary>
         /// <value>
@@ -194,6 +204,7 @@ namespace Rock.Model
         /// <value>
         /// The <see cref="Rock.Model.Person"/> that this UserLogin is associated with.
         /// </value>
+        [LavaInclude]
         public virtual Model.Person Person { get; set; }
 
         /// <summary>
@@ -213,6 +224,7 @@ namespace Rock.Model
         ///   A <see cref="System.Boolean"/> value that is <c>true</c> if the user actually authenticated; otherwise <c>false</c>.
         /// </value>
         [NotMapped]
+        [LavaInclude]
         public virtual bool IsAuthenticated
         {
             get

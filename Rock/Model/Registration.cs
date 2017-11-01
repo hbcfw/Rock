@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,6 +35,7 @@ namespace Rock.Model
     /// <summary>
     /// The person doing the registration. For example, Dad signing his kids up for camp. Dad is the Registration person and the kids would be Registrants
     /// </summary>
+    [RockDomain( "Event" )]
     [Table( "Registration" )]
     [DataContract]
     public partial class Registration : Model<Registration>
@@ -444,6 +445,14 @@ Registration By: {0} Total Cost/Fees:{1}
         public int? RegistrationId { get; set; }
 
         /// <summary>
+        /// Gets or sets the slots available.
+        /// </summary>
+        /// <value>
+        /// The slots available.
+        /// </value>
+        public int? SlotsAvailable { get; set; }
+
+        /// <summary>
         /// Gets or sets your first name.
         /// </summary>
         /// <value>
@@ -597,6 +606,7 @@ Registration By: {0} Total Cost/Fees:{1}
                 DiscountAmount = registration.DiscountAmount;
                 TotalCost = registration.TotalCost;
                 DiscountedCost = registration.DiscountedCost;
+                SlotsAvailable = registration.Registrants.Where( r => !r.OnWaitList ).Count();
 
                 if ( registration.PersonAlias != null && registration.PersonAlias.Person != null )
                 {
@@ -749,12 +759,33 @@ Registration By: {0} Total Cost/Fees:{1}
         public string PersonName { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether [on wait list].
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [on wait list]; otherwise, <c>false</c>.
+        /// </value>
+        public bool OnWaitList { get; set; }
+
+        /// <summary>
         /// Gets or sets the cost.
         /// </summary>
         /// <value>
         /// The cost.
         /// </value>
         public decimal Cost { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether [discount applies].
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [discount applies]; otherwise, <c>false</c>.
+        /// </value>
+        public bool DiscountApplies
+        {
+            get { return _discountApplies; }
+            set { _discountApplies = value; }
+        }
+        private bool _discountApplies = true;
 
         /// <summary>
         /// Gets the cost with fees.
@@ -766,6 +797,11 @@ Registration By: {0} Total Cost/Fees:{1}
         {
             get
             {
+                if ( OnWaitList )
+                {
+                    return 0.0M;
+                }
+
                 var cost = Cost;
                 if ( FeeValues != null )
                 {
@@ -795,6 +831,75 @@ Registration By: {0} Total Cost/Fees:{1}
         public Dictionary<int, List<FeeInfo>> FeeValues { get; set; }
 
         /// <summary>
+        /// Gets or sets the signature document Id.
+        /// </summary>
+        /// <value>
+        /// The signature document Id.
+        /// </value>
+        public int? SignatureDocumentId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the signature document key.
+        /// </summary>
+        /// <value>
+        /// The signature document key.
+        /// </value>
+        public string SignatureDocumentKey { get; set; }
+
+        /// <summary>
+        /// Gets or sets the signature document last sent.
+        /// </summary>
+        /// <value>
+        /// The signature document last sent.
+        /// </value>
+        public DateTime? SignatureDocumentLastSent { get; set; }
+
+        /// <summary>
+        /// Discounteds the cost.
+        /// </summary>
+        /// <param name="discountPercent">The discount percent.</param>
+        /// <param name="discountAmount">The discount amount.</param>
+        /// <returns></returns>
+        public virtual decimal DiscountedCost( decimal discountPercent, decimal discountAmount )
+        {
+            if ( OnWaitList )
+            {
+                return 0.0M;
+            }
+
+            var discountedCost = Cost - ( DiscountApplies ? ( Cost * discountPercent ) : 0.0M );
+            discountedCost = discountedCost - ( DiscountApplies ? discountAmount : 0.0M );
+
+            return discountedCost > 0.0m ? discountedCost : 0.0m;
+        }
+
+        /// <summary>
+        /// Discounteds the cost.
+        /// </summary>
+        /// <param name="discountPercent">The discount percent.</param>
+        /// <param name="discountAmount">The discount amount.</param>
+        /// <returns></returns>
+        public virtual decimal DiscountedTotalCost( decimal discountPercent, decimal discountAmount )
+        {
+            if ( OnWaitList )
+            {
+                return 0.0M;
+            }
+
+            var discountedCost = Cost - ( DiscountApplies ? ( Cost * discountPercent ) : 0.0M );
+            if ( FeeValues != null )
+            {
+                foreach ( var fee in FeeValues.SelectMany( f => f.Value ) )
+                {
+                    discountedCost += DiscountApplies ? fee.DiscountedCost( discountPercent ) : fee.TotalCost;
+                }
+            }
+            discountedCost = discountedCost - ( DiscountApplies ? discountAmount : 0.0M );
+
+            return discountedCost > 0.0m ? discountedCost : 0.0m;
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="RegistrantInfo"/> class.
         /// </summary>
         public RegistrantInfo()
@@ -807,6 +912,8 @@ Registration By: {0} Total Cost/Fees:{1}
             FamilyGuid = Guid.Empty;
             FieldValues = new Dictionary<int, FieldValueObject>();
             FeeValues = new Dictionary<int, List<FeeInfo>>();
+            OnWaitList = false;
+            DiscountApplies = true;
         }
 
         /// <summary>
@@ -863,6 +970,8 @@ Registration By: {0} Total Cost/Fees:{1}
                     registrant.GroupMember.Group.Name : string.Empty;
                 RegistrationId = registrant.RegistrationId;
                 Cost = registrant.Cost;
+                DiscountApplies = registrant.DiscountApplies;
+                OnWaitList = registrant.OnWaitList;
 
                 Person person = null;
                 Group family = null;
@@ -949,6 +1058,7 @@ Registration By: {0} Total Cost/Fees:{1}
                             }
                         case RegistrationPersonFieldType.Email: return person.Email;
                         case RegistrationPersonFieldType.Birthdate: return person.BirthDate;
+                        case RegistrationPersonFieldType.Grade: return person.GraduationYear;
                         case RegistrationPersonFieldType.Gender: return person.Gender;
                         case RegistrationPersonFieldType.MaritalStatus: return person.MaritalStatusValueId;
                         case RegistrationPersonFieldType.MobilePhone:
@@ -1000,7 +1110,7 @@ Registration By: {0} Total Cost/Fees:{1}
 
                         case RegistrationFieldSource.GroupMemberAttribute:
                             {
-                                if ( registrant.GroupMember != null )
+                                if ( registrant != null && registrant.GroupMember != null )
                                 {
                                     if ( registrant.GroupMember.Attributes == null )
                                     {
@@ -1013,11 +1123,15 @@ Registration By: {0} Total Cost/Fees:{1}
 
                         case RegistrationFieldSource.RegistrationAttribute:
                             {
-                                if ( registrant.Attributes == null )
+                                if ( registrant != null )
                                 {
-                                    registrant.LoadAttributes();
+                                    if ( registrant.Attributes == null )
+                                    {
+                                        registrant.LoadAttributes();
+                                    }
+                                    return registrant.GetAttributeValue( attribute.Key );
                                 }
-                                return registrant.GetAttributeValue( attribute.Key );
+                                break;
                             }
                     }
                 }
@@ -1082,6 +1196,7 @@ Registration By: {0} Total Cost/Fees:{1}
 
             return null;
         }
+
     }
 
     /// <summary>
@@ -1132,6 +1247,7 @@ Registration By: {0} Total Cost/Fees:{1}
                     {
                         case RegistrationPersonFieldType.Campus:
                         case RegistrationPersonFieldType.MaritalStatus:
+                        case RegistrationPersonFieldType.Grade:
                                 return typeof( int? );
 
                         case RegistrationPersonFieldType.Address:
@@ -1206,6 +1322,14 @@ Registration By: {0} Total Cost/Fees:{1}
         public decimal Cost { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether [discount applies].
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [discount applies]; otherwise, <c>false</c>.
+        /// </value>
+        public bool DiscountApplies { get; set; }
+
+        /// <summary>
         /// Gets the total cost.
         /// </summary>
         /// <value>
@@ -1223,6 +1347,23 @@ Registration By: {0} Total Cost/Fees:{1}
         /// The previous cost.
         /// </value>
         public decimal PreviousCost { get; set; }
+
+        /// <summary>
+        /// Discounteds the cost.
+        /// </summary>
+        /// <param name="discountPercent">The discount percent.</param>
+        /// <returns></returns>
+        public decimal DiscountedCost( decimal discountPercent )
+        {
+            var discountedCost = TotalCost;
+
+            if ( DiscountApplies )
+            {
+                discountedCost = discountedCost - ( discountedCost * discountPercent );
+            }
+
+            return discountedCost;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FeeInfo"/> class.
@@ -1256,7 +1397,9 @@ Registration By: {0} Total Cost/Fees:{1}
             Quantity = fee.Quantity;
             Cost = fee.Cost;
             PreviousCost = fee.Cost;
+            DiscountApplies = fee.RegistrationTemplateFee != null && fee.RegistrationTemplateFee.DiscountApplies;
         }
+
     }
 
     /// <summary>

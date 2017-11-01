@@ -4,14 +4,14 @@
     <ContentTemplate>
         <style>
             .scheduled-locations-scroll-panel {
-                bottom: 100px;
+                bottom: 110px;
             }
 
             .scheduled-locations-actions {
                 position: absolute;
                 bottom: 0px;
                 margin-bottom: 10px;
-                left: 75%;
+                right: 20px;
             }
 
             
@@ -49,8 +49,8 @@
         </div>
 
         <div class="controls checkin-actions scheduled-locations-actions">
-            <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary btn-checkin-select btn-large" OnClick="btnSave_Click" />
-            <asp:LinkButton ID="btnCancel" runat="server" AccessKey="c" Text="Cancel" CssClass="btn btn-default btn-checkin-select btn-large" CausesValidation="false" OnClick="btnCancel_Click" />
+            <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" ToolTip="Alt+s" Text="Save" CssClass="btn btn-primary btn-checkin-select btn-large" OnClick="btnSave_Click" />
+            <asp:LinkButton ID="btnCancel" runat="server" AccessKey="c" ToolTip="Alt+c" Text="Cancel" CssClass="btn btn-default btn-checkin-select btn-large" CausesValidation="false" OnClick="btnCancel_Click" />
         </div>
 
     </ContentTemplate>

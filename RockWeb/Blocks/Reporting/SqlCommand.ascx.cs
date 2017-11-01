@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -42,6 +42,7 @@ namespace RockWeb.Blocks.Reporting
     [DisplayName( "Sql Command" )]
     [Category( "Reporting" )]
     [Description( "Block to execute a sql command and display the result (if any)." )]
+    [IntegerField( "Database Timeout", "The number of seconds to wait before reporting a database timeout.", false, 180, order: 1 )]
     public partial class SqlCommand : RockBlock
     {
         #region Control Methods
@@ -55,6 +56,16 @@ namespace RockWeb.Blocks.Reporting
             base.OnLoad( e );
 
             gReport.GridRebind += gReport_GridRebind;
+
+            if ( ! Page.IsPostBack )
+            {
+                tbQuery.Text = @"
+SELECT
+    TOP 10 *
+FROM
+    [Person]
+";
+            }
         }
 
         /// <summary>
@@ -99,16 +110,20 @@ namespace RockWeb.Blocks.Reporting
                     {
                         gReport.Visible = true;
 
-                        DataTable dataTable = DbService.GetDataTable( query, CommandType.Text, null );
+                        DataSet dataSet = DbService.GetDataSet( query, CommandType.Text, null, GetAttributeValue( "DatabaseTimeout" ).AsIntegerOrNull() ?? 180 );
+                        if ( dataSet.Tables.Count > 0 )
+                        {
+                            var dataTable = dataSet.Tables[0];
 
-                        AddGridColumns( dataTable );
+                            AddGridColumns( dataTable );
 
-                        gReport.DataSource = GetSortedView( dataTable );
-                        gReport.DataBind();
+                            gReport.DataSource = GetSortedView( dataTable );
+                            gReport.DataBind();
+                        }
                     }
                     else
                     {
-                        int rows = DbService.ExecuteCommand( query );
+                        int rows = DbService.ExecuteCommand( query, commandTimeout: GetAttributeValue( "DatabaseTimeout" ).AsIntegerOrNull() ?? 180 );
                         if ( rows < 0 )
                         {
                             rows = 0;

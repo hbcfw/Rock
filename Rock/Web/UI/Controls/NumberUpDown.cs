@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,7 +27,7 @@ namespace Rock.Web.UI.Controls
     /// NumberUpDown control
     /// </summary>
     [ToolboxData( "<{0}:NumberUpDown runat=server></{0}:NumberUpDown>" )]
-    public class NumberUpDown : CompositeControl, IRockControl, IDisplayRequiredIndicator
+    public class NumberUpDown : CompositeControl, IRockControl, IDisplayRequiredIndicator, IPostBackEventHandler
     {
         #region IRockControl implementation
 
@@ -92,6 +92,34 @@ namespace Rock.Web.UI.Controls
                 }
             }
         }
+
+        /// <summary>
+        /// Gets or sets the warning text.
+        /// </summary>
+        /// <value>
+        /// The warning text.
+        /// </value>
+        [
+        Bindable( true ),
+        Category( "Appearance" ),
+        DefaultValue( "" ),
+        Description( "The warning block." )
+        ]
+        public string Warning
+        {
+            get
+            {
+                return WarningBlock != null ? WarningBlock.Text : string.Empty;
+            }
+            set
+            {
+                if ( WarningBlock != null )
+                {
+                    WarningBlock.Text = value;
+                }
+            }
+        }
+
         /// <summary>
         /// Gets or sets a value indicating whether this <see cref="RockTextBox"/> is required.
         /// </summary>
@@ -164,6 +192,14 @@ namespace Rock.Web.UI.Controls
         /// The help block.
         /// </value>
         public HelpBlock HelpBlock { get; set; }
+
+        /// <summary>
+        /// Gets or sets the warning block.
+        /// </summary>
+        /// <value>
+        /// The warning block.
+        /// </value>
+        public WarningBlock WarningBlock { get; set; }
 
         /// <summary>
         /// Gets or sets the required field validator.
@@ -275,6 +311,7 @@ namespace Rock.Web.UI.Controls
             RequiredFieldValidator = new HiddenFieldValidator();
             RequiredFieldValidator.ValidationGroup = this.ValidationGroup;
             HelpBlock = new HelpBlock();
+            WarningBlock = new WarningBlock();
         }
 
         #endregion
@@ -310,7 +347,7 @@ namespace Rock.Web.UI.Controls
 
             _lblNumber = new Label();
             _lblNumber.ID = string.Format( "{0}_lblNumber", this.ID );
-            Controls.Add( _hfMin );
+            Controls.Add( _lblNumber );
 
             RequiredFieldValidator.InitialValue = string.Empty;
             RequiredFieldValidator.ControlToValidate = _hfNumber.ID;
@@ -346,8 +383,11 @@ namespace Rock.Web.UI.Controls
             _hfMax.RenderControl( writer );
             _hfNumber.RenderControl( writer );
 
+            var postBackScript = this.NumberUpdated != null ? this.Page.ClientScript.GetPostBackEventReference( new PostBackOptions( this, "NumberUpdated" ), true ) : "";
+            postBackScript = postBackScript.Replace( '\'', '"' );
+
             string disabledMinCss = Value <= Minimum ? "disabled " : "";
-            writer.AddAttribute( HtmlTextWriterAttribute.Onclick, "Rock.controls.numberUpDown.adjust( this, -1 );" );
+            writer.AddAttribute( HtmlTextWriterAttribute.Onclick, string.Format("Rock.controls.numberUpDown.adjust( this, -1, '{0}' );", postBackScript ) );
             writer.AddAttribute( HtmlTextWriterAttribute.Class, "js-number-down numberincrement-down " + disabledMinCss );
             writer.RenderBeginTag( HtmlTextWriterTag.A );
             writer.AddAttribute( HtmlTextWriterAttribute.Class, "fa fa-minus " );
@@ -359,7 +399,7 @@ namespace Rock.Web.UI.Controls
             _lblNumber.RenderControl( writer );
 
             string disabledMaxCss = Value >= Maximum ? "disabled " : "";
-            writer.AddAttribute( HtmlTextWriterAttribute.Onclick, "Rock.controls.numberUpDown.adjust( this, 1 );" );
+            writer.AddAttribute( HtmlTextWriterAttribute.Onclick, string.Format( "Rock.controls.numberUpDown.adjust( this, 1, '{0}' );", postBackScript ) );
             writer.AddAttribute( HtmlTextWriterAttribute.Class, "js-number-up numberincrement-up " + disabledMaxCss );
             writer.RenderBeginTag( HtmlTextWriterTag.A );
             writer.AddAttribute( HtmlTextWriterAttribute.Class, "fa fa-plus " );
@@ -370,6 +410,27 @@ namespace Rock.Web.UI.Controls
             writer.RenderEndTag();  // Div.input-group
         }
 
-        #endregion 
+        #endregion
+
+        #region Events
+
+        /// <summary>
+        /// Occurs when [number updated].
+        /// </summary>
+        public event EventHandler<EventArgs> NumberUpdated;
+
+        /// <summary>
+        /// When implemented by a class, enables a server control to process an event raised when a form is posted to the server.
+        /// </summary>
+        /// <param name="eventArgument">A <see cref="T:System.String" /> that represents an optional event argument to be passed to the event handler.</param>
+        public void RaisePostBackEvent( string eventArgument )
+        {
+            if ( eventArgument == "NumberUpdated" && NumberUpdated != null )
+            {
+                NumberUpdated( this, new EventArgs() );
+            }
+        }
+
+        #endregion
     }
 }

@@ -1,11 +1,11 @@
-﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// <copyright>
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,6 +15,7 @@
 // </copyright>
 //
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
@@ -45,6 +46,67 @@ namespace Rock
                 }
             }
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Determines whether the string is not null or whitespace.
+        /// </summary>
+        /// <param name="str">The string.</param>
+        /// <returns></returns>
+        public static bool IsNotNullOrWhitespace( this string str )
+        {
+            return !string.IsNullOrWhiteSpace( str );
+        }
+
+        /// <summary>
+        /// Determines whether [is null or white space].
+        /// </summary>
+        /// <param name="str">The string.</param>
+        /// <returns></returns>
+        public static bool IsNullOrWhiteSpace( this string str )
+        {
+            return string.IsNullOrWhiteSpace( str );
+        }
+
+        /// <summary>
+        /// Determines whether the string is made up of only digits
+        /// </summary>
+        /// <param name="str">The string.</param>
+        /// <returns></returns>
+        public static bool IsDigitsOnly( this string str )
+        {
+            foreach ( char c in str )
+            {
+                if ( c < '0' || c > '9' )
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Makes the Int64 hash code from the provided string.
+        /// </summary>
+        /// <param name="str">The string.</param>
+        /// <returns></returns>
+        public static Int64 MakeInt64HashCode( this string str )
+        {
+            // http://www.codeproject.com/Articles/34309/Convert-String-to-64bit-Integer
+            Int64 hashCode = 0;
+            if ( !string.IsNullOrEmpty( str ) )
+            {
+                //Unicode Encode Covering all characterset
+                byte[] byteContents = Encoding.Unicode.GetBytes( str );
+                System.Security.Cryptography.SHA256 hash =
+                new System.Security.Cryptography.SHA256CryptoServiceProvider();
+                byte[] hashText = hash.ComputeHash( byteContents );
+
+                Int64 hashCodeStart = BitConverter.ToInt64( hashText, 0 );
+                Int64 hashCodeMedium = BitConverter.ToInt64( hashText, 8 );
+                Int64 hashCodeEnd = BitConverter.ToInt64( hashText, 24 );
+                hashCode = hashCodeStart ^ hashCodeMedium ^ hashCodeEnd;
+            }
+            return ( hashCode );
         }
 
         /// <summary>
@@ -90,8 +152,6 @@ namespace Rock
             char[] delimiter = new char[] { ',' };
             return Regex.Replace( str, regex, "," ).Split( delimiter, StringSplitOptions.RemoveEmptyEntries );
         }
-
-
 
         /// <summary>
         /// Replaces every instance of oldValue (regardless of case) with the newValue.
@@ -187,7 +247,7 @@ namespace Rock
             if ( str == null )
             {
                 return null;
-            }                
+            }
             else if ( str.Length <= length )
             {
                 return str;
@@ -221,8 +281,6 @@ namespace Rock
             return truncatedString + "...";
         }
 
-        
-
         /// <summary>
         /// Removes any non-numeric characters.
         /// </summary>
@@ -236,15 +294,19 @@ namespace Rock
         /// <summary>
         /// Replaces the last occurrence of a given string with a new value
         /// </summary>
-        /// <param name="Source">The string.</param>
-        /// <param name="Find">The search parameter.</param>
-        /// <param name="Replace">The replacement parameter.</param>
+        /// <param name="source">The string.</param>
+        /// <param name="find">The search parameter.</param>
+        /// <param name="replace">The replacement parameter.</param>
         /// <returns></returns>
-        public static string ReplaceLastOccurrence( this string Source, string Find, string Replace )
+        public static string ReplaceLastOccurrence( this string source, string find, string replace )
         {
-            int Place = Source.LastIndexOf( Find );
-            string result = Source.Remove( Place, Find.Length ).Insert( Place, Replace );
-            return result;
+            int place = source.LastIndexOf( find );
+            if ( place >= 0 )
+            {
+                return source.Remove( place, find.Length ).Insert( place, replace );
+            }
+
+            return source;
         }
 
         /// <summary>
@@ -284,6 +346,47 @@ namespace Rock
             }
 
             return trueStrings.Contains( str.ToLower() );
+        }
+
+        /// <summary>
+        /// Attempts to convert string to an dictionary using the |/comma and ^ delimiter Key/Value syntax.  Returns an empty dictionary if unsuccessful.
+        /// </summary>
+        /// <param name="str">The string.</param>
+        /// <returns></returns>
+        public static System.Collections.Generic.Dictionary<string, string> AsDictionary( this string str )
+        {
+            var dictionary = new System.Collections.Generic.Dictionary<string, string>();
+            string[] nameValues = str.Split( new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries );
+            // If we haven't found any pipes, check for commas
+            if ( nameValues.Count() == 1 && nameValues[0] == str )
+            {
+                nameValues = str.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries );
+            }
+            foreach ( string nameValue in nameValues )
+            {
+                string[] nameAndValue = nameValue.Split( new char[] { '^' }, 2 );
+                if ( nameAndValue.Count() == 2 )
+                {
+                    dictionary[nameAndValue[0]] = nameAndValue[1];
+                }
+            }
+            return dictionary;
+        }
+
+        /// <summary>
+        /// Attempts to convert string to an dictionary using the |/comma and ^ delimiter Key/Value syntax.  Returns null if unsuccessful.
+        /// </summary>
+        /// <param name="str">The string.</param>
+        /// <returns></returns>
+        [System.Diagnostics.DebuggerStepThrough()]
+        public static System.Collections.Generic.Dictionary<string, string> AsDictionaryOrNull( this string str )
+        {
+            var dictionary = AsDictionary( str );
+            if ( dictionary.Count() > 0 )
+            {
+                return dictionary;
+            }
+            return null;
         }
 
         /// <summary>
@@ -409,8 +512,8 @@ namespace Rock
         {
             if ( !string.IsNullOrWhiteSpace( str ) )
             {
-                // strip off non numeric and characters (for example, currency symbols)
-                str = Regex.Replace( str, @"[^0-9\.-]", "" );
+                // strip off non numeric and characters at the beginning of the line (currency symbols)
+                str = Regex.Replace( str, @"^[^0-9\.-]", "" );
             }
 
             double value;
@@ -476,16 +579,29 @@ namespace Rock
         }
 
         /// <summary>
-        /// Masks the specified value if greater than 4 characters (such as a credit card number).
+        /// Masks the specified value if greater than 4 characters (such as a credit card number) showing only the last 4 chars prefixed with 12*s
         /// For example, the return string becomes "************6789".
         /// </summary>
         /// <param name="value">The value.</param>
         /// <returns></returns>
         public static string Masked( this string value )
         {
-            if ( value.Length > 4 )
+            return value.Masked( false );
+        }
+
+        /// <summary>
+        /// Masks the specified value if greater than 4 characters (such as a credit card number) showing only the last 4 chars and replacing the preceeding chars with *
+        /// For example, the return string becomes "************6789".
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <param name="preserveLength">if set to <c>true</c> [preserve length]. If false, always put 12 *'s as the prefix</param>
+        /// <returns></returns>
+        public static string Masked( this string value, bool preserveLength )
+        {
+            if ( value != null && value.Length > 4 )
             {
-                return string.Concat( new string( '*', 12 ), value.Substring( value.Length - 4 ) );
+                int maskedLength = preserveLength ? value.Length - 4 : 12;
+                return string.Concat( new string( '*', maskedLength ), value.Substring( value.Length - 4 ) );
             }
             else
             {
@@ -562,6 +678,55 @@ namespace Rock
             s = Regex.Replace( s, "[\u02DC\u00A0]", " " );
 
             return s;
+        }
+
+        /// <summary>
+        /// Returns a list of KeyValuePairs from a serialized list of Rock KeyValuePairs (e.g. 'Item1^Value1|Item2^Value2')
+        /// </summary>
+        /// <param name="input">The input.</param>
+        /// <returns></returns>
+        public static List<KeyValuePair<string, object>> ToKeyValuePairList( this string input )
+        {
+            List<KeyValuePair<string, object>> keyPairs = new List<KeyValuePair<string, object>>();
+
+            if ( !string.IsNullOrWhiteSpace( input ) )
+            {
+                var items = input.Split( '|' );
+
+                foreach ( var item in items )
+                {
+                    var parts = item.Split( '^' );
+                    if ( parts.Length == 2 )
+                    {
+                        keyPairs.Add( new KeyValuePair<string, object>( parts[0], parts[1] ) );
+                    }
+                }
+            }
+
+            return keyPairs;
+        }
+
+        /// <summary>
+        /// Removes the spaces.
+        /// </summary>
+        /// <param name="input">The input.</param>
+        /// <returns></returns>
+        public static string RemoveSpaces( this string input )
+        {
+            return input.Replace( " ", "" );
+        }
+
+        /// <summary>
+        /// Breaks a string into chunks. Handy for splitting a large string into smaller chunks
+        /// from https://stackoverflow.com/a/1450889/1755417
+        /// </summary>
+        /// <param name="str">The string.</param>
+        /// <param name="maxChunkSize">Maximum size of the chunk.</param>
+        /// <returns></returns>
+        public static IEnumerable<string> SplitIntoChunks( this string str, int maxChunkSize )
+        {
+            for ( int i = 0; i < str.Length; i += maxChunkSize )
+                yield return str.Substring( i, Math.Min( maxChunkSize, str.Length - i ) );
         }
 
         #endregion String Extensions

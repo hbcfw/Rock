@@ -5,13 +5,13 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 // <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -62,6 +62,15 @@ namespace Rock.Client
         public string ForeignKey { get; set; }
 
         /// <summary />
+        public string GatewayTransactionKey { get; set; }
+
+        /// <summary />
+        public bool? IsReconciled { get; set; }
+
+        /// <summary />
+        public bool? IsSettled { get; set; }
+
+        /// <summary />
         public Rock.Client.Enums.MICRStatus? MICRStatus { get; set; }
 
         /// <summary>
@@ -79,7 +88,22 @@ namespace Rock.Client
         public int? ScheduledTransactionId { get; set; }
 
         /// <summary />
+        public DateTime? SettledDate { get; set; }
+
+        /// <summary />
+        public string SettledGroupId { get; set; }
+
+        /// <summary />
+        public bool ShowAsAnonymous { get; set; }
+
+        /// <summary />
         public int? SourceTypeValueId { get; set; }
+
+        /// <summary />
+        public string Status { get; set; }
+
+        /// <summary />
+        public string StatusMessage { get; set; }
 
         /// <summary />
         public string Summary { get; set; }
@@ -135,12 +159,20 @@ namespace Rock.Client
             this.FinancialPaymentDetailId = source.FinancialPaymentDetailId;
             this.ForeignGuid = source.ForeignGuid;
             this.ForeignKey = source.ForeignKey;
+            this.GatewayTransactionKey = source.GatewayTransactionKey;
+            this.IsReconciled = source.IsReconciled;
+            this.IsSettled = source.IsSettled;
             this.MICRStatus = source.MICRStatus;
             this.ModifiedAuditValuesAlreadyUpdated = source.ModifiedAuditValuesAlreadyUpdated;
             this.ProcessedByPersonAliasId = source.ProcessedByPersonAliasId;
             this.ProcessedDateTime = source.ProcessedDateTime;
             this.ScheduledTransactionId = source.ScheduledTransactionId;
+            this.SettledDate = source.SettledDate;
+            this.SettledGroupId = source.SettledGroupId;
+            this.ShowAsAnonymous = source.ShowAsAnonymous;
             this.SourceTypeValueId = source.SourceTypeValueId;
+            this.Status = source.Status;
+            this.StatusMessage = source.StatusMessage;
             this.Summary = source.Summary;
             this.TransactionCode = source.TransactionCode;
             this.TransactionDateTime = source.TransactionDateTime;
@@ -160,6 +192,9 @@ namespace Rock.Client
     /// </summary>
     public partial class FinancialTransaction : FinancialTransactionEntity
     {
+        /// <summary />
+        public PersonAlias AuthorizedPersonAlias { get; set; }
+
         /// <summary />
         public FinancialGateway FinancialGateway { get; set; }
 

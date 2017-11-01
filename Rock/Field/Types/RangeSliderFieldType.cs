@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -84,7 +84,7 @@ namespace Rock.Field.Types
             if ( controls != null && controls.Count == 2 )
             {
                 var nbMin = controls[0] as NumberBox;
-                var nbMax = controls[0] as NumberBox;
+                var nbMax = controls[1] as NumberBox;
                 if ( nbMin != null )
                 {
                     configurationValues["min"].Value = nbMin.Text;
@@ -109,7 +109,7 @@ namespace Rock.Field.Types
             if ( controls != null && controls.Count == 2 && configurationValues != null )
             {
                 var nbMin = controls[0] as NumberBox;
-                var nbMax = controls[0] as NumberBox;
+                var nbMax = controls[1] as NumberBox;
                 if ( nbMin != null && configurationValues.ContainsKey( "min" ) )
                 {
                     nbMin.Text = configurationValues["min"].Value;
@@ -150,23 +150,6 @@ namespace Rock.Field.Types
             }
 
             return null;
-        }
-
-        #endregion
-
-        #region Formatting
-
-        /// <summary>
-        /// Formats the value as HTML.
-        /// </summary>
-        /// <param name="parentControl">The parent control.</param>
-        /// <param name="value">The value.</param>
-        /// <param name="configurationValues">The configuration values.</param>
-        /// <param name="condensed">if set to <c>true</c> [condsed].</param>
-        /// <returns></returns>
-        public override string FormatValueAsHtml( Control parentControl, string value, Dictionary<string, ConfigurationValue> configurationValues, bool condensed = false )
-        {
-            return value;
         }
 
         #endregion

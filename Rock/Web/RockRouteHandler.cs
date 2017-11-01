@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,13 +16,13 @@
 //
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.IO;
-using System.Runtime.Caching;
-using System.Text.RegularExpressions;
 using System.Web.Compilation;
 using System.Web.Routing;
 using Rock.Model;
 using Rock.Web.Cache;
+using Rock.Transactions;
 
 namespace Rock.Web
 {
@@ -46,6 +46,10 @@ namespace Rock.Web
 
             try
             {
+                var httpRequest = requestContext.HttpContext.Request;
+
+                var siteCookie = httpRequest.Cookies["last_site"];
+
                 string pageId = "";
                 int routeId = 0;
 
@@ -56,21 +60,82 @@ namespace Rock.Web
                 {
                     pageId = (string)requestContext.RouteData.Values["PageId"];
                 }
+
                 // Pages that use a custom URL route will have the page id in the RouteDate.DataTokens collection
-                else if ( requestContext.RouteData.DataTokens["PageId"] != null )
+                else if ( requestContext.RouteData.DataTokens["PageRoutes"] != null )
                 {
-                    pageId = (string)requestContext.RouteData.DataTokens["PageId"];
-                    routeId = Int32.Parse( (string)requestContext.RouteData.DataTokens["RouteId"] );
+                    var pageAndRouteIds = requestContext.RouteData.DataTokens["PageRoutes"] as List<PageAndRouteId>;
+                    if ( pageAndRouteIds != null && pageAndRouteIds.Count > 0 )
+                    {
+                        // Default to first site/page
+                        if ( pageAndRouteIds.Count >= 1 )
+                        {
+                            var pageAndRouteId = pageAndRouteIds.First();
+                            pageId = pageAndRouteId.PageId.ToJson();
+                            routeId = pageAndRouteId.RouteId;
+                        }
+
+                        // Then check to see if any can be matched by site
+                        if ( pageAndRouteIds.Count > 1 )
+                        {
+                            SiteCache site = null;
+
+                            // First check to see if site was specified in querystring
+                            int? siteId = httpRequest.QueryString["SiteId"].AsIntegerOrNull();
+                            if ( siteId.HasValue )
+                            {
+                                site = SiteCache.Read( siteId.Value );
+                            }
+
+                            // Then check to see if site can be determined by domain
+                            if ( site == null )
+                            {
+                                site = SiteCache.GetSiteByDomain( httpRequest.Url.Host );
+                            }
+
+                            // Then check the last site
+                            if ( site == null )
+                            {
+                                if ( siteCookie != null && siteCookie.Value != null )
+                                {
+                                    site = SiteCache.Read( siteCookie.Value.AsInteger() );
+                                }
+                            }
+
+                            if ( site != null )
+                            {
+                                foreach ( var pageAndRouteId in pageAndRouteIds )
+                                {
+                                    var pageCache = PageCache.Read( pageAndRouteId.PageId );
+                                    if ( pageCache != null && pageCache.Layout != null && pageCache.Layout.SiteId == site.Id )
+                                    {
+                                        pageId = pageAndRouteId.PageId.ToJson();
+                                        routeId = pageAndRouteId.RouteId;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     foreach ( var routeParm in requestContext.RouteData.Values )
                     {
                         parms.Add( routeParm.Key, (string)routeParm.Value );
                     }
                 }
+
                 // If page has not been specified get the site by the domain and use the site's default page
-                else
+                if ( string.IsNullOrEmpty( pageId ) )
                 {
-                    SiteCache site = SiteCache.GetSiteByDomain( requestContext.HttpContext.Request.Url.Host );
+                    SiteCache site = SiteCache.GetSiteByDomain( httpRequest.Url.Host );
+                    if ( site == null )
+                    {
+                        // Use last site
+                        if ( siteCookie != null && siteCookie.Value != null )
+                        {
+                            site = SiteCache.Read( siteCookie.Value.AsInteger() );
+                        }
+                    }
 
                     // if not found use the default site
                     if ( site == null )
@@ -80,15 +145,43 @@ namespace Rock.Web
 
                     if ( site != null )
                     {
+                        // Check to see if this is a short link route
+                        if ( requestContext.RouteData.Values.ContainsKey( "shortlink" ) )
+                        {
+                            string shortlink = requestContext.RouteData.Values["shortlink"].ToString();
+                            using ( var rockContext = new Rock.Data.RockContext() )
+                            {
+                                var pageShortLink = new PageShortLinkService( rockContext ).GetByToken( shortlink, site.Id );
+                                if ( pageShortLink != null )
+                                {
+                                    var transaction = new ShortLinkTransaction();
+                                    transaction.PageShortLinkId = pageShortLink.Id;
+                                    transaction.Token = pageShortLink.Token;
+                                    transaction.Url = pageShortLink.Url;
+                                    if ( requestContext.HttpContext.User != null )
+                                    {
+                                        transaction.UserName = requestContext.HttpContext.User.Identity.Name;
+                                    }
+                                    transaction.DateViewed = RockDateTime.Now;
+                                    transaction.IPAddress = UI.RockPage.GetClientIpAddress( httpRequest );
+                                    transaction.UserAgent = httpRequest.UserAgent ?? "";
+                                    RockQueue.TransactionQueue.Enqueue( transaction );
+
+                                    requestContext.HttpContext.Response.Redirect( pageShortLink.Url );
+                                    return null;
+                                }
+                            }
+                        }
+
                         // If site has has been enabled for mobile redirect, then we'll need to check what type of device is being used
                         if ( site.EnableMobileRedirect )
                         {
-                            bool redirect = false;
-
                             // get the device type
-                            string u = requestContext.HttpContext.Request.UserAgent;
+                            string u = httpRequest.UserAgent;
 
-                            var clientType = PageViewUserAgent.GetClientType( u );
+                            var clientType = InteractionDeviceType.GetClientType( u );
+
+                            bool redirect = false;
 
                             // first check if device is a mobile device
                             if ( clientType == "Mobile" )
@@ -153,13 +246,22 @@ namespace Rock.Web
                 if ( page == null )
                 {
                     // try to get site's 404 page
-                    SiteCache site = SiteCache.GetSiteByDomain( requestContext.HttpContext.Request.Url.Host );
+                    SiteCache site = SiteCache.GetSiteByDomain( httpRequest.Url.Host );
+                    if ( site == null )
+                    {
+                        // Use last site
+                        if ( siteCookie != null && siteCookie.Value != null )
+                        {
+                            site = SiteCache.Read( siteCookie.Value.AsInteger() );
+                        }
+                    }
+
                     if ( site != null && site.PageNotFoundPageId != null )
                     {
                         if ( Convert.ToBoolean( GlobalAttributesCache.Read().GetValue( "Log404AsException" ) ) )
                         {
                             Rock.Model.ExceptionLogService.LogException(
-                                new Exception( string.Format( "404 Error: {0}", requestContext.HttpContext.Request.Url.AbsoluteUri ) ),
+                                new Exception( string.Format( "404 Error: {0}", httpRequest.Url.AbsoluteUri ) ),
                                 requestContext.HttpContext.ApplicationInstance.Context );
                         }
 
@@ -177,12 +279,22 @@ namespace Rock.Web
                 string layout = page.Layout.FileName;
                 string layoutPath = PageCache.FormatPath( theme, layout );
 
+                if ( siteCookie == null )
+                {
+                    siteCookie = new System.Web.HttpCookie( "last_site", page.Layout.SiteId.ToString() );
+                }
+                else
+                {
+                    siteCookie.Value = page.Layout.SiteId.ToString();
+                }
+                requestContext.HttpContext.Response.SetCookie( siteCookie );
+
                 try
                 {
                     // Return the page for the selected theme and layout
                     Rock.Web.UI.RockPage cmsPage = (Rock.Web.UI.RockPage)BuildManager.CreateInstanceFromVirtualPath( layoutPath, typeof( Rock.Web.UI.RockPage ) );
                     cmsPage.SetPage( page );
-                    cmsPage.PageReference = new PageReference( page.Id, routeId, parms, requestContext.HttpContext.Request.QueryString );
+                    cmsPage.PageReference = new PageReference( page.Id, routeId, parms, httpRequest.QueryString );
                     return cmsPage;
                 }
                 catch ( System.Web.HttpException )
@@ -204,7 +316,7 @@ namespace Rock.Web
                     // Return the default layout and/or theme
                     Rock.Web.UI.RockPage cmsPage = (Rock.Web.UI.RockPage)BuildManager.CreateInstanceFromVirtualPath( layoutPath, typeof( Rock.Web.UI.RockPage ) );
                     cmsPage.SetPage( page );
-                    cmsPage.PageReference = new PageReference( page.Id, routeId, parms, requestContext.HttpContext.Request.QueryString );
+                    cmsPage.PageReference = new PageReference( page.Id, routeId, parms, httpRequest.QueryString );
                     return cmsPage;
                 }
             }
@@ -220,6 +332,28 @@ namespace Rock.Web
                 return errorPage;
             }
         }
+    }
+
+    /// <summary>
+    /// Helper for storing page an route ids in a System.Web.Routing.Route datatoken
+    /// </summary>
+    public class PageAndRouteId
+    {
+        /// <summary>
+        /// Gets or sets the page identifier.
+        /// </summary>
+        /// <value>
+        /// The page identifier.
+        /// </value>
+        public int PageId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the route identifier.
+        /// </summary>
+        /// <value>
+        /// The route identifier.
+        /// </value>
+        public int RouteId { get; set; }
     }
 
     /// <summary>

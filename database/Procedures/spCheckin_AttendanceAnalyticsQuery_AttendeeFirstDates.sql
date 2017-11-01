@@ -9,7 +9,7 @@
 		* TimeAttending
 		* SundayDate
 	</returns>
-	<param name='GroupTypeId' datatype='int'>The Check-in Area Group Type Id (only attendance for this are will be included</param>
+	<param name='GroupTypeIds' datatype='varchar(max)'>The Group Type Ids (only attendance for these group types will be included</param>
 	<param name='StartDate' datatype='datetime'>Beginning date range filter</param>
 	<param name='EndDate' datatype='datetime'>Ending date range filter</param>
 	<param name='GroupIds' datatype='varchar(max)'>Optional list of group ids to limit attendance to</param>
@@ -24,7 +24,7 @@
 */
 
 ALTER PROCEDURE [dbo].[spCheckin_AttendanceAnalyticsQuery_AttendeeFirstDates]
-	  @GroupTypeId int
+	  @GroupTypeIds varchar(max)
 	, @GroupIds varchar(max)
 	, @StartDate datetime = NULL
 	, @EndDate datetime = NULL
@@ -42,22 +42,36 @@ BEGIN
 	SET @EndDate = COALESCE( DATEADD( day, ( 0 - DATEDIFF( day, CONVERT( datetime, '19000107', 112 ), @EndDate ) % 7 ), @EndDate ), '2100-01-01' )
     IF @EndDate < @StartDate SET @EndDate = DATEADD( day, 6 + DATEDIFF( day, @EndDate, @StartDate ), @EndDate )
 
+	DECLARE @CampusTbl TABLE ( [Id] int )
+	INSERT INTO @CampusTbl SELECT [Item] FROM ufnUtility_CsvToTable( ISNULL(@CampusIds,'') )
+
+	DECLARE @ScheduleTbl TABLE ( [Id] int )
+	INSERT INTO @ScheduleTbl SELECT [Item] FROM ufnUtility_CsvToTable( ISNULL(@ScheduleIds,'') )
+
+	DECLARE @GroupTbl TABLE ( [Id] int )
+	INSERT INTO @GroupTbl SELECT [Item] FROM ufnUtility_CsvToTable( ISNULL(@GroupIds,'') )
+
+	DECLARE @GroupTypeTbl TABLE ( [Id] int )
+	INSERT INTO @GroupTypeTbl SELECT [Item] FROM ufnUtility_CsvToTable( ISNULL(@GroupTypeIds,'') )
+
 	-- Get all the attendees
 	DECLARE @PersonIdTbl TABLE ( [PersonId] INT NOT NULL )
 	INSERT INTO @PersonIdTbl
 	SELECT DISTINCT PA.[PersonId]
 	FROM [Attendance] A
     INNER JOIN [PersonAlias] PA ON PA.[Id] = A.[PersonAliasId]
-    WHERE A.[GroupId] in ( SELECT * FROM ufnUtility_CsvToTable( @GroupIds ) ) 
-    AND [StartDateTime] BETWEEN @StartDate AND @EndDate
+	INNER JOIN @GroupTbl [G] ON [G].[Id] = A.[GroupId]
+	LEFT OUTER JOIN @CampusTbl [C] ON [C].[id] = [A].[CampusId]
+	LEFT OUTER JOIN @ScheduleTbl [S] ON [S].[id] = [A].[ScheduleId]
+    WHERE [StartDateTime] BETWEEN @StartDate AND @EndDate
 	AND [DidAttend] = 1
 	AND ( 
-		( @CampusIds IS NULL OR A.[CampusId] in ( SELECT * FROM ufnUtility_CsvToTable( @CampusIds ) ) ) OR  
+		( @CampusIds IS NULL OR [C].[Id] IS NOT NULL ) OR  
 		( @IncludeNullCampusIds = 1 AND A.[CampusId] IS NULL ) 
-	)	
-	AND ( @ScheduleIds IS NULL OR A.[ScheduleId] IN ( SELECT * FROM ufnUtility_CsvToTable( @ScheduleIds ) ) )
+	)
+	AND ( @ScheduleIds IS NULL OR [S].[Id] IS NOT NULL  )
 
-    -- Get the first 5 times they attended this group type (any group or campus)
+    -- Get the first 5 times they attended any of the selected group types (any group or campus)
 	SELECT 
 		P.[PersonId],
 		D.[TimeAttending],
@@ -70,7 +84,7 @@ BEGIN
         FROM (
             SELECT DISTINCT [StartDate]
 		    FROM [vCheckin_GroupTypeAttendance] A
-		    WHERE A.[GroupTypeId] = @GroupTypeId
+			INNER JOIN @GroupTypeTbl [G] ON [G].[id] = [A].[GroupTypeId]
 		    AND A.[PersonId] = P.[PersonId]
         ) S
 	) D

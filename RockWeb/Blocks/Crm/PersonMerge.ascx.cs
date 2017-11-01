@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,6 +27,7 @@ using Rock;
 using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
+using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
 
@@ -39,15 +40,19 @@ namespace RockWeb.Blocks.Crm
     [Category( "CRM" )]
     [Description( "Merges two or more person records into one." )]
 
-    [LinkedPage( "Person Detail Page" )]
+    [BooleanField( "Reset Login Confirmation",
+        "When merging people that have different email addresses, should the logins for those people be updated to require a reconfirmation of the selected email address before being able to login? This is typically enabled as a precaution to prevent someone maliciously obtaining another person's login information simply by creating a duplicate account with same name but different login.",
+        true, "", 0 )]
+    [LinkedPage( "Person Detail Page", "The page to navigate to after the merge is completed.", true, "", "", 1 )]
     public partial class PersonMerge : Rock.Web.UI.RockBlock
     {
 
         #region Fields
 
         private List<string> headingKeys = new List<string> {
-            "PhoneNumbers", 
-            "PersonAttributes"
+            "PhoneNumbers",
+            "PersonAttributes",
+            "FamilyAttributes"
         };
 
         #endregion
@@ -102,6 +107,13 @@ namespace RockWeb.Blocks.Crm
 ", hfSelectedColumn.ClientID );
             ScriptManager.RegisterStartupScript( gValues, gValues.GetType(), "primary-person-click", script, true );
 
+            nbSecurityNotice.Text = string.Format( @"Because there are two different emails associated with this merge, and at least one of the 
+records has a login, be sure to proceed with caution. It is possible that the new record was created in an attempt to gain access to the account 
+through the merge process. {0}", GetAttributeValue( "ResetLoginConfirmation" ).AsBoolean() ? 
+        @"While this person will be prompted to reconfirm their login(s) using the email address you select, you may wish to manually confirm the 
+validity of the request before completing this merge." : 
+        @"Because of this, make sure to confirm the validity of the request before completing this merge." );
+
         }
 
         /// <summary>
@@ -113,6 +125,7 @@ namespace RockWeb.Blocks.Crm
             base.OnLoad( e );
 
             nbPeople.Visible = false;
+            nbError.Visible = false;
 
             bool canEdit = this.IsUserAuthorized( Rock.Security.Authorization.EDIT );
 
@@ -134,8 +147,15 @@ namespace RockWeb.Blocks.Crm
         /// </summary>
         private void LoadViewDetails()
         {
-            if ( !Page.IsPostBack )
+            if ( Page.IsPostBack )
             {
+                nbMergeRequestSuccess.Visible = false;
+                nbMergeRequestAlreadySubmitted.Visible = false;
+            }
+            else
+            {
+                nbNotAuthorized.Visible = true;
+
                 int? setId = PageParameter( "Set" ).AsIntegerOrNull();
                 if ( setId.HasValue )
                 {
@@ -149,9 +169,12 @@ namespace RockWeb.Blocks.Crm
                         var definedValuePurpose = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.ENTITY_SET_PURPOSE_PERSON_MERGE_REQUEST.AsGuid() );
                         if ( definedValuePurpose != null )
                         {
+                            nbNotAuthorized.Visible = false;
+                            tbEntitySetNote.Visible = true;
+                            btnSaveRequestNote.Visible = true;
+
                             if ( entitySet.EntitySetPurposeValueId != definedValuePurpose.Id && entitySet.ExpireDateTime != null )
                             {
-                                nbMergeRequestAlreadySubmitted.Visible = false;
                                 nbMergeRequestSuccess.Visible = true;
                                 entitySet.EntitySetPurposeValueId = definedValuePurpose.Id;
                                 entitySet.ExpireDateTime = null;
@@ -160,7 +183,6 @@ namespace RockWeb.Blocks.Crm
                             else
                             {
                                 nbMergeRequestAlreadySubmitted.Visible = true;
-                                nbMergeRequestSuccess.Visible = false;
                             }
                         }
                     }
@@ -184,13 +206,18 @@ namespace RockWeb.Blocks.Crm
                         .Distinct()
                         .ToList();
 
+                    if ( selectedPersonIds.Count == 0 )
+                    {
+                        ScriptManager.RegisterStartupScript( this, this.GetType(), "goBack", "history.go(-1);", true );
+                    }
+
                     // Get the people selected
                     var people = new PersonService( new RockContext() ).Queryable( "CreatedByPersonAlias.Person,Users", true )
                         .Where( p => selectedPersonIds.Contains( p.Id ) )
                         .ToList();
 
                     // Create the data structure used to build grid
-                    MergeData = new MergeData( people, headingKeys );
+                    MergeData = new MergeData( people, headingKeys, CurrentPerson );
                     MergeData.EntitySetId = setId.Value;
                     BuildColumns();
                     BindGrid();
@@ -247,7 +274,7 @@ namespace RockWeb.Blocks.Crm
                     .ToList();
 
                 // Rebuild mergdata, columns, and grid
-                MergeData = new MergeData( people, headingKeys );
+                MergeData = new MergeData( people, headingKeys, CurrentPerson );
                 BuildColumns();
                 BindGrid();
             }
@@ -276,7 +303,7 @@ namespace RockWeb.Blocks.Crm
                     .ToList();
 
                 // Rebuild mergdata, columns, and grid
-                MergeData = new MergeData( people, headingKeys );
+                MergeData = new MergeData( people, headingKeys, CurrentPerson );
                 BuildColumns();
                 BindGrid();
             }
@@ -315,7 +342,10 @@ namespace RockWeb.Blocks.Crm
                 return;
             }
 
-            bool reconfirmRequired = ( MergeData.People.Select( p => p.Email ).Distinct().Count() > 1 && MergeData.People.Where( p => p.HasLogins ).Any() );
+            bool reconfirmRequired = ( 
+                GetAttributeValue( "ResetLoginConfirmation").AsBoolean() &&
+                MergeData.People.Select( p => p.Email ).Distinct().Count() > 1 && 
+                MergeData.People.Where( p => p.HasLogins ).Any() );
 
             GetValuesSelection();
 
@@ -325,158 +355,187 @@ namespace RockWeb.Blocks.Crm
 
             var rockContext = new RockContext();
 
-            rockContext.WrapTransaction( () =>
+            try
             {
-                var personService = new PersonService( rockContext );
-                var userLoginService = new UserLoginService( rockContext );
-                var groupService = new GroupService( rockContext );
-                var groupMemberService = new GroupMemberService( rockContext );
-                var binaryFileService = new BinaryFileService( rockContext );
-                var phoneNumberService = new PhoneNumberService( rockContext );
-                var taggedItemService = new TaggedItemService( rockContext );
-
-                Person primaryPerson = personService.Get( MergeData.PrimaryPersonId ?? 0 );
-                if ( primaryPerson != null )
+                rockContext.WrapTransaction( () =>
                 {
-                    primaryPersonId = primaryPerson.Id;
+                    var personService = new PersonService( rockContext );
+                    var userLoginService = new UserLoginService( rockContext );
+                    var groupService = new GroupService( rockContext );
+                    var groupMemberService = new GroupMemberService( rockContext );
+                    var binaryFileService = new BinaryFileService( rockContext );
+                    var phoneNumberService = new PhoneNumberService( rockContext );
+                    var taggedItemService = new TaggedItemService( rockContext );
 
-                    var changes = new List<string>();
-
-                    foreach ( var p in MergeData.People.Where( p => p.Id != primaryPerson.Id ) )
+                    Person primaryPerson = personService.Get( MergeData.PrimaryPersonId ?? 0 );
+                    if ( primaryPerson != null )
                     {
-                        changes.Add( string.Format( "Merged <span class='field-value'>{0} [ID: {1}]</span> with this record.", p.FullName, p.Id ) );
-                    }
+                        primaryPersonId = primaryPerson.Id;
 
-                    // Photo Id
-                    int? newPhotoId = MergeData.GetSelectedValue( MergeData.GetProperty( "Photo" ) ).Value.AsIntegerOrNull();
-                    if ( !primaryPerson.PhotoId.Equals( newPhotoId ) )
-                    {
-                        changes.Add( "Modified the photo." );
-                        primaryPerson.PhotoId = newPhotoId;
-                    }
+                        var changes = new List<string>();
 
-                    primaryPerson.TitleValueId = GetNewIntValue( "Title", changes );
-                    primaryPerson.FirstName = GetNewStringValue( "FirstName", changes );
-                    primaryPerson.NickName = GetNewStringValue( "NickName", changes );
-                    primaryPerson.MiddleName = GetNewStringValue( "MiddleName", changes );
-                    primaryPerson.LastName = GetNewStringValue( "LastName", changes );
-                    primaryPerson.SuffixValueId = GetNewIntValue( "Suffix", changes );
-                    primaryPerson.RecordTypeValueId = GetNewIntValue( "RecordType", changes );
-                    primaryPerson.RecordStatusValueId = GetNewIntValue( "RecordStatus", changes );
-                    primaryPerson.RecordStatusReasonValueId = GetNewIntValue( "RecordStatusReason", changes );
-                    primaryPerson.ConnectionStatusValueId = GetNewIntValue( "ConnectionStatus", changes );
-                    primaryPerson.IsDeceased = GetNewBoolValue( "Deceased", changes ) ?? false;
-                    primaryPerson.Gender = (Gender)GetNewEnumValue( "Gender", typeof( Gender ), changes );
-                    primaryPerson.MaritalStatusValueId = GetNewIntValue( "MaritalStatus", changes );
-                    primaryPerson.SetBirthDate( GetNewDateTimeValue( "BirthDate", changes ) );
-                    primaryPerson.AnniversaryDate = GetNewDateTimeValue( "AnniversaryDate", changes );
-                    primaryPerson.GraduationYear = GetNewIntValue( "GraduationYear", changes );
-                    primaryPerson.Email = GetNewStringValue( "Email", changes );
-                    primaryPerson.IsEmailActive = GetNewBoolValue( "EmailActive", changes ) ?? true;
-                    primaryPerson.EmailNote = GetNewStringValue( "EmailNote", changes );
-                    primaryPerson.EmailPreference = (EmailPreference)GetNewEnumValue( "EmailPreference", typeof( EmailPreference ), changes );
-                    primaryPerson.SystemNote = GetNewStringValue( "InactiveReasonNote", changes );
-                    primaryPerson.SystemNote = GetNewStringValue( "SystemNote", changes );
-
-                    // Update phone numbers
-                    var phoneTypes = DefinedTypeCache.Read( Rock.SystemGuid.DefinedType.PERSON_PHONE_TYPE.AsGuid() ).DefinedValues;
-                    foreach ( var phoneType in phoneTypes )
-                    {
-                        var phoneNumber = primaryPerson.PhoneNumbers.Where( p => p.NumberTypeValueId == phoneType.Id ).FirstOrDefault();
-                        string oldValue = phoneNumber != null ? phoneNumber.Number : string.Empty;
-
-                        string key = "phone_" + phoneType.Id.ToString();
-                        string newValue = GetNewStringValue( key, changes );
-
-                        if ( !oldValue.Equals( newValue, StringComparison.OrdinalIgnoreCase ) )
+                        foreach ( var p in MergeData.People.Where( p => p.Id != primaryPerson.Id ) )
                         {
-                            // New phone doesn't match old
-
-                            if ( !string.IsNullOrWhiteSpace( newValue ) )
-                            {
-                                // New value exists
-                                if ( phoneNumber == null )
-                                {
-                                    // Old value didn't exist... create new phone record
-                                    phoneNumber = new PhoneNumber { NumberTypeValueId = phoneType.Id };
-                                    primaryPerson.PhoneNumbers.Add( phoneNumber );
-                                }
-
-                                // Update phone number
-                                phoneNumber.Number = newValue;
-                            }
-                            else
-                            {
-                                // New value doesn't exist
-                                if ( phoneNumber != null )
-                                {
-                                    // old value existed.. delete it
-                                    primaryPerson.PhoneNumbers.Remove( phoneNumber );
-                                    phoneNumberService.Delete( phoneNumber );
-                                }
-                            }
+                            changes.Add( string.Format( "Merged <span class='field-value'>{0} [ID: {1}]</span> with this record.", p.FullName, p.Id ) );
                         }
-                    }
 
-                    // Save the new record
-                    rockContext.SaveChanges();
-
-                    // Update the attributes
-                    primaryPerson.LoadAttributes( rockContext );
-                    foreach ( var property in MergeData.Properties.Where( p => p.Key.StartsWith( "attr_" ) ) )
-                    {
-                        string attributeKey = property.Key.Substring( 5 );
-                        string oldValue = primaryPerson.GetAttributeValue( attributeKey ) ?? string.Empty;
-                        string newValue = GetNewStringValue( property.Key, changes ) ?? string.Empty;
-
-                        if ( !oldValue.Equals( newValue ) )
+                        // Photo Id
+                        int? newPhotoId = MergeData.GetSelectedValue( MergeData.GetProperty( "Photo" ) ).Value.AsIntegerOrNull();
+                        if ( !primaryPerson.PhotoId.Equals( newPhotoId ) )
                         {
-                            var attribute = primaryPerson.Attributes[attributeKey];
-                            Rock.Attribute.Helper.SaveAttributeValue( primaryPerson, attribute, newValue, rockContext );
+                            changes.Add( "Modified the photo." );
+                            primaryPerson.PhotoId = newPhotoId;
                         }
-                    }
 
-                    HistoryService.SaveChanges( rockContext, typeof( Person ), Rock.SystemGuid.Category.HISTORY_PERSON_DEMOGRAPHIC_CHANGES.AsGuid(),
-                        primaryPerson.Id, changes );
+                        primaryPerson.TitleValueId = GetNewIntValue( "Title", changes );
+                        primaryPerson.FirstName = GetNewStringValue( "FirstName", changes );
+                        primaryPerson.NickName = GetNewStringValue( "NickName", changes );
+                        primaryPerson.MiddleName = GetNewStringValue( "MiddleName", changes );
+                        primaryPerson.LastName = GetNewStringValue( "LastName", changes );
+                        primaryPerson.SuffixValueId = GetNewIntValue( "Suffix", changes );
+                        primaryPerson.RecordTypeValueId = GetNewIntValue( "RecordType", changes );
+                        primaryPerson.RecordStatusValueId = GetNewIntValue( "RecordStatus", changes );
+                        primaryPerson.RecordStatusReasonValueId = GetNewIntValue( "RecordStatusReason", changes );
+                        primaryPerson.ConnectionStatusValueId = GetNewIntValue( "ConnectionStatus", changes );
+                        primaryPerson.IsDeceased = GetNewBoolValue( "Deceased", changes ) ?? false;
+                        primaryPerson.Gender = (Gender)GetNewEnumValue( "Gender", typeof( Gender ), changes );
+                        primaryPerson.MaritalStatusValueId = GetNewIntValue( "MaritalStatus", changes );
+                        primaryPerson.SetBirthDate( GetNewDateTimeValue( "BirthDate", changes ) );
+                        primaryPerson.AnniversaryDate = GetNewDateTimeValue( "AnniversaryDate", changes );
+                        primaryPerson.GraduationYear = GetNewIntValue( "GraduationYear", changes );
+                        primaryPerson.Email = GetNewStringValue( "Email", changes );
+                        primaryPerson.IsEmailActive = GetNewBoolValue( "EmailActive", changes ) ?? true;
+                        primaryPerson.EmailNote = GetNewStringValue( "EmailNote", changes );
+                        primaryPerson.EmailPreference = (EmailPreference)GetNewEnumValue( "EmailPreference", typeof( EmailPreference ), changes );
+                        primaryPerson.SystemNote = GetNewStringValue( "InactiveReasonNote", changes );
+                        primaryPerson.SystemNote = GetNewStringValue( "SystemNote", changes );
 
-                    // Delete the unselected photos
-                    string photoKeeper = primaryPerson.PhotoId.HasValue ? primaryPerson.PhotoId.Value.ToString() : string.Empty;
-                    foreach ( var photoValue in MergeData.Properties
-                        .Where( p => p.Key == "Photo" )
-                        .SelectMany( p => p.Values )
-                        .Where( v => v.Value != "" && v.Value != photoKeeper )
-                        .Select( v => v.Value ) )
-                    {
-                        int photoId = 0;
-                        if ( int.TryParse( photoValue, out photoId ) )
+                        // Update phone numbers
+                        var phoneTypes = DefinedTypeCache.Read( Rock.SystemGuid.DefinedType.PERSON_PHONE_TYPE.AsGuid() ).DefinedValues;
+                        foreach ( var phoneType in phoneTypes )
                         {
-                            var photo = binaryFileService.Get( photoId );
-                            if ( photo != null )
+                            var phoneNumber = primaryPerson.PhoneNumbers.Where( p => p.NumberTypeValueId == phoneType.Id ).FirstOrDefault();
+                            string oldValue = phoneNumber != null ? phoneNumber.Number : string.Empty;
+
+                            string key = "phone_" + phoneType.Id.ToString();
+                            string newValue = GetNewStringValue( key, changes );
+                            bool phoneNumberDeleted = false;
+
+                            if ( !oldValue.Equals( newValue, StringComparison.OrdinalIgnoreCase ) )
                             {
-                                string errorMessages;
-                                if ( binaryFileService.CanDelete( photo, out errorMessages ) )
+                                // New phone doesn't match old
+
+                                if ( !string.IsNullOrWhiteSpace( newValue ) )
                                 {
-                                    binaryFileService.Delete( photo );
+                                    // New value exists
+                                    if ( phoneNumber == null )
+                                    {
+                                        // Old value didn't exist... create new phone record
+                                        phoneNumber = new PhoneNumber { NumberTypeValueId = phoneType.Id };
+                                        primaryPerson.PhoneNumbers.Add( phoneNumber );
+                                    }
+
+                                    // Update phone number
+                                    phoneNumber.Number = newValue;
+                                }
+                                else
+                                {
+                                    // New value doesn't exist
+                                    if ( phoneNumber != null )
+                                    {
+                                        // old value existed.. delete it
+                                        primaryPerson.PhoneNumbers.Remove( phoneNumber );
+                                        phoneNumberService.Delete( phoneNumber );
+                                        phoneNumberDeleted = true;
+                                    }
+                                }
+                            }
+
+                            // check to see if IsMessagingEnabled is true for any of the merged people for this number/numbertype
+                            if ( phoneNumber != null && !phoneNumberDeleted && !phoneNumber.IsMessagingEnabled )
+                            {
+                                var personIds = MergeData.People.Select( a => a.Id ).ToList();
+                                var isMessagingEnabled = phoneNumberService.Queryable().Where( a => personIds.Contains( a.PersonId ) && a.Number == phoneNumber.Number && a.NumberTypeValueId == phoneNumber.NumberTypeValueId ).Any( a => a.IsMessagingEnabled );
+                                if ( isMessagingEnabled )
+                                {
+                                    phoneNumber.IsMessagingEnabled = true;
                                 }
                             }
                         }
-                    }
-                    rockContext.SaveChanges();
 
-                    // Delete merged person's family records and any families that would be empty after merge
-                    foreach ( var p in MergeData.People.Where( p => p.Id != primaryPersonId.Value ) )
-                    {
-                        // Delete the merged person's phone numbers (we've already updated the primary persons values)
-                        foreach ( var phoneNumber in phoneNumberService.GetByPersonId( p.Id ) )
+                        // Save the new record
+                        rockContext.SaveChanges();
+
+                        // Update the attributes
+                        primaryPerson.LoadAttributes( rockContext );
+                        foreach ( var property in MergeData.Properties.Where( p => p.Key.StartsWith( "attr_" ) ) )
                         {
-                            phoneNumberService.Delete( phoneNumber );
+                            string attributeKey = property.Key.Substring( 5 );
+                            string oldValue = primaryPerson.GetAttributeValue( attributeKey ) ?? string.Empty;
+                            string newValue = GetNewStringValue( property.Key, changes ) ?? string.Empty;
+
+                            if ( !oldValue.Equals( newValue ) )
+                            {
+                                var attribute = primaryPerson.Attributes[attributeKey];
+                                Rock.Attribute.Helper.SaveAttributeValue( primaryPerson, attribute, newValue, rockContext );
+                            }
                         }
+
+                        //Update the family attributes
+                        var primaryFamily = primaryPerson.GetFamily();
+                        if ( primaryFamily != null )
+                        {
+                            primaryFamily.LoadAttributes( rockContext );
+                            foreach ( var property in MergeData.Properties.Where( p => p.Key.StartsWith( "groupattr_" ) ) )
+                            {
+                                string attributeKey = property.Key.Substring( 10 );
+                                string oldValue = primaryFamily.GetAttributeValue( attributeKey ) ?? string.Empty;
+                                string newValue = GetNewStringValue( property.Key, changes ) ?? string.Empty;
+
+                                if ( !oldValue.Equals( newValue ) )
+                                {
+                                    var attribute = primaryFamily.Attributes[attributeKey];
+                                    Rock.Attribute.Helper.SaveAttributeValue( primaryFamily, attribute, newValue, rockContext );
+                                }
+                            }
+                        }
+
+                        HistoryService.SaveChanges( rockContext, typeof( Person ), Rock.SystemGuid.Category.HISTORY_PERSON_DEMOGRAPHIC_CHANGES.AsGuid(),
+                            primaryPerson.Id, changes );
+
+                        // Delete the unselected photos
+                        string photoKeeper = primaryPerson.PhotoId.HasValue ? primaryPerson.PhotoId.Value.ToString() : string.Empty;
+                        foreach ( var photoValue in MergeData.Properties
+                            .Where( p => p.Key == "Photo" )
+                            .SelectMany( p => p.Values )
+                            .Where( v => v.Value != "" && v.Value != photoKeeper )
+                            .Select( v => v.Value ) )
+                        {
+                            int photoId = 0;
+                            if ( int.TryParse( photoValue, out photoId ) )
+                            {
+                                var photo = binaryFileService.Get( photoId );
+                                if ( photo != null )
+                                {
+                                    string errorMessages;
+                                    if ( binaryFileService.CanDelete( photo, out errorMessages ) )
+                                    {
+                                        binaryFileService.Delete( photo );
+                                    }
+                                }
+                            }
+                        }
+                        rockContext.SaveChanges();
 
                         // If there was more than one email address and user has logins, then set any of the local 
                         // logins ( database & AD ) to require a reconfirmation
                         if ( reconfirmRequired )
                         {
-                            foreach ( var login in userLoginService.GetByPersonId( p.Id ) )
+                            var personIds = MergeData.People.Select( a => a.Id ).ToList();
+                            foreach ( var login in userLoginService.Queryable()
+                                .Where( l => 
+                                    l.PersonId.HasValue &&
+                                    personIds.Contains( l.PersonId.Value ) ) )
                             {
                                 var component = Rock.Security.AuthenticationContainer.GetComponent( login.EntityType.Name );
                                 if ( component != null && !component.RequiresRemoteAuthentication )
@@ -485,82 +544,102 @@ namespace RockWeb.Blocks.Crm
                                 }
                             }
                         }
-
                         rockContext.SaveChanges();
 
-                        // Delete the merged person's other family member records and the family if they were the only one in the family
-                        Guid familyGuid = Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY.AsGuid();
-                        foreach ( var familyMember in groupMemberService.Queryable().Where( m => m.PersonId == p.Id && m.Group.GroupType.Guid == familyGuid ) )
+                        // Delete merged person's family records and any families that would be empty after merge
+                        foreach ( var p in MergeData.People.Where( p => p.Id != primaryPersonId.Value ) )
                         {
-                            groupMemberService.Delete( familyMember );
+                            // Delete the merged person's phone numbers (we've already updated the primary persons values)
+                            foreach ( var phoneNumber in phoneNumberService.GetByPersonId( p.Id ) )
+                            {
+                                phoneNumberService.Delete( phoneNumber );
+                            }
 
                             rockContext.SaveChanges();
 
-                            // Get the family
-                            var family = groupService.Queryable( "Members" ).Where( f => f.Id == familyMember.GroupId ).FirstOrDefault();
-                            if ( !family.Members.Any() )
+                            // Delete the merged person's other family member records and the family if they were the only one in the family
+                            Guid familyGuid = Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY.AsGuid();
+                            foreach ( var familyMember in groupMemberService.Queryable().Where( m => m.PersonId == p.Id && m.Group.GroupType.Guid == familyGuid ) )
                             {
-                                // If there are not any other family members, delete the family record.
+                                groupMemberService.Delete( familyMember );
 
-                                // If theres any people that have this group as a giving group, set it to null (the person being merged should be the only one)
-                                foreach ( Person gp in personService.Queryable().Where( g => g.GivingGroupId == family.Id ) )
-                                {
-                                    gp.GivingGroupId = null;
-                                }
-
-                                // save to the database prior to doing groupService.Delete since .Delete quietly might not delete if thinks the Family is used for a GivingGroupId
                                 rockContext.SaveChanges();
 
-                                // Delete the family
-                                string errorMessage;
-                                if ( groupService.CanDelete( family, out errorMessage ) )
+                                // Get the family
+                                var family = groupService.Queryable( "Members" ).Where( f => f.Id == familyMember.GroupId ).FirstOrDefault();
+                                if ( !family.Members.Any() )
                                 {
-                                    var oldFamilyChanges = new List<string>();
-                                    History.EvaluateChange( oldFamilyChanges, "Family", family.Name, string.Empty );
-                                    HistoryService.SaveChanges( rockContext, typeof( Person ), Rock.SystemGuid.Category.HISTORY_PERSON_FAMILY_CHANGES.AsGuid(),
-                                        primaryPersonId.Value, oldFamilyChanges, family.Name, typeof( Group ), family.Id );
+                                    // If there are not any other family members, delete the family record.
 
-                                    groupService.Delete( family );
+                                    // If theres any people that have this group as a giving group, set it to null (the person being merged should be the only one)
+                                    foreach ( Person gp in personService.Queryable().Where( g => g.GivingGroupId == family.Id ) )
+                                    {
+                                        gp.GivingGroupId = null;
+                                    }
+
+                                    // save to the database prior to doing groupService.Delete since .Delete quietly might not delete if thinks the Family is used for a GivingGroupId
                                     rockContext.SaveChanges();
+
+                                    // Delete the family
+                                    string errorMessage;
+                                    if ( groupService.CanDelete( family, out errorMessage ) )
+                                    {
+                                        var oldFamilyChanges = new List<string>();
+                                        History.EvaluateChange( oldFamilyChanges, "Family", family.Name, string.Empty );
+                                        HistoryService.SaveChanges( rockContext, typeof( Person ), Rock.SystemGuid.Category.HISTORY_PERSON_FAMILY_CHANGES.AsGuid(),
+                                            primaryPersonId.Value, oldFamilyChanges, family.Name, typeof( Group ), family.Id );
+
+                                        groupService.Delete( family );
+                                        rockContext.SaveChanges();
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    // Flush any security roles that the merged person's other records were a part of
-                    foreach ( var p in MergeData.People.Where( p => p.Id != primaryPersonId.Value ) )
-                    {
-                        foreach ( var groupMember in groupMemberService.Queryable().Where( m => m.PersonId == p.Id ) )
+                        // Flush any security roles that the merged person's other records were a part of
+                        foreach ( var p in MergeData.People.Where( p => p.Id != primaryPersonId.Value ) )
                         {
-                            Group group = new GroupService( rockContext ).Get( groupMember.GroupId );
-                            if ( group.IsSecurityRole || group.GroupType.Guid.Equals( Rock.SystemGuid.GroupType.GROUPTYPE_SECURITY_ROLE.AsGuid() ) )
+                            foreach ( var groupMember in groupMemberService.Queryable().Where( m => m.PersonId == p.Id ) )
                             {
-                                Rock.Security.Role.Flush( group.Id );
-                                Rock.Security.Authorization.Flush();
+                                Group group = new GroupService( rockContext ).Get( groupMember.GroupId );
+                                if ( group.IsSecurityRole || group.GroupType.Guid.Equals( Rock.SystemGuid.GroupType.GROUPTYPE_SECURITY_ROLE.AsGuid() ) )
+                                {
+                                    Rock.Security.Role.Flush( group.Id );
+                                    Rock.Security.Authorization.Flush();
+                                }
                             }
                         }
-                    }
 
-                    // now that the Merge is complete, the EntitySet can be marked to be deleted by the RockCleanup job
-                    var entitySetService = new EntitySetService( rockContext );
-                    var entitySet = entitySetService.Get( MergeData.EntitySetId );
-                    if ( entitySet != null )
-                    {
-                        entitySet.ExpireDateTime = RockDateTime.Now.AddMinutes(-1);
-                        entitySet.EntitySetPurposeValueId = null;
-                        rockContext.SaveChanges();
-                    }
+                        // now that the Merge is complete, the EntitySet can be marked to be deleted by the RockCleanup job
+                        var entitySetService = new EntitySetService( rockContext );
+                        var entitySet = entitySetService.Get( MergeData.EntitySetId );
+                        if ( entitySet != null )
+                        {
+                            entitySet.ExpireDateTime = RockDateTime.Now.AddMinutes( -1 );
+                            entitySet.EntitySetPurposeValueId = null;
+                            rockContext.SaveChanges();
+                        }
 
+                    }
+                } );
+
+                foreach ( var p in MergeData.People.Where( p => p.Id != primaryPersonId.Value ) )
+                {
+                    // Run merge proc to merge all associated data
+                    var parms = new Dictionary<string, object>();
+                    parms.Add( "OldId", p.Id );
+                    parms.Add( "NewId", primaryPersonId.Value );
+                    DbService.ExecuteCommand( "spCrm_PersonMerge", CommandType.StoredProcedure, parms );
                 }
-            } );
-
-            foreach ( var p in MergeData.People.Where( p => p.Id != primaryPersonId.Value ) )
+            }
+            catch ( Exception ex )
             {
-                // Run merge proc to merge all associated data
-                var parms = new Dictionary<string, object>();
-                parms.Add( "OldId", p.Id );
-                parms.Add( "NewId", primaryPersonId.Value );
-                DbService.ExecuteCommand( "spCrm_PersonMerge", CommandType.StoredProcedure, parms );
+                ExceptionLogService.LogException( ex, Context, this.RockPage.PageId, this.RockPage.Site.Id, CurrentPersonAlias );
+
+                nbError.Heading = "Merge Error";
+                nbError.Text = string.Format( "<p>The following error occurred when attempting the merge: {0}</p>", ex.Message );
+                nbError.Visible = true;
+                return;
             }
 
             NavigateToLinkedPage( "PersonDetailPage", "PersonId", primaryPersonId.Value );
@@ -690,9 +769,11 @@ namespace RockWeb.Blocks.Crm
             if ( MergeData != null && MergeData.People != null && MergeData.People.Any() )
             {
                 // If the people have different email addresses and any logins, display security alert box
-                nbSecurityNotice.Visible =
+                bool showAlert = 
                     ( MergeData.People.Select( p => p.Email ).Where( e => e != null && e != "" ).Distinct( StringComparer.CurrentCultureIgnoreCase ).Count() > 1 &&
                     MergeData.People.Where( p => p.HasLogins ).Any() );
+
+                nbSecurityNotice.Visible = showAlert;
 
                 foreach ( var col in gValues.Columns.OfType<PersonMergeField>() )
                 {
@@ -876,7 +957,7 @@ namespace RockWeb.Blocks.Crm
         /// Initializes a new instance of the <see cref="MergeData"/> class.
         /// </summary>
         /// <param name="people">The people.</param>
-        public MergeData( List<Person> people, List<string> headingKeys )
+        public MergeData( List<Person> people, List<string> headingKeys, Person currentPerson )
         {
             People = new List<MergePerson>();
             Properties = new List<PersonProperty>();
@@ -912,10 +993,33 @@ namespace RockWeb.Blocks.Crm
                 person.LoadAttributes();
                 foreach ( var attribute in person.Attributes.OrderBy( a => a.Value.Order ) )
                 {
-                    string value = person.GetAttributeValue( attribute.Key );
-                    bool condensed = attribute.Value.FieldType.Class == typeof( Rock.Field.Types.ImageFieldType ).FullName;
-                    string formattedValue = attribute.Value.FieldType.Field.FormatValue( null, value, attribute.Value.QualifierValues, condensed );
-                    AddProperty( "attr_" + attribute.Key, attribute.Value.Name, person.Id, value, formattedValue );
+                    if ( attribute.Value.IsAuthorized( Rock.Security.Authorization.VIEW, currentPerson ) )
+                    {
+                        string value = person.GetAttributeValue( attribute.Key );
+                        bool condensed = attribute.Value.FieldType.Class == typeof( Rock.Field.Types.ImageFieldType ).FullName;
+                        string formattedValue = attribute.Value.FieldType.Field.FormatValue( null, attribute.Value.EntityTypeId, person.Id, value, attribute.Value.QualifierValues, condensed );
+                        AddProperty( "attr_" + attribute.Key, attribute.Value.Name, person.Id, value, formattedValue );
+                    }
+                }
+            }
+
+            foreach ( var person in people )
+            {
+                AddProperty( "FamilyAttributes", "Family Attributes", 0, string.Empty );
+                var family = person.GetFamily();
+                if ( family != null )
+                {
+                    family.LoadAttributes();
+                    foreach ( var attribute in family.Attributes.OrderBy( a => a.Value.Order ) )
+                    {
+                        if ( attribute.Value.IsAuthorized( Rock.Security.Authorization.VIEW, currentPerson ) )
+                        {
+                            string value = family.GetAttributeValue( attribute.Key );
+                            bool condensed = attribute.Value.FieldType.Class == typeof( Rock.Field.Types.ImageFieldType ).FullName;
+                            string formattedValue = attribute.Value.FieldType.Field.FormatValue( null, attribute.Value.EntityTypeId, person.Id, value, attribute.Value.QualifierValues, condensed );
+                            AddProperty( "groupattr_" + attribute.Key, attribute.Value.Name, person.Id, value, formattedValue );
+                        }
+                    }
                 }
             }
 

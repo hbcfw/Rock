@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -76,7 +76,7 @@ namespace Rock.Apps.StatementGenerator
 
             var accounts = _rockRestClient.GetData<List<Rock.Client.FinancialAccount>>( "api/FinancialAccounts" );
 
-            lstAccounts.ItemsSource = accounts.OrderBy( a => a.Order ).ThenBy( a => a.Name ).Select( a => new NameIdIsChecked { Id = a.Id, Name = a.Name, IsChecked = true } );
+            lstAccounts.ItemsSource = accounts.OrderBy( a => a.Order ).ThenBy( a => a.Name ).Select( a => new NameIdIsChecked { Id = a.Id, Name = a.PublicName, IsChecked = true } );
 
             lblWarning.Visibility = Visibility.Hidden;
         }

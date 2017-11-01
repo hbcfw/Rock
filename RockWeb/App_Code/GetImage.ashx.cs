@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -259,11 +259,35 @@ namespace RockWeb
                     context.Response.Cache.SetMaxAge( new TimeSpan( 365, 0, 0, 0 ) );
                 }
 
+                // set the mime-type to that of the binary file
                 context.Response.ContentType = binaryFileMetaData.MimeType != "image/tiff" ? binaryFileMetaData.MimeType : "image/jpg";
+
+                // check that the format of the image wasn't changed by a format query parm if so adjust the mime-type to reflect the conversion
+                if ( context.Request["format"].IsNotNullOrWhitespace() )
+                {
+                    switch ( context.Request["format"] )
+                    {
+                        case "png":
+                            {
+                                context.Response.ContentType = "image/png";
+                                break;
+                            }
+                        case "gif":
+                            {
+                                context.Response.ContentType = "image/gif";
+                                break;
+                            }
+                        case "jpg":
+                            {
+                                context.Response.ContentType = "image/jpeg";
+                                break;
+                            }
+                    }
+                }
 
                 using ( var responseStream = fileContent )
                 {
-                    context.Response.AddHeader( "content-disposition", "inline;filename=" + binaryFileMetaData.FileName.MakeValidFileName() );
+                    context.Response.AddHeader( "content-disposition", "inline;filename=" + binaryFileMetaData.FileName.MakeValidFileName().UrlEncode() );
                     if ( responseStream.CanSeek )
                     {
                         responseStream.Seek( 0, SeekOrigin.Begin );

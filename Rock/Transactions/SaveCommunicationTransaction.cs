@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,6 +14,7 @@
 // limitations under the License.
 // </copyright>
 //
+using System;
 using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
@@ -83,6 +84,7 @@ namespace Rock.Transactions
         /// <value>
         /// The text message.
         /// </value>
+        [Obsolete("Text Message property is no longer supported for emails")]
         public string TextMessage { get; set; }
 
         /// <summary>
@@ -169,7 +171,7 @@ namespace Rock.Transactions
                 int? senderPersonAliasId = sender != null ? sender.PrimaryAliasId : (int?)null;
 
                 new CommunicationService( rockContext ).CreateEmailCommunication(
-                    RecipientEmails, FromName, FromAddress, ReplyTo, Subject, HtmlMessage, TextMessage, BulkCommunication,
+                    RecipientEmails, FromName, FromAddress, ReplyTo, Subject, HtmlMessage, BulkCommunication,
                     RecipientStatus, senderPersonAliasId );
                 rockContext.SaveChanges();
             }

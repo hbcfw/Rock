@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -463,6 +463,14 @@ namespace Rock.Web.UI
             this.BlockValidationGroup = string.Format( "{0}_{1}", this.GetType().BaseType.Name, BlockCache.Id );
 
             RockPage.BlockUpdated += Page_BlockUpdated;
+
+            if ( !Page.IsPostBack )
+            {
+                if ( this is ICustomGridColumns )
+                {
+                    AddCustomGridColumns();
+                }
+            }
         }
 
         /// <summary>
@@ -475,11 +483,21 @@ namespace Rock.Web.UI
             {
                 if ( this.PageParameter( "ShowDebugTimings" ).AsBoolean() )
                 {
-                    TimeSpan tsDuration = RockDateTime.Now.Subtract( (DateTime)Context.Items["Request_Start_Time"] );
+                    TimeSpan tsDuration = RockDateTime.Now.Subtract( ( DateTime ) Context.Items["Request_Start_Time"] );
                     var lblShowDebugTimings = this.Page.Form.Controls.OfType<Label>().Where( a => a.ID == "lblShowDebugTimings" ).FirstOrDefault();
                     if ( lblShowDebugTimings != null )
                     {
+                        var previousPointInTimeMS = lblShowDebugTimings.Attributes["PointInTimeMS"]?.AsDoubleOrNull();
+                        if ( previousPointInTimeMS.HasValue )
+                        {
+                            var lastDurationMS = Math.Round(tsDuration.TotalMilliseconds - previousPointInTimeMS.Value, 3);
+                            lblShowDebugTimings.Text = lblShowDebugTimings.Text.ReplaceLastOccurrence( "</pre>", $"  [{lastDurationMS}ms]</pre>" );
+                        }
+
                         lblShowDebugTimings.Text += string.Format( "<pre>Start OnLoad {0} @ {1}</pre>", this.BlockName, tsDuration.TotalMilliseconds );
+
+
+                        lblShowDebugTimings.Attributes["PointInTimeMS"] = tsDuration.TotalMilliseconds.ToString();
                     }
                 }
             }
@@ -487,12 +505,12 @@ namespace Rock.Web.UI
             {
                 // ignore
             }
-            
+
             base.OnLoad( e );
 
             if ( this.BlockCache == null ||
-                this.BlockCache.Page == null || 
-                this.BlockCache.Page.Layout == null || 
+                this.BlockCache.Page == null ||
+                this.BlockCache.Page.Layout == null ||
                 this.BlockCache.Page.Layout.FileName != "Dialog" )
             {
                 SetValidationGroup( this.Controls, BlockValidationGroup );
@@ -500,6 +518,39 @@ namespace Rock.Web.UI
         }
 
         #endregion
+
+
+        #region ICustomGridColumns
+
+        /// <summary>
+        /// Adds any custom grid columns to the Grid on the block
+        /// </summary>
+        public virtual void AddCustomGridColumns()
+        {
+            var additionalColumns = this.GetAttributeValue( CustomGridColumnsConfig.AttributeKey ).FromJsonOrNull<CustomGridColumnsConfig>();
+            var grid = this.ControlsOfTypeRecursive<Rock.Web.UI.Controls.Grid>().FirstOrDefault();
+            if ( grid != null && additionalColumns != null && additionalColumns.ColumnsConfig.Any() )
+            {
+                foreach ( var columnConfig in additionalColumns.ColumnsConfig )
+                {
+                    int insertPosition;
+                    if ( columnConfig.PositionOffsetType == CustomGridColumnsConfig.ColumnConfig.OffsetType.LastColumn )
+                    {
+                        insertPosition = grid.Columns.Count - columnConfig.PositionOffset;
+                    }
+                    else
+                    {
+                        insertPosition = columnConfig.PositionOffset;
+                    }
+
+                    var column = columnConfig.GetGridColumn();
+                    grid.Columns.Insert( insertPosition, column );
+                    insertPosition++;
+                }
+            }
+        }
+
+        #endregion ICustomGridColumns
 
         #region Public Methods
 
@@ -513,7 +564,7 @@ namespace Rock.Web.UI
             PageCache = pageCache;
             BlockCache = blockCache;
             UserCanEdit = IsUserAuthorized( Authorization.EDIT );
-            UserCanAdministrate  = IsUserAuthorized( Authorization.ADMINISTRATE );
+            UserCanAdministrate = IsUserAuthorized( Authorization.ADMINISTRATE );
         }
 
         /// <summary>
@@ -650,7 +701,7 @@ namespace Rock.Web.UI
         /// In each <see cref="System.Collections.Generic.KeyValuePair{String,String}"/> the key value is a <see cref="System.String"/> that represents the name of the query string 
         /// parameter, and the value is a <see cref="System.String"/> that represents the query string value..</param>
         /// <returns>A <see cref="System.String"/> representing the URL to the linked <see cref="Rock.Model.Page"/>. </returns>
-        public string LinkedPageUrl( string attributeKey, Dictionary<string, string> queryParams = null )
+        public virtual string LinkedPageUrl( string attributeKey, Dictionary<string, string> queryParams = null )
         {
             var pageReference = new PageReference( GetAttributeValue( attributeKey ), queryParams );
             if ( pageReference.PageId > 0 )
@@ -664,13 +715,23 @@ namespace Rock.Web.UI
         }
 
         /// <summary>
+        /// If this Attribute is a reference to a PageRoute, this will return the Route, otherwise it will return the normal URL
+        /// </summary>
+        /// <param name="attributeKey">The attribute key.</param>
+        /// <returns></returns>
+        public string LinkedPageRoute( string attributeKey )
+        {
+            return new PageReference( GetAttributeValue( attributeKey ) ).Route;
+        }
+
+        /// <summary>
         /// Navigate to a linked <see cref="Rock.Model.Page"/>.
         /// </summary>
         /// <param name="attributeKey">A <see cref="System.String"/> representing the name of the linked <see cref="Rock.Model.Page"/> attribute key.</param>
         /// <param name="queryParams">A <see cref="System.Collections.Generic.Dictionary{String,String}"/> containing the query string parameters to include in the linked page URL.  
         /// Each <see cref="System.Collections.Generic.KeyValuePair{String,String}"/> the key value is a <see cref="System.String"/> that represents the name of the query string
         /// parameter, and the value is a <see cref="System.String"/> that represents the query string value. This dictionary defaults to a null value.</param>
-        public bool NavigateToLinkedPage( string attributeKey, Dictionary<string, string> queryParams = null )
+        public virtual bool NavigateToLinkedPage( string attributeKey, Dictionary<string, string> queryParams = null )
         {
             string url = LinkedPageUrl( attributeKey, queryParams );
 
@@ -705,6 +766,42 @@ namespace Rock.Web.UI
             }
 
             return NavigateToLinkedPage( attributeKey, queryParams );
+        }
+
+        /// <summary>
+        /// Navigates to current page id
+        /// </summary>
+        /// <param name="queryString">The query string.</param>
+        /// <returns></returns>
+        public bool NavigateToCurrentPage( Dictionary<string, string> queryString = null )
+        {
+            var pageCache = PageCache.Read( RockPage.PageId );
+            if ( pageCache != null )
+            {
+                return NavigateToPage( pageCache.Guid, queryString );
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Navigates to current page reference including current page parameters and query parameters, with an option to specify additional query parameters
+        /// </summary>
+        /// <param name="additionalQueryParameters">The additional query parameters.</param>
+        /// <returns></returns>
+        public bool NavigateToCurrentPageReference( Dictionary<string, string> additionalQueryParameters = null)
+        {
+            var pageReference = new Rock.Web.PageReference( this.CurrentPageReference );
+            pageReference.QueryString = new System.Collections.Specialized.NameValueCollection( pageReference.QueryString );
+            if ( additionalQueryParameters != null )
+            {
+                foreach ( var qryParam in additionalQueryParameters )
+                {
+                    pageReference.QueryString[qryParam.Key] = qryParam.Value;
+                }
+            }
+
+            return NavigateToPage( pageReference );
         }
 
         /// <summary>
@@ -848,7 +945,7 @@ namespace Rock.Web.UI
                 {
                     return string.Format( "<img src='{0}'{1}/>", photoUrl.ToString(), styleString );
                 }
-                
+
             }
 
             return string.Empty;
@@ -1118,8 +1215,9 @@ namespace Rock.Web.UI
                 {
                     // Move
                     HtmlGenericControl aMoveBlock = new HtmlGenericControl( "a" );
-                    aMoveBlock.Attributes.Add( "class", "block-move block-move" );
+                    aMoveBlock.Attributes.Add( "class", "block-move" );
                     aMoveBlock.Attributes.Add( "href", BlockCache.Id.ToString() );
+                    aMoveBlock.Attributes.Add( "data-blockname", BlockCache.Name );
                     aMoveBlock.Attributes.Add( "data-zone", BlockCache.Zone );
                     aMoveBlock.Attributes.Add( "data-zone-location", BlockCache.BlockLocation.ToString() );
                     aMoveBlock.Attributes.Add( "title", "Move Block" );
@@ -1131,7 +1229,7 @@ namespace Rock.Web.UI
 
                 // Delete
                 HtmlGenericControl aDeleteBlock;
-                if (!this.BlockCache.IsSystem)
+                if ( !this.BlockCache.IsSystem )
                 {
                     aDeleteBlock = new HtmlGenericControl( "a" );
                     aDeleteBlock.Attributes.Add( "class", "delete block-delete" );
@@ -1146,7 +1244,7 @@ namespace Rock.Web.UI
                     aDeleteBlock.Attributes.Add( "class", "delete block-delete disabled js-disabled" );
                     configControls.Add( aDeleteBlock );
                 }
-                
+
                 HtmlGenericControl iDeleteBlock = new HtmlGenericControl( "i" );
                 aDeleteBlock.Controls.Add( iDeleteBlock );
                 iDeleteBlock.Attributes.Add( "class", "fa fa-times-circle-o" );

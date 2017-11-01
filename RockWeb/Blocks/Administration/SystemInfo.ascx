@@ -10,6 +10,12 @@
             });
         });
 
+        $('#show-routes').click(function () {
+            $('#routes').toggle('slow', function () {
+                Rock.controls.modal.updateSize();
+            });
+        });
+
         $('a.show-pill').click(function () {
     	    $('ul.nav-pills > li').attr('class', '');
     	    $(this).parent().attr('class', 'active');
@@ -49,7 +55,7 @@
         <Rock:NotificationBox ID="nbMessage" runat="server" NotificationBoxType="Success" Title="Success" Visible="false" Text=""></Rock:NotificationBox>
 
         <div class="actions margin-t-xl">
-            <asp:Button runat="server" ID="btnFlushCache" CssClass="btn btn-primary" Text="Clear Cache" OnClick="btnClearCache_Click" ToolTip="Flushes all cached items from the Rock cache (e.g. Pages, BlockTypes, Blocks, Attributes, etc." />
+            <Rock:BootstrapButton runat="server" ID="btnFlushCache" CssClass="btn btn-primary" Text="Clear Cache" OnClick="btnClearCache_Click" DataLoadingText="Clearing..." ToolTip="Flushes all cached items from the Rock cache (e.g. Pages, BlockTypes, Blocks, Attributes, etc." />
             <asp:Button runat="server" ID="btnRestart" CssClass="btn btn-link js-restart" Text="Restart Rock" OnClick="btnRestart_Click" ToolTip="Restarts the Application." />
         </div>
     </div>
@@ -90,6 +96,10 @@
         <div class="row">
             <div class="col-md-6">
 
+                <h4>Transaction Queue</h4>
+                <asp:Literal ID="lTransactionQueue" runat="server"></asp:Literal>
+                
+                
                 <h4>Cache</h4>
                 <div id="cache-details">
                     <asp:Literal ID="lCacheOverview" runat="server"></asp:Literal>
@@ -108,7 +118,15 @@
             <div class="col-md-6">
 
                 <h4>Routes</h4>
-                <asp:Literal ID="lRoutes" runat="server"></asp:Literal>
+
+                <p><a id="show-routes" href="#">Show Routes</a></p>
+                <div id="routes" style="display:none">
+                    <p>
+                    <asp:Literal ID="lRoutes" runat="server"></asp:Literal>
+                    </p>
+                </div>
+
+                
 
             </div>
         </div>

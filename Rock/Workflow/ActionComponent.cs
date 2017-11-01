@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -49,9 +49,8 @@ namespace Rock.Workflow
         /// <summary>
         /// Initializes a new instance of the <see cref="ActionComponent" /> class.
         /// </summary>
-        public ActionComponent()
+        public ActionComponent() : base( false )
         {
-            // Override default constructor of Component that loads attributes (not needed for workflow actions, needs to be done by each action)
         }
 
         /// <summary>
@@ -63,16 +62,6 @@ namespace Rock.Workflow
         /// <param name="errorMessages">The error messages.</param>
         /// <returns></returns>
         public abstract Boolean Execute( RockContext rockContext, WorkflowAction action, Object entity, out List<string> errorMessages );
-
-        /// <summary>
-        /// Loads the attributes for the action.  The attributes are loaded by the framework prior to executing the action, 
-        /// so typically workflow actions do not need to load the attributes
-        /// </summary>
-        /// <param name="action">The action.</param>
-        public void LoadAttributes( WorkflowAction action )
-        {
-            action.ActionType.LoadAttributes();
-        }
 
         /// <summary>
         /// Use GetAttributeValue( WorkflowAction action, string key) instead.  Workflow action attribute values are 
@@ -122,7 +111,46 @@ namespace Rock.Workflow
         /// <returns></returns>
         protected string GetAttributeValue( WorkflowAction action, string key )
         {
-            return GetActionAttributeValue( action, key );
+            return GetAttributeValue( action, key, false );
+        }
+
+        /// <summary>
+        /// Gets the attribute value.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        /// <param name="key">The key.</param>
+        /// <param name="checkWorkflowAttributeValue">if set to <c>true</c> and the returned value is a guid, check to see if the workflow 
+        /// or activity contains an attribute with that guid. This is useful when using the WorkflowTextOrAttribute field types to get the 
+        /// actual value or workflow value.</param>
+        /// <returns></returns>
+        protected string GetAttributeValue( WorkflowAction action, string key, bool checkWorkflowAttributeValue )
+        {
+            string value = GetActionAttributeValue( action, key );
+            if ( checkWorkflowAttributeValue )
+            {
+                Guid? attributeGuid = value.AsGuidOrNull();
+                if ( attributeGuid.HasValue )
+                {
+                    var attribute = AttributeCache.Read( attributeGuid.Value );
+                    if ( attribute != null )
+                    {
+                        value = action.GetWorklowAttributeValue( attributeGuid.Value );
+                        if ( !string.IsNullOrWhiteSpace( value ) )
+                        {
+                            if ( attribute.FieldTypeId == FieldTypeCache.Read( SystemGuid.FieldType.ENCRYPTED_TEXT.AsGuid() ).Id )
+                            {
+                                value = Security.Encryption.DecryptString( value );
+                            }
+                            else if ( attribute.FieldTypeId == FieldTypeCache.Read( SystemGuid.FieldType.SSN.AsGuid() ).Id )
+                            {
+                                value = Rock.Field.Types.SSNFieldType.UnencryptAndClean( value );
+                            }
+                        }
+                    }
+                }
+            }
+
+            return value;
         }
 
         /// <summary>
@@ -133,7 +161,7 @@ namespace Rock.Workflow
         /// <returns></returns>
         public static string GetActionAttributeValue( WorkflowAction action, string key )
         {
-            var actionType = action.ActionType;
+            var actionType = action.ActionTypeCache;
 
             if ( actionType != null )
             {
@@ -141,6 +169,7 @@ namespace Rock.Workflow
                 {
                     actionType.LoadAttributes();
                 }
+
                 var values = actionType.AttributeValues;
                 if ( values.ContainsKey( key ) )
                 {
@@ -161,27 +190,78 @@ namespace Rock.Workflow
             return string.Empty;
         }
 
+
+        /// <summary>
+        /// Sets the workflow attribute value.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        /// <param name="key">The key.</param>
+        /// <param name="value">The value.</param>
+        protected AttributeCache SetWorkflowAttributeValue( WorkflowAction action, string key, int? value )
+        {
+            return SetWorkflowAttributeValue( action, key, value.ToString() );
+        }
+
+        /// <summary>
+        /// Sets the workflow attribute value.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        /// <param name="key">The key.</param>
+        /// <param name="value">The value.</param>
+        protected AttributeCache SetWorkflowAttributeValue( WorkflowAction action, string key, decimal? value )
+        {
+            return SetWorkflowAttributeValue( action, key, value.ToString() );
+        }
+
+        /// <summary>
+        /// Sets the workflow attribute value.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        /// <param name="key">The key.</param>
+        /// <param name="value">The value.</param>
+        protected AttributeCache SetWorkflowAttributeValue( WorkflowAction action, string key, Guid? value )
+        {
+            return SetWorkflowAttributeValue( action, key, value.ToString() );
+        }
+
+        /// <summary>
+        /// Sets the workflow attribute value.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        /// <param name="key">The key.</param>
+        /// <param name="value">The value.</param>
+        protected AttributeCache SetWorkflowAttributeValue( WorkflowAction action, string key, string value )
+        {
+            Guid? attrGuid = GetAttributeValue( action, key ).AsGuidOrNull();
+            if ( attrGuid.HasValue )
+            {
+                return SetWorkflowAttributeValue( action, attrGuid.Value, value );
+            }
+            return null;
+        }
+
         /// <summary>
         /// Sets the workflow attribute value.
         /// </summary>
         /// <param name="action">The action.</param>
         /// <param name="guid">The unique identifier.</param>
         /// <param name="value">The value.</param>
-        protected void SetWorkflowAttributeValue( WorkflowAction action, Guid guid, string value )
+        protected AttributeCache SetWorkflowAttributeValue( WorkflowAction action, Guid guid, string value )
         {
-            var testAttribute = AttributeCache.Read( guid );
-            if ( testAttribute != null )
+            var attr = AttributeCache.Read( guid );
+            if ( attr != null )
             {
-                string testAttributeValue = string.Empty;
-                if ( testAttribute.EntityTypeId == new Rock.Model.Workflow().TypeId )
+                if ( attr.EntityTypeId == new Rock.Model.Workflow().TypeId )
                 {
-                    action.Activity.Workflow.SetAttributeValue( testAttribute.Key, value );
+                    action.Activity.Workflow.SetAttributeValue( attr.Key, value );
                 }
-                else if ( testAttribute.EntityTypeId == new Rock.Model.WorkflowActivity().TypeId )
+                else if ( attr.EntityTypeId == new Rock.Model.WorkflowActivity().TypeId )
                 {
-                    action.Activity.SetAttributeValue( testAttribute.Key, value );
+                    action.Activity.SetAttributeValue( attr.Key, value );
                 }
             }
+
+            return attr;
         }
 
         /// <summary>
@@ -191,19 +271,10 @@ namespace Rock.Workflow
         /// <returns></returns>
         protected Dictionary<string, object> GetMergeFields( WorkflowAction action )
         {
-            var mergeFields = Rock.Web.Cache.GlobalAttributesCache.GetMergeFields( null );
+            var mergeFields = Lava.LavaHelper.GetCommonMergeFields( null );
             mergeFields.Add( "Action", action );
             mergeFields.Add( "Activity", action.Activity );
             mergeFields.Add( "Workflow", action.Activity.Workflow );
-
-            if ( HttpContext.Current != null && HttpContext.Current.Items.Contains( "CurrentPerson" ) )
-            {
-                var currentPerson = HttpContext.Current.Items["CurrentPerson"] as Person;
-                if (currentPerson != null)
-                {
-                    mergeFields.Add( "CurrentPerson", currentPerson );
-                }
-            }
 
             return mergeFields;
         }

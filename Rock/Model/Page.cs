@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,8 +19,9 @@ using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Entity.ModelConfiguration;
+using System.Linq;
 using System.Runtime.Serialization;
-
+using System.Web.Routing;
 using Newtonsoft.Json;
 
 using Rock.Data;
@@ -35,6 +36,7 @@ namespace Rock.Model
     /// Pages are hierarchical, and are used to create the structure of the site.  Each page can have one parent Page and zero or more children pages, and the 
     /// page hierarchy is used to create the SiteMap.
     /// </summary>
+    [RockDomain( "CMS" )]
     [Table( "Page" )]
     [DataContract]
     public partial class Page : Model<Page>, IOrdered
@@ -334,6 +336,16 @@ namespace Rock.Model
         }
         private bool _includeAdminFooter = true;
 
+        /// <summary>
+        /// Gets or sets the body CSS class.
+        /// </summary>
+        /// <value>
+        /// The body CSS class.
+        /// </value>
+        [DataMember]
+        [MaxLength( 100 )]
+        public string BodyCssClass { get; set; }
+
         #endregion
 
         #region Virtual Properties
@@ -344,6 +356,7 @@ namespace Rock.Model
         /// <value>
         /// The <see cref="Rock.Model.Page"/> entity for the parent Page
         /// </value>
+        [LavaInclude]
         public virtual Page ParentPage { get; set; }
 
         /// <summary>
@@ -369,7 +382,25 @@ namespace Rock.Model
         /// <value>
         /// The <see cref="Rock.Model.Layout"/> entity that the Page is using
         /// </value>
+        [LavaInclude]
         public virtual Layout Layout { get; set; }
+
+        /// <summary>
+        /// Gets the site identifier of the Page's Layout
+        /// NOTE: This is needed so that Page Attributes qualified by SiteId work
+        /// </summary>
+        /// <value>
+        /// The site identifier.
+        /// </value>
+        public virtual int SiteId
+        {
+            get
+            {
+                var layout = Web.Cache.LayoutCache.Read( this.LayoutId );
+                return layout != null ? layout.SiteId : 0;
+            }
+        }
+
         
         /// <summary>
         /// Gets or sets the collection of <see cref="Rock.Model.Block">Blocks</see> that are used on the page.
@@ -468,8 +499,28 @@ namespace Rock.Model
             {
                 Dictionary<string, object> parameters = new Dictionary<string, object>();
                 parameters.Add( "PageId", this.Id );
-                Rock.Data.DbService.ExecuteCommand( "spCore_PageViewNullPageId", System.Data.CommandType.StoredProcedure, parameters );
+
+                // since routes have a cascade delete relationship (their presave won't get called), delete routes from route table
+                var routes = RouteTable.Routes;
+                if ( routes != null )
+                {
+                    foreach( var existingRoute in RouteTable.Routes.OfType<Route>().Where( r => r.PageIds().Contains( this.Id ) ) )
+                    { 
+                        var pageAndRouteIds = existingRoute.DataTokens["PageRoutes"] as List<Rock.Web.PageAndRouteId>;
+                        pageAndRouteIds = pageAndRouteIds.Where( p => p.PageId != this.Id ).ToList();
+                        if ( pageAndRouteIds.Any() )
+                        {
+                            existingRoute.DataTokens["PageRoutes"] = pageAndRouteIds;
+                        }
+                        else
+                        {
+                            RouteTable.Routes.Remove( existingRoute );
+                        }
+                    }
+                }
             }
+
+            base.PreSaveChanges( dbContext, state );
         }
 
         /// <summary>

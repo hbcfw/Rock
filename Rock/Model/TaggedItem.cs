@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,6 +27,7 @@ namespace Rock.Model
     /// <summary>
     /// Represents an entity object that belongs to a Tag. The same entity object can belong to multiple tags.
     /// </summary>
+    [RockDomain( "Core" )]
     [Table( "TaggedItem" )]
     [DataContract]
     public partial class TaggedItem : Model<TaggedItem>
@@ -53,7 +54,17 @@ namespace Rock.Model
         [Required]
         [DataMember( IsRequired = true )]
         public int TagId { get; set; }
-        
+
+        /// <summary>
+        /// Gets or sets the entity type identifier.
+        /// </summary>
+        /// <value>
+        /// The entity type identifier.
+        /// </value>
+        [Required]
+        [DataMember( IsRequired = true )]
+        public int EntityTypeId { get; set; }
+
         /// <summary>
         /// Gets or sets the GUID identifier of the tagged entity.
         /// </summary>
@@ -84,6 +95,15 @@ namespace Rock.Model
         /// </value>
         [DataMember]
         public virtual Tag Tag { get; set; }
+
+        /// <summary>
+        /// Gets or sets the <see cref="Rock.Model.EntityType"/> of this item.
+        /// </summary>
+        /// <value>
+        /// The <see cref="Rock.Model.EntityType"/> of this item.
+        /// </value>
+        [DataMember]
+        public virtual Model.EntityType EntityType { get; set; }
 
         #endregion
 
@@ -131,6 +151,7 @@ namespace Rock.Model
         public TaggedItemConfiguration()
         {
             this.HasRequired( p => p.Tag ).WithMany( p => p.TaggedItems ).HasForeignKey( p => p.TagId ).WillCascadeOnDelete(true);
+            this.HasRequired( p => p.EntityType ).WithMany().HasForeignKey( p => p.EntityTypeId ).WillCascadeOnDelete( false );
         }
     }
 

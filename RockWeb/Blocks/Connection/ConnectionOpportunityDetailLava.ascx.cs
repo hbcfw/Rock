@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -37,7 +37,6 @@ namespace RockWeb.Blocks.Connection
     [Description( "Displays the details of the given opportunity for the external website." )]
     [LinkedPage( "Signup Page", "The page used to sign up for an opportunity" )]
     [CodeEditorField( "Lava Template", "Lava template to use to display the package details.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 400, true, @"{% include '~~/Assets/Lava/OpportunityDetail.lava' %}", "", 2 )]
-    [BooleanField( "Enable Debug", "Display a list of merge fields available for lava.", false, "", 3 )]
     [BooleanField( "Set Page Title", "Determines if the block should set the page title with the package name.", false )]
     public partial class ConnectionOpportunityDetailLava : RockBlock
     {
@@ -137,18 +136,15 @@ namespace RockWeb.Blocks.Connection
                     .Queryable()
                     .Where( g => g.Id == opportunityId );
 
-                if ( !enableDebug )
-                {
-                    qry = qry.AsNoTracking();
-                }
+                qry = qry.AsNoTracking();
+ 
                 var opportunity = qry.FirstOrDefault();
 
-                var mergeFields = new Dictionary<string, object>();
+                var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
                 Dictionary<string, object> linkedPages = new Dictionary<string, object>();
-                linkedPages.Add( "SignupPage", LinkedPageUrl( "SignupPage", null ) );
+                linkedPages.Add( "SignupPage", LinkedPageRoute( "SignupPage" ) );
                 mergeFields.Add( "LinkedPages", linkedPages );
 
-                mergeFields.Add( "CurrentPerson", CurrentPerson );
                 mergeFields.Add( "CampusContext", RockPage.GetCurrentContext( EntityTypeCache.Read( "Rock.Model.Campus" ) ) as Campus );
 
                 // run opportunity summary and details through lava
@@ -158,10 +154,6 @@ namespace RockWeb.Blocks.Connection
                 mergeFields.Add( "Opportunity", opportunity );
 
                 // add linked pages
-                
-
-                var globalAttributeFields = Rock.Web.Cache.GlobalAttributesCache.GetMergeFields( CurrentPerson );
-                globalAttributeFields.ToList().ForEach( d => mergeFields.Add( d.Key, d.Value ) );
 
                 lOutput.Text = GetAttributeValue( "LavaTemplate" ).ResolveMergeFields( mergeFields );
 
@@ -173,12 +165,6 @@ namespace RockWeb.Blocks.Connection
                     RockPage.Header.Title = String.Format( "{0} | {1}", pageTitle, RockPage.Site.Name );
                 }
 
-                // show debug info
-                if ( GetAttributeValue( "EnableDebug" ).AsBoolean() && IsUserAuthorized( Authorization.EDIT ) )
-                {
-                    lDebug.Visible = true;
-                    lDebug.Text = mergeFields.lavaDebugInfo();
-                }
             }
         }
         #endregion

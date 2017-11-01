@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +19,9 @@ using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
 using System.Text;
+using System.Web;
+using System.Web.Security;
+
 using Rock.Data;
 using Rock.Model;
 using Rock.Web.Cache;
@@ -44,6 +47,11 @@ namespace Rock.Security
         public const string EDIT = "Edit";
 
         /// <summary>
+        /// Authorization to delete object (only used in few places where delete needs to be securred differently that EDIT, i.e. Financial Batch )
+        /// </summary>
+        public const string DELETE = "Delete";
+
+        /// <summary>
         /// Authorization to administer object ( add child object, set security, etc)
         /// </summary>
         public const string ADMINISTRATE = "Administrate";
@@ -52,6 +60,16 @@ namespace Rock.Security
         /// Authorization to approve object (html, prayer, ads, etc)
         /// </summary>
         public const string APPROVE = "Approve";
+
+        /// <summary>
+        /// Authorization to interact with the object (content channel item)
+        /// </summary>
+        public const string INTERACT = "Interact";
+
+        /// <summary>
+        /// Authorization to refund a transaction
+        /// </summary>
+        public const string REFUND = "Refund";
 
         #endregion
 
@@ -86,7 +104,7 @@ namespace Rock.Security
             {
                 List<AuthEntityRule> authEntityRules = new List<AuthEntityRule>();
 
-                var securityGroupType = GroupTypeCache.Read( Rock.SystemGuid.GroupType.GROUPTYPE_SECURITY_ROLE.AsGuid());
+                var securityGroupType = GroupTypeCache.Read( Rock.SystemGuid.GroupType.GROUPTYPE_SECURITY_ROLE.AsGuid() );
                 int securityGroupTypeId = securityGroupType != null ? securityGroupType.Id : 0;
 
                 // query the database for all of the entity auth rules
@@ -94,13 +112,14 @@ namespace Rock.Security
                 {
                     foreach ( var auth in new AuthService( rockContext )
                         .Queryable().AsNoTracking()
-                        .Where( t => 
+                        .Where( t =>
                             t.Group == null ||
                             ( t.Group.IsActive && ( t.Group.IsSecurityRole || t.Group.GroupTypeId == securityGroupTypeId ) ) )
                         .OrderBy( A => A.EntityTypeId )
                         .ThenBy( A => A.EntityId )
                         .ThenBy( A => A.Action )
                         .ThenBy( A => A.Order )
+                        .ThenBy( A => A.Id )
                         .Select( a => new
                         {
                             a.Id,
@@ -110,7 +129,7 @@ namespace Rock.Security
                             a.AllowOrDeny,
                             a.SpecialRole,
                             a.PersonAliasId,
-                            PersonId = a.PersonAlias != null ? a.PersonAlias.PersonId : (int?)null,
+                            PersonId = a.PersonAlias != null ? a.PersonAlias.PersonId : ( int? ) null,
                             a.GroupId,
                             a.Order
                         } ) )
@@ -166,7 +185,8 @@ namespace Rock.Security
         /// </summary>
         /// <param name="entityTypeId">The entity type identifier.</param>
         /// <param name="entityId">The entity identifier.</param>
-        public static void ReloadEntity( int entityTypeId, int entityId )
+        /// <param name="rockContext">The rock context.</param>
+        public static void ReloadEntity( int entityTypeId, int entityId, RockContext rockContext = null )
         {
             var rockMemoryCache = RockMemoryCache.Default;
             if ( rockMemoryCache.IsRedisClusterEnabled && rockMemoryCache.IsRedisConnected )
@@ -175,7 +195,7 @@ namespace Rock.Security
             }
             else
             {
-                RefreshEntity( entityTypeId, entityId );
+                RefreshEntity( entityTypeId, entityId, rockContext );
             }
         }
 
@@ -184,13 +204,14 @@ namespace Rock.Security
         /// </summary>
         /// <param name="entityTypeId">The entity type identifier.</param>
         /// <param name="entityId">The entity identifier.</param>
-        internal static void RefreshEntity( int entityTypeId, int entityId )
+        /// <param name="rockContext">The rock context.</param>
+        internal static void RefreshEntity( int entityTypeId, int entityId, RockContext rockContext = null )
         {
             if ( !Load() )
             {
                 lock ( _lock )
                 {
-                    if ( _authorizations != null && _authorizations.ContainsKey(entityTypeId) )
+                    if ( _authorizations != null && _authorizations.ContainsKey( entityTypeId ) )
                     {
                         var entityAuths = _authorizations[entityTypeId];
                         if ( entityAuths.ContainsKey( entityId ) )
@@ -201,34 +222,56 @@ namespace Rock.Security
                 }
 
                 // Query database for the authorizations related to this entitytype, entity, and action
-                using ( var rockContext = new RockContext() )
+                List<Auth> auths;
+
+                if ( rockContext != null )
                 {
-                    var securityGroupType = GroupTypeCache.Read( Rock.SystemGuid.GroupType.GROUPTYPE_SECURITY_ROLE.AsGuid(), rockContext );
-                    int securityGroupTypeId = securityGroupType != null ? securityGroupType.Id : 0;
-
-                    var auths = new AuthService( rockContext )
-                        .Get( entityTypeId, entityId )
-                        .AsNoTracking()
-                        .Where( t =>
-                            t.Group == null ||
-                            ( t.Group.IsActive && ( t.Group.IsSecurityRole || t.Group.GroupTypeId == securityGroupTypeId ) )
-                        )
-                        .OrderBy( a => a.Order )
-                        .ToList();
-
-                    var actions = auths.Select( a => a.Action ).Distinct().ToList();
-                    foreach ( string action in actions )
+                    auths = LoadAuths( entityTypeId, entityId, rockContext );
+                }
+                else
+                {
+                    using ( rockContext = new RockContext() )
                     {
-                        var newAuthRules = new List<AuthRule>();
-
-                        foreach ( Auth auth in auths.Where( a => a.Action == action ) )
-                        {
-                            newAuthRules.Add( new AuthRule( auth ) );
-                        }
-                        ResetAction( entityTypeId, entityId, action, newAuthRules );
+                        auths = LoadAuths( entityTypeId, entityId, rockContext );
                     }
                 }
+
+                var actions = auths.Select( a => a.Action ).Distinct().ToList();
+                foreach ( string action in actions )
+                {
+                    var newAuthRules = new List<AuthRule>();
+
+                    foreach ( Auth auth in auths.Where( a => a.Action == action ) )
+                    {
+                        newAuthRules.Add( new AuthRule( auth ) );
+                    }
+                    ResetAction( entityTypeId, entityId, action, newAuthRules );
+                }
+
             }
+        }
+
+        /// <summary>
+        /// Loads the authorizations
+        /// </summary>
+        /// <param name="entityTypeId">The Entity Type Id</param>
+        /// <param name="entityId">The Entity Id</param>
+        /// <param name="rockContext">The RockContext to use</param>
+        /// <returns></returns>
+        private static List<Auth> LoadAuths( int entityTypeId, int entityId, RockContext rockContext )
+        {
+            var securityGroupType = GroupTypeCache.Read( Rock.SystemGuid.GroupType.GROUPTYPE_SECURITY_ROLE.AsGuid(), rockContext );
+            int securityGroupTypeId = securityGroupType != null ? securityGroupType.Id : 0;
+
+            return new AuthService( rockContext )
+                .Get( entityTypeId, entityId )
+                .AsNoTracking()
+                .Where( t =>
+                    t.Group == null ||
+                    ( t.Group.IsActive && ( t.Group.IsSecurityRole || t.Group.GroupTypeId == securityGroupTypeId ) )
+                )
+                .OrderBy( a => a.Order ).ThenBy( a => a.Id )
+                .ToList();
         }
 
         /// <summary>
@@ -256,7 +299,6 @@ namespace Rock.Security
         /// <param name="entityTypeId">The entity type id.</param>
         /// <param name="entityId">The entity id.</param>
         /// <param name="action">The action.</param>
-        /// <param name="isRedisCommand">if set to <c>true</c> [is redis command].</param>
         internal static void RefreshAction( int entityTypeId, int entityId, string action )
         {
             // if the authorizations have already been loaded, update just the selected action
@@ -282,7 +324,7 @@ namespace Rock.Security
                     }
                 }
 
-                ResetAction( entityTypeId, entityId, action, newAuthRules);
+                ResetAction( entityTypeId, entityId, action, newAuthRules );
             }
         }
 
@@ -349,7 +391,7 @@ namespace Rock.Security
         /// <returns></returns>
         public static bool Authorized( ISecured entity, string action, SpecialRole specialRole )
         {
-            return ItemAuthorized( entity, action, specialRole ) ?? entity.IsAllowedByDefault( action );
+            return ItemAuthorized( entity, action, specialRole, true, true ) ?? entity.IsAllowedByDefault( action );
         }
 
         /// <summary>
@@ -362,7 +404,7 @@ namespace Rock.Security
         /// <returns></returns>
         public static bool Authorized( ISecured entity, string action, Rock.Model.Person person )
         {
-            return ItemAuthorized( entity, action, person ) ?? entity.IsAllowedByDefault( action );
+            return ItemAuthorized( entity, action, person, true, true ) ?? entity.IsAllowedByDefault( action );
         }
 
         /// <summary>
@@ -479,7 +521,7 @@ namespace Rock.Security
                 }
             }
         }
-        
+
         /// <summary>
         /// Updates authorization rules for the entity so that the current person is allowed to perform the specified action.
         /// </summary>
@@ -599,7 +641,7 @@ namespace Rock.Security
 
             // Copy target auths to source auths
             int order = 0;
-            foreach( Auth sourceAuth in authService.Get( sourceEntityTypeId, sourceEntity.Id ).ToList() )
+            foreach ( Auth sourceAuth in authService.Get( sourceEntityTypeId, sourceEntity.Id ).ToList() )
             {
                 if ( ( string.IsNullOrWhiteSpace( action ) || sourceAuth.Action.Equals( action, StringComparison.OrdinalIgnoreCase ) ) &&
                     targetEntity.SupportedActions.ContainsKey( sourceAuth.Action ) )
@@ -619,7 +661,7 @@ namespace Rock.Security
                 }
             }
 
-            ReloadEntity( targetEntityTypeId, targetEntity.Id );
+            ReloadEntity( targetEntityTypeId, targetEntity.Id, rockContext );
 
         }
 
@@ -702,22 +744,111 @@ namespace Rock.Security
         /// <param name="IsImpersonated">if set to <c>true</c> [is impersonated].</param>
         public static void SetAuthCookie( string userName, bool isPersisted, bool IsImpersonated )
         {
-            var ticket = new System.Web.Security.FormsAuthenticationTicket( 1, userName, RockDateTime.Now,
-                RockDateTime.Now.Add( System.Web.Security.FormsAuthentication.Timeout ), isPersisted,
-                IsImpersonated.ToString(), System.Web.Security.FormsAuthentication.FormsCookiePath );
+            var ticket = new FormsAuthenticationTicket( 1, userName, RockDateTime.Now,
+                RockDateTime.Now.Add( FormsAuthentication.Timeout ), isPersisted,
+                IsImpersonated.ToString(), FormsAuthentication.FormsCookiePath );
 
-            var encryptedTicket = System.Web.Security.FormsAuthentication.Encrypt( ticket );
-
-            var httpCookie = new System.Web.HttpCookie( System.Web.Security.FormsAuthentication.FormsCookieName, encryptedTicket );
-            httpCookie.HttpOnly = true;
-            httpCookie.Path = System.Web.Security.FormsAuthentication.FormsCookiePath;
-            httpCookie.Secure = System.Web.Security.FormsAuthentication.RequireSSL;
-            if ( System.Web.Security.FormsAuthentication.CookieDomain != null )
-                httpCookie.Domain = System.Web.Security.FormsAuthentication.CookieDomain;
+            var authCookie = GetAuthCookie( GetCookieDomain(), FormsAuthentication.Encrypt( ticket ) );
             if ( ticket.IsPersistent )
-                httpCookie.Expires = ticket.Expiration;
+            {
+                authCookie.Expires = ticket.Expiration;
+            }
+            HttpContext.Current.Response.Cookies.Add( authCookie );
 
-            System.Web.HttpContext.Current.Response.Cookies.Add( httpCookie );
+            // If cookie is for a more generic domain, we need to store that domain so that we can expire it correctly 
+            // when the user signs out.
+            if ( authCookie.Domain.IsNotNullOrWhitespace() )
+            {
+                var domainCookie = new HttpCookie( $"{FormsAuthentication.FormsCookieName}_DOMAIN", authCookie.Domain );
+                domainCookie.HttpOnly = true;
+                domainCookie.Domain = authCookie.Domain;
+                domainCookie.Path = FormsAuthentication.FormsCookiePath;
+                domainCookie.Secure = FormsAuthentication.RequireSSL;
+                domainCookie.Expires = authCookie.Expires;
+                HttpContext.Current.Response.Cookies.Add( domainCookie );
+            }
+
+        }
+
+        /// <summary>
+        /// Signs a user out of rock by deleting the appropriate forms authentication cookies
+        /// </summary>
+        public static void SignOut()
+        {
+            var domainCookie = HttpContext.Current.Request.Cookies[$"{FormsAuthentication.FormsCookieName}_DOMAIN"];
+            if ( domainCookie != null )
+            { 
+                var authCookie = GetAuthCookie( domainCookie.Value, null );
+                authCookie.Expires = DateTime.Now.AddDays( -1d );
+                HttpContext.Current.Response.Cookies.Remove( FormsAuthentication.FormsCookieName );
+                HttpContext.Current.Response.Cookies.Add( authCookie );
+
+                domainCookie = new HttpCookie( $"{FormsAuthentication.FormsCookieName}_DOMAIN" );
+                domainCookie.HttpOnly = true;
+                domainCookie.Domain = authCookie.Domain;
+                domainCookie.Path = FormsAuthentication.FormsCookiePath;
+                domainCookie.Secure = FormsAuthentication.RequireSSL;
+                domainCookie.Expires = DateTime.Now.AddDays( -1d );
+                HttpContext.Current.Response.Cookies.Remove( $"{FormsAuthentication.FormsCookieName}_DOMAIN" );
+                HttpContext.Current.Response.Cookies.Add( domainCookie );
+            }
+            else
+            {
+                FormsAuthentication.SignOut();
+            }
+        }
+
+        /// <summary>
+        /// Create a forms authentication cookie.
+        /// </summary>
+        /// <param name="domain">The domain.</param>
+        /// <param name="value">The value.</param>
+        /// <returns></returns>
+        private static HttpCookie GetAuthCookie( string domain, string value )
+        {
+            var httpCookie = new HttpCookie( FormsAuthentication.FormsCookieName, value );
+            httpCookie.Domain = domain.IsNotNullOrWhitespace() ? domain : FormsAuthentication.CookieDomain;
+            httpCookie.HttpOnly = true;
+            httpCookie.Path = FormsAuthentication.FormsCookiePath;
+            httpCookie.Secure = FormsAuthentication.RequireSSL;
+            return httpCookie;
+        }
+
+
+        /// <summary>
+        /// Gets the domain for the forms authentication cookie. This is based on whether the current host name has an entry in the 'Domains Sharing Logins' defined type.
+        /// </summary>
+        /// <returns></returns>
+        private static string GetCookieDomain()
+        {
+            // Get the domains that should be saving cookies as domain level cookies instead of the default of subdomain level.
+            var dt = DefinedTypeCache.Read( SystemGuid.DefinedType.DOMAINS_SHARING_LOGINS.AsGuid() );
+            var domains = dt != null ? dt.DefinedValues.Select( v => v.Value ).ToList() : new List<string>();
+
+            // Get the first domain in the list that the current request's host name ends with
+            string domain  = domains.FirstOrDefault( d => System.Web.HttpContext.Current.Request.Url.Host.ToLower().EndsWith( d.ToLower() ) );
+            if ( domain.IsNotNullOrWhitespace() )
+            {
+                // Make sure domain name is prefixed with a '.'
+                domain = domain.StartsWith(".") ? domain : $".{domain}";
+
+                // Make sure there now at least two '.' characters (this is required for browser to store cookie).
+                return domain.Count( c => c == '.' ) >= 2 ? domain : string.Empty;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Checks to see if a person is authorized for entity
+        /// </summary>
+        /// <param name="entity">The entity.</param>
+        /// <param name="action">The action.</param>
+        /// <param name="person">The person.</param>
+        /// <returns></returns>
+        public static bool? AuthorizedForEntity( ISecured entity, string action, Rock.Model.Person person )
+        {
+            return ItemAuthorized( entity, action, person, true, false );
         }
 
         #endregion
@@ -730,8 +861,10 @@ namespace Rock.Security
         /// <param name="entity">The entity.</param>
         /// <param name="action">The action.</param>
         /// <param name="specialRole">The special role.</param>
+        /// <param name="isRootEntity">if set to <c>true</c> [is root entity].</param>
+        /// <param name="checkParentAuthority">if set to <c>true</c> [check parent authority].</param>
         /// <returns></returns>
-        private static bool? ItemAuthorized( ISecured entity, string action, SpecialRole specialRole )
+        private static bool? ItemAuthorized( ISecured entity, string action, SpecialRole specialRole, bool isRootEntity, bool checkParentAuthority )
         {
             Load();
 
@@ -772,14 +905,17 @@ namespace Rock.Security
             // parent authority return the defualt authorization
             bool? parentAuthorized = null;
 
-            if ( entity.ParentAuthorityPre != null )
+            if ( checkParentAuthority )
             {
-                parentAuthorized = ItemAuthorized( entity.ParentAuthorityPre, action, specialRole );
-            }
+                if ( isRootEntity && entity.ParentAuthorityPre != null )
+                {
+                    parentAuthorized = ItemAuthorized( entity.ParentAuthorityPre, action, specialRole, false, false );
+                }
 
-            if ( !parentAuthorized.HasValue && entity.ParentAuthority != null )
-            {
-                parentAuthorized = ItemAuthorized( entity.ParentAuthority, action, specialRole );
+                if ( !parentAuthorized.HasValue && entity.ParentAuthority != null )
+                {
+                    parentAuthorized = ItemAuthorized( entity.ParentAuthority, action, specialRole, false, true );
+                }
             }
 
             return parentAuthorized;
@@ -791,8 +927,10 @@ namespace Rock.Security
         /// <param name="entity">The entity.</param>
         /// <param name="action">The action.</param>
         /// <param name="person">The person.</param>
+        /// <param name="isRootEntity">if set to <c>true</c> [is root entity].</param>
+        /// <param name="checkParentAuthority">if set to <c>true</c> [check parent].</param>
         /// <returns></returns>
-        private static bool? ItemAuthorized( ISecured entity, string action, Rock.Model.Person person )
+        private static bool? ItemAuthorized( ISecured entity, string action, Rock.Model.Person person, bool isRootEntity, bool checkParentAuthority )
         {
             Load();
 
@@ -809,7 +947,7 @@ namespace Rock.Security
                     // check if the exact same instance of an entity is already a parent (indicating we are spinning around recursively)
                     if ( parentHistory.Any( a => a.TypeId == parentAuthEntity.TypeId && a.Id == parentAuthEntity.Id && parentAuthEntity.Id > 0 ) )
                     {
-                        // infinite recursion situation, so threat as if no rules were found and return NULL
+                        // infinite recursion situation, so treat as if no rules were found and return NULL
                         return null;
                     }
                     else
@@ -834,7 +972,7 @@ namespace Rock.Security
                     _authorizations[entityTypeId].Keys.Contains( entity.Id ) &&
                     _authorizations[entityTypeId][entity.Id].Keys.Contains( action ) )
                 {
-                    Guid? personGuid = person != null ? person.Guid : (Guid?)null;
+                    Guid? personGuid = person != null ? person.Guid : ( Guid? ) null;
 
                     foreach ( AuthRule authRule in _authorizations[entityTypeId][entity.Id][action] )
                     {
@@ -899,14 +1037,17 @@ namespace Rock.Security
             // parent authority return the defualt authorization
             bool? parentAuthorized = null;
 
-            if ( entity.ParentAuthorityPre != null )
+            if ( checkParentAuthority )
             {
-                parentAuthorized = entity.ParentAuthorityPre.IsAuthorized( action, person );
-            }
+                if ( isRootEntity && entity.ParentAuthorityPre != null )
+                {
+                    parentAuthorized = ItemAuthorized( entity.ParentAuthorityPre, action, person, false, false );
+                }
 
-            if ( !parentAuthorized.HasValue && entity.ParentAuthority != null )
-            {
-                parentAuthorized = entity.ParentAuthority.IsAuthorized( action, person );
+                if ( !parentAuthorized.HasValue && entity.ParentAuthority != null )
+                {
+                    parentAuthorized = ItemAuthorized( entity.ParentAuthority, action, person, false, true );
+                }
             }
 
             return parentAuthorized;
@@ -1038,8 +1179,8 @@ namespace Rock.Security
         /// <param name="group">The group.</param>
         /// <param name="specialRole">The special role.</param>
         /// <param name="rockContext">The rock context.</param>
-        private static void MyAllow( ISecured entity, string action, 
-            Person person = null, Group group = null, SpecialRole specialRole = SpecialRole.None, 
+        private static void MyAllow( ISecured entity, string action,
+            Person person = null, Group group = null, SpecialRole specialRole = SpecialRole.None,
             RockContext rockContext = null )
         {
             rockContext = rockContext ?? new RockContext();
@@ -1311,7 +1452,8 @@ namespace Rock.Security
                                     if ( group != null )
                                     {
                                         return string.Format( "<span class='text-muted'>GROUP - {0} <small>(No longer a valid active role)</small></span>",
-                                            group.Name ); ;
+                                            group.Name );
+                                        ;
                                     }
                                 }
                             }
@@ -1356,7 +1498,7 @@ namespace Rock.Security
             EntityId = auth.EntityId;
             AllowOrDeny = auth.AllowOrDeny == "A" ? 'A' : 'D';
             SpecialRole = auth.SpecialRole;
-            PersonId = auth.PersonAlias != null ? auth.PersonAlias.PersonId : (int?)null;
+            PersonId = auth.PersonAlias != null ? auth.PersonAlias.PersonId : ( int? ) null;
             PersonAliasId = auth.PersonAliasId;
             GroupId = auth.GroupId;
             Order = auth.Order;

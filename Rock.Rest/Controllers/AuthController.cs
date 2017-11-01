@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -62,7 +62,8 @@ namespace Rock.Rest.Controllers
         /// <summary>
         /// Use this to Login a user and return an AuthCookie which can be used in subsequent REST calls
         /// </summary>
-        /// <param name="loginParameters">The login parameters.</param>
+        /// <param name="facebookUser">The facebook user.</param>
+        /// <exception cref="HttpResponseException"></exception>
         /// <exception cref="System.Web.Http.HttpResponseException"></exception>
         [HttpPost]
         [System.Web.Http.Route( "api/Auth/FacebookLogin" )]
@@ -82,7 +83,8 @@ namespace Rock.Rest.Controllers
         /// <summary>
         /// Use this to Login a user and return an AuthCookie which can be used in subsequent REST calls
         /// </summary>
-        /// <param name="loginParameters">The login parameters.</param>
+        /// <param name="googleUser">The google user.</param>
+        /// <exception cref="HttpResponseException"></exception>
         /// <exception cref="System.Web.Http.HttpResponseException"></exception>
         [HttpPost]
         [System.Web.Http.Route("api/Auth/GoogleLogin")]
@@ -102,7 +104,8 @@ namespace Rock.Rest.Controllers
         /// <summary>
         /// Use this to Login a user and return an AuthCookie which can be used in subsequent REST calls
         /// </summary>
-        /// <param name="loginParameters">The login parameters.</param>
+        /// <param name="twitterUser">The twitter user.</param>
+        /// <exception cref="HttpResponseException"></exception>
         /// <exception cref="System.Web.Http.HttpResponseException"></exception>
         [HttpPost]
         [System.Web.Http.Route( "api/Auth/TwitterLogin" )]

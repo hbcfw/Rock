@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -117,10 +117,12 @@ namespace Rock.Transactions
 
                     if ( recipients.Any() )
                     {
-                        var recipientList = new List<RecipientData>();
-                        recipients.ToList().ForEach( r => recipientList.Add( new RecipientData( r.Key, r.Value ) ) );
-                        Email.Send( Rock.SystemGuid.SystemEmail.REGISTRATION_NOTIFICATION.AsGuid(), recipientList, AppRoot, ThemeRoot );
-
+                        var emailMessage = new RockEmailMessage( Rock.SystemGuid.SystemEmail.REGISTRATION_NOTIFICATION.AsGuid() );
+                        emailMessage.AdditionalMergeFields = mergeFields;
+                        recipients.ToList().ForEach( r => emailMessage.AddRecipient( new RecipientData( r.Key, r.Value ) ) );
+                        emailMessage.AppRoot = AppRoot;
+                        emailMessage.ThemeRoot = ThemeRoot;
+                        emailMessage.Send();
                     }
                 }
             }

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,6 +28,7 @@ namespace Rock.Model
     /// <summary>
     /// Represents an <see cref="Rock.Model.WorkflowActionType"/> (action or task) that is performed as part of a <see cref="Rock.Model.WorkflowActionType"/>.
     /// </summary>
+    [RockDomain( "Workflow" )]
     [Table( "WorkflowActionType" )]
     [DataContract]
     public partial class WorkflowActionType : Model<WorkflowActionType>, IOrdered
@@ -139,6 +140,7 @@ namespace Rock.Model
         /// <value>
         /// The <see cref="Rock.Model.WorkflowActivityType" /> that performs this ActionType.
         /// </value>
+        [LavaInclude]
         public virtual WorkflowActivityType ActivityType { get; set; }
 
         /// <summary>
@@ -160,19 +162,7 @@ namespace Rock.Model
         {
             get
             {
-                if ( this.EntityType != null )
-                {
-                    foreach ( var serviceEntry in ActionContainer.Instance.Components )
-                    {
-                        var component = serviceEntry.Value.Value;
-                        string componentName = component.GetType().FullName;
-                        if ( componentName == this.EntityType.Name )
-                        {
-                            return component;
-                        }
-                    }
-                }
-                return null;
+                return GetWorkflowAction( this.EntityTypeId );
             }
         }
 
@@ -212,6 +202,29 @@ namespace Rock.Model
         public override string ToString()
         {
             return this.Name;
+        }
+
+        /// <summary>
+        /// Gets the workflow action.
+        /// </summary>
+        /// <param name="entityTypeId">The entity type identifier.</param>
+        /// <returns></returns>
+        public static ActionComponent GetWorkflowAction( int entityTypeId )
+        {
+            var entityType = Web.Cache.EntityTypeCache.Read( entityTypeId );
+            if ( entityType != null )
+            {
+                foreach ( var serviceEntry in ActionContainer.Instance.Components )
+                {
+                    var component = serviceEntry.Value.Value;
+                    string componentName = component.GetType().FullName;
+                    if ( componentName == entityType.Name )
+                    {
+                        return component;
+                    }
+                }
+            }
+            return null;
         }
 
         #endregion

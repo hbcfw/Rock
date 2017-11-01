@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -234,7 +234,7 @@ namespace Rock.Web.UI.Controls
 
                         if ( !string.IsNullOrWhiteSpace( args.Value ) )
                         {
-                            filterDisplay.AddOrIgnore( args.Name, args.Value );
+                            filterDisplay.AddOrReplace( args.Name, args.Value );
                         }
                     }
                 }
@@ -310,7 +310,20 @@ namespace Rock.Web.UI.Controls
                 writer.AddAttribute("class", "row");
                 writer.RenderBeginTag( HtmlTextWriterTag.Div );
 
+                var filterControls = new List<Control>();
                 foreach ( Control child in Controls )
+                {
+                    if ( child is PlaceHolder )
+                    {
+                        filterControls.AddRange( ( child as PlaceHolder ).Controls.OfType<Control>().ToList() );
+                    }
+                    else
+                    {
+                        filterControls.Add( child );
+                    }
+                }
+
+                foreach ( Control child in filterControls )
                 {
                     // write new row
                     if ( cellCount >= cellsPerRow )
@@ -408,7 +421,7 @@ namespace Rock.Web.UI.Controls
         }
 
         /// <summary>
-        /// Deletes the user preferences.
+        /// Deletes all the grid user preferences for all grid filters on the block
         /// </summary>
         public void DeleteUserPreferences()
         {

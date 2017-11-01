@@ -14,11 +14,11 @@
             <div class="scroller">
 
                 <div class="control-group checkin-time-select" style="margin: 0 auto">
-                    <h1>Select Time(s)</h1>
+                    <h1><asp:Literal ID="lCaption" runat="server" /></h1>
                     <div class="controls checkin-timelist btn-group" data-toggle="buttons-checkbox">
                         <asp:Repeater ID="rSelection" runat="server">
                             <ItemTemplate>
-                                <button type="button" schedule-id='<%# Eval("Schedule.Id") %>' class="btn btn-default btn-lg btn-checkbox">
+                                <button type="button" schedule-id='<%# Eval("Schedule.Id") %>' class='<%# "btn btn-default btn-lg btn-checkbox" + ((bool)Eval("PreSelected") ? " active" : "") %>'>
                                     <i class="fa fa-square-o"></i>
                                 
                                     <div><%# Container.DataItem.ToString() %></div>
@@ -28,7 +28,7 @@
                     </div>
 
                     <div class="checkin-actions">
-                        <asp:LinkButton CssClass="btn btn-primary" ID="lbSelect" runat="server" data-loading-text="Printing..." OnClientClick="return GetTimeSelection();" OnClick="lbSelect_Click" Text="Check-in" />
+                        <asp:LinkButton CssClass="btn btn-primary" ID="lbSelect" runat="server" OnClientClick="return GetTimeSelection();" OnClick="lbSelect_Click" />
                     </div>
 
                 </div>

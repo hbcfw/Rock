@@ -11,6 +11,8 @@
             <div class="panel-body">
 
                 <asp:ValidationSummary ID="valSummaryTop" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
+                <asp:CustomValidator ID="cvGroupMember" runat="server" Display="None" />
+                <Rock:NotificationBox ID="nbRoleLimitWarning" runat="server" NotificationBoxType="Warning" Heading="Role Limit Warning" />
 
                 <div class="row">
                     <div class="col-md-4">
@@ -47,7 +49,7 @@
                                         <div class="clearfix">
                                             <div class="person-image" id="divPersonImage" runat="server"></div>
                                             <div class="member-information">
-                                                <h4><%# Eval("NickName") %> <%# Eval("LastName") %></h4>
+                                                <h4><%# Eval("NickName") %> <%# Eval("LastName") %><asp:Literal ID="lFamilyMemberAge" runat="server" /></h4>
                                             
                                                   <asp:RadioButtonList ID="rblRole" runat="server" DataValueField="Id" DataTextField="Name" />
                                             
@@ -75,7 +77,7 @@
                     <div class="panel-body">
                 
                         <div class="grid grid-panel">
-                            <Rock:Grid ID="gLocations" runat="server" AllowSorting="true" AllowPaging="false" DisplayType="Light">
+                            <Rock:Grid ID="gLocations" runat="server" AllowSorting="true" AllowPaging="false" DisplayType="Light" RowItemText="Address">
                                 <Columns>
                                     <Rock:RockTemplateField HeaderText="Type">
                                         <ItemTemplate>
@@ -90,7 +92,7 @@
                                             <%# Eval("FormattedAddress") %><br />
                                         </ItemTemplate>
                                         <EditItemTemplate>
-                                            <Rock:AddressControl ID="acAddress" runat="server" Required="true"/>
+                                            <Rock:AddressControl ID="acAddress" runat="server" Required="true" RequiredErrorMessage="Address is required"/>
                                         </EditItemTemplate>
                                     </Rock:RockTemplateField>
                                     <Rock:RockTemplateField HeaderText="Mailing" HeaderStyle-HorizontalAlign="Center" ItemStyle-HorizontalAlign="Center">
@@ -127,9 +129,18 @@
                     </div>
                 </div>
 
+                <asp:Panel ID="pnlAttributes" runat="server" CssClass="panel panel-widget">
+                    <div class="panel-heading clearfix">
+                        <h4 class="panel-title pull-left"><%=GroupTypeName %> Attributes</h4>
+                    </div>
+                    <div class="panel-body">
+                        <Rock:DynamicPlaceHolder ID="phGroupAttributes" runat="server" />
+                    </div>
+                </asp:Panel>
+
                 <div class="actions">
-                    <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" />
-                    <asp:LinkButton ID="btnCancel" runat="server" AccessKey="c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="btnCancel_Click" />
+                    <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" ToolTip="Alt+s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" />
+                    <asp:LinkButton ID="btnCancel" runat="server" AccessKey="c" ToolTip="Alt+c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="btnCancel_Click" />
                     <asp:LinkButton ID="btnDelete" runat="server" Text="Delete" CssClass="btn btn-link" OnClick="btnDelete_Click" CausesValidation="false" />
                 </div>
 
@@ -150,6 +161,7 @@
                     <li id="liExistingPerson" runat="server"><a href='#<%=divExistingPerson.ClientID%>' data-toggle="pill">Add Existing Person</a></li>
                 </ul>
 
+                <Rock:NotificationBox ID="nbAddPerson" runat="server" Heading="Please Correct the Following" NotificationBoxType="Danger" Visible="false" />
                 <asp:ValidationSummary ID="valSummaryAddPerson" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" ValidationGroup="AddPerson"/>
 
                 <div class="tab-content">
@@ -159,23 +171,25 @@
                             <div class="col-sm-4">
                                 <div class="well">
                                     <Rock:RockDropDownList ID="ddlNewPersonTitle" runat="server" Label="Title" ValidationGroup="AddPerson" CssClass="input-width-md" />
-                                    <Rock:RockTextBox ID="tbNewPersonFirstName" runat="server" Label="First Name" ValidationGroup="AddPerson" />
-                                    <Rock:RockTextBox ID="tbNewPersonLastName" runat="server" Label="Last Name" ValidationGroup="AddPerson" />
+                                    <Rock:RockTextBox ID="tbNewPersonFirstName" runat="server" Label="First Name" ValidationGroup="AddPerson" Required="true" autocomplete="off" />
+                                    <Rock:RockTextBox ID="tbNewPersonLastName" runat="server" Label="Last Name" ValidationGroup="AddPerson" Required="true" autocomplete="off" />
                                     <Rock:RockDropDownList ID="ddlNewPersonSuffix" runat="server" Label="Suffix" ValidationGroup="AddPerson" CssClass="input-width-md" />
                                 </div>
                             </div>
                             <div class="col-sm-4">
                                 <div class="well">
-                                    <Rock:RockDropDownList ID="ddlNewPersonConnectionStatus" runat="server" Label="Connection Status" ValidationGroup="AddPerson"/>
-                                    <Rock:RockRadioButtonList ID="rblNewPersonRole" runat="server" DataTextField="Name" DataValueField="Id" RepeatDirection="Horizontal" Label="Role" ValidationGroup="AddPerson"/>
+                                    <Rock:RockDropDownList ID="ddlNewPersonConnectionStatus" runat="server" Label="Connection Status" ValidationGroup="AddPerson" Required="true"/>
+                                    <Rock:RockRadioButtonList ID="rblNewPersonRole" runat="server" Required="true" DataTextField="Name" DataValueField="Id" RepeatDirection="Horizontal" Label="Role" ValidationGroup="AddPerson"/>
                                     <Rock:RockRadioButtonList ID="rblNewPersonGender" runat="server" Required="true" Label="Gender" RepeatDirection="Horizontal" ValidationGroup="AddPerson"/>
                                 </div>
                             </div>
                             <div class="col-sm-4">
                                 <div class="well">
-                                    <Rock:DatePicker ID="dpNewPersonBirthDate" runat="server" Label="Birthdate" ValidationGroup="AddPerson"/>
+                                    <Rock:DatePicker ID="dpNewPersonBirthDate" runat="server" Label="Birthdate" ValidationGroup="AddPerson" AllowFutureDateSelection="False" ForceParse="false"/>
                                     <Rock:GradePicker ID="ddlGradePicker" runat="server" Label="Grade" ValidationGroup="AddPerson" UseAbbreviation="true" UseGradeOffsetAsValue="true" />
                                     <Rock:RockDropDownList ID="ddlNewPersonMaritalStatus" runat="server" DataTextField="Name" DataValueField="Id" RepeatDirection="Horizontal" Label="Marital Status"  ValidationGroup="AddPerson"/>
+                                    <Rock:PhoneNumberBox ID="pnNewPersonPhoneNumber"  runat="server" Label="Phone" ValidationGroup="AddPerson" />
+                                    <Rock:EmailBox ID="tbNewPersonEmail" runat="server" Label="Email" ValidationGroup="AddPerson" />
                                 </div>
                             </div>
                         </div>
@@ -191,65 +205,25 @@
 
                 </div>
 
-
-                <script>
-                    Sys.Application.add_load(function () {
-
-                        $('#<%=modalAddPerson.ServerSaveLink.ClientID%>').on('click', function () {
-
-                            // if Save was clicked, set the fields that should be validated based on what tab they are on
-                            if ($('#<%=hfActiveTab.ClientID%>').val() == "Existing") {
-                                enableRequiredField('<%=ppPerson.RequiredFieldValidator.ClientID%>', true)
-                                enableRequiredField('<%=tbNewPersonFirstName.RequiredFieldValidator.ClientID%>', false);
-                                enableRequiredField('<%=tbNewPersonLastName.RequiredFieldValidator.ClientID%>', false);
-                                enableRequiredField('<%=rblNewPersonRole.RequiredFieldValidator.ClientID%>', false);
-                                enableRequiredField('<%=rblNewPersonGender.RequiredFieldValidator.ClientID%>', false);
-                                enableRequiredField('<%=ddlNewPersonConnectionStatus.RequiredFieldValidator.ClientID%>', false);
-                            }
-                            else {
-                                enableRequiredField('<%=ppPerson.RequiredFieldValidator.ClientID%>', false)
-                                enableRequiredField('<%=tbNewPersonFirstName.RequiredFieldValidator.ClientID%>', true);
-                                enableRequiredField('<%=tbNewPersonLastName.RequiredFieldValidator.ClientID%>', true);
-                                enableRequiredField('<%=rblNewPersonRole.RequiredFieldValidator.ClientID%>', true);
-                                enableRequiredField('<%=rblNewPersonGender.RequiredFieldValidator.ClientID%>', true);
-                                enableRequiredField('<%=ddlNewPersonConnectionStatus.RequiredFieldValidator.ClientID%>', true);
-                            }
-
-                            // update the scrollbar since our validation box could show
-                            setTimeout(function () {
-                                Rock.dialogs.updateModalScrollBar('<%=valSummaryAddPerson.ClientID%>');
-                            });
-                        })
-
-                        $('a[data-toggle="pill"]').on('shown.bs.tab', function (e) {
-                            var tabHref = $(e.target).attr("href");
-                            if (tabHref == '#<%=divExistingPerson.ClientID%>') {
-                                $('#<%=hfActiveTab.ClientID%>').val('Existing');
-                            } else {
-                                $('#<%=hfActiveTab.ClientID%>').val('New');
-                            }
-
-                            // if the validation error summary is shown, hide it when they switch tabs
-                            $('#<%=valSummaryAddPerson.ClientID%>').hide();
-                        });
-
-                    })
-
-                    function enableRequiredField(validatorId, enable) {
-                        var jqObj = $('#' + validatorId);
-
-                        if (jqObj != null) {
-                            var domObj = jqObj.get(0);
-                            if (domObj != null) {
-                                ValidatorEnable(domObj, enable);
-                            }
-                        }
-                    }
-
-                </script>
-
             </Content>
         </Rock:ModalDialog>
+
+        <script>
+
+            function enableRequiredField(validatorId, enable) {
+                var jqObj = $('#' + validatorId);
+                if (jqObj != null) {
+                    var domObj = jqObj.get(0);
+                    if (domObj != null) {
+                        console.log( validatorId + ': found');
+                        ValidatorEnable(domObj, enable);
+                    } else {
+                        console.log( validatorId + ': NOT found');
+                    }
+                }
+            }
+
+        </script>
 
     </ContentTemplate>
 </asp:UpdatePanel>

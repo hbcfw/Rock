@@ -16,9 +16,9 @@
             </div>
             <div class="panel-body">
                  <Rock:NotificationBox ID="nbVersionIssue" runat="server" NotificationBoxType="Danger" Visible="false">
-                     <h2>Database Update Required</h2>
-                     <p>As of Rock McKinley v4, Rock requires SQL Server 2012 or greater.
-                         You will need to upgrade your database in order to proceed with the next update.</p>
+                     <h2><i class="fa fa-exclamation-triangle"></i> .NET Framework Update Required</h2>
+                     <p>As of Rock McKinley v6, Rock requires Microsoft .NET Framework 4.5.2 or greater on the hosting server.
+                        This framework version was released by Microsoft on May 5th, 2014.</p>
                  </Rock:NotificationBox>
                  <asp:Panel ID="pnlNoUpdates" runat="server">
                     <div class="well well-message">
@@ -32,7 +32,7 @@
 
                 <asp:Panel ID="pnlUpdatesAvailable" Visible="false" runat="server">
                     <div class="well well-message well-message-info">
-                        <h1>You're Missing Some Pieces</h1>
+                        <h1>New Pieces Available</h1>
                         <i class="fa fa-puzzle-piece"></i>
                         <p>We've expanded the puzzle, let's get you up-to-date.</p>
                     </div>
@@ -40,7 +40,7 @@
                     <Rock:NotificationBox runat="server" Title="Remember..." NotificationBoxType="Warning" ID="nbRepoWarning" Visible="false">
                         You're using a <b>beta</b> or <b>alpha</b> update repository.</Rock:NotificationBox>
 
-                    <Rock:NotificationBox runat="server" Title="Note" NotificationBoxType="Danger" ID="nbBackupMessage">
+                    <Rock:NotificationBox runat="server" Title="Note:" NotificationBoxType="Warning" ID="nbBackupMessage">
                         We <em>strongly urge</em> you to backup your database and website before updating Rock.
                         The changes that are made during the update process can't be undone.
                         Also, be patient when updating. It takes anywhere from a few seconds
@@ -61,7 +61,7 @@
                             <ItemTemplate>
                                 <div id="divPanel" runat="server" class="panel">
                                     <div class="panel-heading">
-                                        <h3 class="panel-title"><asp:Literal runat="server" Text='<%# Eval( "Title" ) %>' /></h3>
+                                        <h3 class="panel-title"><asp:Literal runat="server" Text='<%# GetRockVersion( Eval( "Version" ) )%>' /></h3>
                                     </div>
                                     <div class="panel-body">
                                         <div class="row">

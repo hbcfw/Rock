@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -113,6 +113,34 @@ namespace Rock.Web.UI.Controls
         }
 
         /// <summary>
+        /// Gets or sets the warning text.
+        /// </summary>
+        /// <value>
+        /// The warning text.
+        /// </value>
+        [
+        Bindable( true ),
+        Category( "Appearance" ),
+        DefaultValue( "" ),
+        Description( "The warning block." )
+        ]
+        public string Warning
+        {
+            get
+            {
+                return WarningBlock != null ? WarningBlock.Text : string.Empty;
+            }
+
+            set
+            {
+                if ( WarningBlock != null )
+                {
+                    WarningBlock.Text = value;
+                }
+            }
+        }
+
+        /// <summary>
         /// Gets or sets a value indicating whether this <see cref="RockTextBox"/> is required.
         /// </summary>
         /// <value>
@@ -191,6 +219,14 @@ namespace Rock.Web.UI.Controls
         /// The help block.
         /// </value>
         public HelpBlock HelpBlock { get; set; }
+
+        /// <summary>
+        /// Gets or sets the warning block.
+        /// </summary>
+        /// <value>
+        /// The warning block.
+        /// </value>
+        public WarningBlock WarningBlock { get; set; }
 
         /// <summary>
         /// Gets or sets the required field validator.
@@ -418,6 +454,14 @@ namespace Rock.Web.UI.Controls
         public bool AllowMultiSelect { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether [show select children].
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [show select children]; otherwise, <c>false</c>.
+        /// </value>
+        internal bool ShowSelectChildren { get; set; }
+
+        /// <summary>
         /// Gets or sets the default text.
         /// </summary>
         /// <value>
@@ -461,6 +505,7 @@ namespace Rock.Web.UI.Controls
         {
             RequiredFieldValidator = new HiddenFieldValidator();
             HelpBlock = new HelpBlock();
+            WarningBlock = new WarningBlock();
         }
 
         #endregion
@@ -498,17 +543,17 @@ namespace Rock.Web.UI.Controls
         /// </summary>
         protected virtual void RegisterJavaScript()
         {
-            string treeViewScriptFormat =
-@"Rock.controls.itemPicker.initialize({{ 
-    controlId: '{0}',
-    restUrl: '{1}',
-    allowMultiSelect: {2},
-    defaultText: '{3}',
-    restParams: $('#{4}').val(),
-    expandedIds: [{5}]
+            string treeViewScript =
+$@"Rock.controls.itemPicker.initialize({{ 
+    controlId: '{this.ClientID}',
+    restUrl: '{this.ResolveUrl( ItemRestUrl )}',
+    allowMultiSelect: {this.AllowMultiSelect.ToString().ToLower()},
+    defaultText: '{this.DefaultText}',
+    restParams: $('#{_hfItemRestUrlExtraParams.ClientID}').val(),
+    expandedIds: [{this.InitialItemParentIds}],
+    showSelectChildren: {this.ShowSelectChildren.ToString().ToLower()}
 }});
 ";
-            string treeViewScript = string.Format( treeViewScriptFormat, this.ClientID, this.ResolveUrl( ItemRestUrl ), this.AllowMultiSelect.ToString().ToLower(), this.DefaultText, _hfItemRestUrlExtraParams.ClientID, this.InitialItemParentIds );
             ScriptManager.RegisterStartupScript( this, this.GetType(), "item_picker-treeviewscript_" + this.ClientID, treeViewScript, true );
         }
 
@@ -549,8 +594,8 @@ namespace Rock.Web.UI.Controls
             _btnSelect.InnerText = "Select";
             _btnSelect.CausesValidation = false;
 
-            // we only need the postback on Select if SelectItem is assigned or if this is PagePicker
-            if ( SelectItem != null || ( this is PagePicker ) )
+            // make sure PagePicker always does a postback, even if _selectItem is not assigned
+            if ( _selectItem == null && ( this is PagePicker ) )
             {
                 _btnSelect.ServerClick += btnSelect_Click;
             }
@@ -562,8 +607,8 @@ namespace Rock.Web.UI.Controls
             _btnSelectNone.CausesValidation = false;
             _btnSelectNone.Style[HtmlTextWriterStyle.Display] = "none";
 
-            // we only need the postback on SelectNone if SelectItem is assigned or if this is PagePicker
-            if ( SelectItem != null || ( this is PagePicker ) )
+            // make sure PagePicker always does a postback, even if _selectItem is not assigned
+            if ( _selectItem == null && ( this is PagePicker ) )
             {
                 _btnSelectNone.ServerClick += btnSelect_Click;
             }
@@ -616,7 +661,7 @@ namespace Rock.Web.UI.Controls
                 {
                     string pickerLabelHtmlFormat = @"
                     <a class='picker-label' href='#'>
-                        <i class='{2} icon-fw'></i>
+                        <i class='{2} fa-fw'></i>
                         <span id='selectedItemLabel_{0}' class='selected-names'>{1}</span>
                         <b class='fa fa-caret-down pull-right'></b>
                     </a>";
@@ -800,9 +845,9 @@ namespace Rock.Web.UI.Controls
                 SetValueOnSelect();
             }
 
-            if ( SelectItem != null )
+            if ( _selectItem != null )
             {
-                SelectItem( sender, e );
+                _selectItem( sender, e );
             }
         }
 
@@ -836,10 +881,28 @@ namespace Rock.Web.UI.Controls
         /// </summary>
         protected abstract void SetValuesOnSelect();
 
+        private event EventHandler _selectItem;
+
         /// <summary>
         /// Occurs when [select item].
         /// </summary>
-        public event EventHandler SelectItem;
+        public event EventHandler SelectItem
+        {
+            add
+            {
+                EnsureChildControls();
+                _selectItem += value;
+                _btnSelect.ServerClick += btnSelect_Click;
+                _btnSelectNone.ServerClick += btnSelect_Click;
+            }
+
+            remove
+            {
+                _selectItem -= value;
+                _btnSelect.ServerClick -= btnSelect_Click;
+                _btnSelectNone.ServerClick -= btnSelect_Click;
+            }
+        }
 
         /// <summary>
         /// Shows the error message.

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,13 +35,15 @@ using Newtonsoft.Json;
 namespace Rock.Address
 {
     /// <summary>
-    /// The standardization/geocoding service from <a href="http://dev.virtualearth.net">Bing</a>
+    /// The standardization/geocoding service from SmartyStreets
     /// </summary>
     [Description( "Address verification service from SmartyStreets" )]
     [Export( typeof( VerificationComponent ) )]
     [ExportMetadata( "ComponentName", "Smarty Streets" )]
-    [TextField( "Auth ID", "The Smarty Streets Authorization ID", true, "", "", 2 )]
-    [TextField( "Auth Token", "The Smarty Streets Authorization Token", true, "", "", 3 )]
+
+    [BooleanField( "Use Managed API Key", "Enable this to use the Auth ID and Auth Token that is managed by Spark.", true, "", 1 )]
+    [TextField( "Auth ID", "The Smarty Streets Authorization ID. NOTE: This can be left blank and will be ignored if 'Use Managed API Key' is enabled.", false, "", "", 2 )]
+    [TextField( "Auth Token", "The Smarty Streets Authorization Token. NOTE: This can be left blank and will be ignored if 'Use Managed API Key' is enabled.", false, "", "", 3 )]
     [TextField( "Acceptable DPV Codes", "The Smarty Streets Delivery Point Validation (DPV) match code values that are considered acceptable levels of standardization (see http://smartystreets.com/kb/liveaddress-api/field-definitions#dpvmatchcode for details).", false, "Y,S,D", "", 4 )]
     [TextField( "Acceptable Precisions", "The Smarty Streets latitude & longitude precision values that are considered acceptable levels of geocoding (see http://smartystreets.com/kb/liveaddress-api/field-definitions#precision for details).", false, "Zip7,Zip8,Zip9", "", 5 )]
     public class SmartyStreets : VerificationComponent
@@ -59,10 +61,51 @@ namespace Rock.Address
             VerificationResult result = VerificationResult.None;
             resultMsg = string.Empty;
 
-            string authId = GetAttributeValue( "AuthID" );
-            string authToken = GetAttributeValue( "AuthToken" );
-            var dpvCodes = GetAttributeValue("AcceptableDPVCodes").SplitDelimitedValues();
-            var precisions = GetAttributeValue("AcceptablePrecisions").SplitDelimitedValues();
+            string authId = null;
+            string authToken = null;
+
+            if ( GetAttributeValue( "UseManagedAPIKey" ).AsBooleanOrNull() ?? true )
+            {
+                var lastKeyUpdate = Rock.Web.SystemSettings.GetValue( "core_SmartyStreetsApiKeyLastUpdate" ).AsDateTime() ?? DateTime.MinValue;
+                var hoursSinceLastUpdate = ( RockDateTime.Now - lastKeyUpdate ).TotalHours;
+                if ( hoursSinceLastUpdate > 24 || true )
+                {
+                    var rockInstanceId = Rock.Web.SystemSettings.GetRockInstanceId();
+                    var getAPIKeyClient = new RestClient( "https://www.rockrms.com/api/SmartyStreets/GetSmartyStreetsApiKey?rockInstanceId={rockInstanceId}" );
+
+                    // If debugging locally
+                    // var getAPIKeyClient = new RestClient( $"http://localhost:57822/api/SmartyStreets/GetSmartyStreetsApiKey?rockInstanceId={rockInstanceId}" );
+
+                    var getApiKeyRequest = new RestRequest( Method.GET );
+                    var getApiKeyResponse = getAPIKeyClient.Get<SmartyStreetsAPIKey>( getApiKeyRequest );
+
+                    if ( getApiKeyResponse.StatusCode == HttpStatusCode.OK )
+                    {
+                        SmartyStreetsAPIKey managedKey = getApiKeyResponse.Data;
+                        if ( managedKey.AuthID != null && managedKey.AuthToken != null )
+                        {
+                            Rock.Web.SystemSettings.SetValue( "core_SmartyStreetsApiKeyLastUpdate", RockDateTime.Now.ToString( "o" ) );
+                            Rock.Web.SystemSettings.SetValue( "core_SmartyStreetsAuthID", Rock.Security.Encryption.EncryptString( managedKey.AuthID ) );
+                            Rock.Web.SystemSettings.SetValue( "core_SmartyStreetsAuthToken", Rock.Security.Encryption.EncryptString( managedKey.AuthToken ) );
+                        }
+                    }
+                }
+
+                string encryptedAuthID = Rock.Web.SystemSettings.GetValue( "core_SmartyStreetsAuthID" );
+                string encryptedAuthToken = Rock.Web.SystemSettings.GetValue( "core_SmartyStreetsAuthToken" );
+
+                authId = Rock.Security.Encryption.DecryptString( encryptedAuthID );
+                authToken = Rock.Security.Encryption.DecryptString( encryptedAuthToken );
+            }
+
+            if ( authId == null || authToken == null )
+            {
+                authId = GetAttributeValue( "AuthID" );
+                authToken = GetAttributeValue( "AuthToken" );
+            }
+
+            var dpvCodes = GetAttributeValue( "AcceptableDPVCodes" ).SplitDelimitedValues();
+            var precisions = GetAttributeValue( "AcceptablePrecisions" ).SplitDelimitedValues();
 
             var payload = new[] { new { addressee = location.Name, street = location.Street1, street2 = location.Street2, city = location.City, state = location.State, zipcode = location.PostalCode, candidates = 1 } };
 
@@ -73,13 +116,13 @@ namespace Rock.Address
             request.AddBody( payload );
             var response = client.Execute( request );
 
-            if (response.StatusCode == HttpStatusCode.OK)
+            if ( response.StatusCode == HttpStatusCode.OK )
             {
                 var candidates = JsonConvert.DeserializeObject( response.Content, typeof( List<CandidateAddress> ) ) as List<CandidateAddress>;
-                if (candidates.Any())
+                if ( candidates.Any() )
                 {
                     var candidate = candidates.FirstOrDefault();
-                    resultMsg = string.Format( "record_type: {0}; dpv_match_code: {1}; precision {2}",
+                    resultMsg = string.Format( "RecordType:{0}; DPV MatchCode:{1}; Precision:{2}",
                         candidate.metadata.record_type, candidate.analysis.dpv_match_code, candidate.metadata.precision );
 
                     location.StandardizeAttemptedResult = candidate.analysis.dpv_match_code;
@@ -91,14 +134,17 @@ namespace Rock.Address
                         location.County = candidate.metadata.county_name;
                         location.State = candidate.components.state_abbreviation;
                         location.PostalCode = candidate.components.zipcode + "-" + candidate.components.plus4_code;
+                        location.Barcode = candidate.delivery_point_barcode;
                         result = result | VerificationResult.Standardized;
                     }
 
                     location.GeocodeAttemptedResult = candidate.metadata.precision;
                     if ( precisions.Contains( candidate.metadata.precision ) )
                     {
-                        location.SetLocationPointFromLatLong( candidate.metadata.latitude, candidate.metadata.longitude );
-                        result = result | VerificationResult.Geocoded;
+                        if ( location.SetLocationPointFromLatLong( candidate.metadata.latitude, candidate.metadata.longitude ) )
+                        {
+                            result = result | VerificationResult.Geocoded;
+                        }
                     }
 
                 }
@@ -166,6 +212,29 @@ namespace Rock.Address
             public string footnotes { get; set; }
         }
 #pragma warning restore
-    
+
+    }
+
+    /// <summary>
+    /// The Smarty Streets API Key information 
+    /// This is a key maintained by Spark that is available for common use
+    /// </summary>
+    public class SmartyStreetsAPIKey
+    {
+        /// <summary>
+        /// Gets or sets the authentication identifier.
+        /// </summary>
+        /// <value>
+        /// The authentication identifier.
+        /// </value>
+        public string AuthID { get; set; }
+
+        /// <summary>
+        /// Gets or sets the authentication token.
+        /// </summary>
+        /// <value>
+        /// The authentication token.
+        /// </value>
+        public string AuthToken { get; set; }
     }
 }

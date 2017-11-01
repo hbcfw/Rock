@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,6 +17,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Data.Entity;
 using System.Linq;
 using System.Text;
 using System.Web.UI;
@@ -536,6 +537,11 @@ achieve our mission.  We are so grateful for your commitment.
                     int txnId = int.MinValue;
                     if ( int.TryParse( PageParameter( "ScheduledTransactionId" ), out txnId ) )
                     {
+                        var personService = new PersonService( rockContext );
+
+                        var validGivingIds = new List<string> { targetPerson.GivingId };
+                        validGivingIds.AddRange( personService.GetBusinesses( targetPerson.Id ).Select( b => b.GivingId ) );
+
                         var service = new FinancialScheduledTransactionService( rockContext );
                         var scheduledTransaction = service
                             .Queryable( "AuthorizedPersonAlias.Person,ScheduledTransactionDetails,FinancialGateway,FinancialPaymentDetail.CurrencyTypeValue,FinancialPaymentDetail.CreditCardTypeValue" )
@@ -543,7 +549,7 @@ achieve our mission.  We are so grateful for your commitment.
                                 t.Id == txnId && 
                                 t.AuthorizedPersonAlias != null &&
                                 t.AuthorizedPersonAlias.Person != null &&
-                                t.AuthorizedPersonAlias.Person.GivingId == targetPerson.GivingId )
+                                validGivingIds.Contains( t.AuthorizedPersonAlias.Person.GivingId ) )
                             .FirstOrDefault();
 
                         if ( scheduledTransaction != null )
@@ -729,7 +735,7 @@ achieve our mission.  We are so grateful for your commitment.
                 var savedAccounts = new FinancialPersonSavedAccountService( new RockContext() )
                     .GetByPersonId( TargetPersonId.Value );
 
-                if ( Gateway != null )
+                if ( Gateway != null && Gateway.SupportsSavedAccount( true ) )
                 {
                     var ccCurrencyType = DefinedValueCache.Read( new Guid( Rock.SystemGuid.DefinedValue.CURRENCY_TYPE_CREDIT_CARD ) );
                     if ( Gateway.SupportsSavedAccount( ccCurrencyType ) )

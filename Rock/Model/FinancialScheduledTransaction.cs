@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,9 +35,10 @@ namespace Rock.Model
     /// <remarks>
     /// Several examples include - A one time transaction to occur on 1/1/2014; an ongoing weekly transaction; a weekly transaction for 10 weeks; a monthly transaction from 1/1/2014 - 12/31/2014.
     /// </remarks>
+    [RockDomain( "Finance" )]
     [Table( "FinancialScheduledTransaction" )]
     [DataContract]
-    public partial class FinancialScheduledTransaction : Model<FinancialScheduledTransaction>
+    public partial class FinancialScheduledTransaction : Model<FinancialScheduledTransaction>, IHasActiveFlag
     {
 
         #region Entity Properties
@@ -51,6 +52,26 @@ namespace Rock.Model
         [DataMember]
         public int AuthorizedPersonAliasId { get; set; }
 
+        /// <summary>
+        /// Gets or sets the transaction type value identifier.
+        /// </summary>
+        /// <value>
+        /// The transaction type value identifier.
+        /// </value>
+        [DataMember]
+        [DefinedValue( SystemGuid.DefinedType.FINANCIAL_TRANSACTION_TYPE )]
+        public int? TransactionTypeValueId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the source type value identifier.
+        /// </summary>
+        /// <value>
+        /// The source type value identifier.
+        /// </value>
+        [DataMember]
+        [DefinedValue( SystemGuid.DefinedType.FINANCIAL_SOURCE_TYPE )]
+        public int? SourceTypeValueId { get; set; }
+        
         /// <summary>
         /// Gets or sets the DefinedValueId of the transaction frequency <see cref="Rock.Model.DefinedValue"/> that represents the frequency that this 
         /// transaction will occur.
@@ -105,7 +126,8 @@ namespace Rock.Model
         public DateTime? NextPaymentDate { get; set; }
 
         /// <summary>
-        /// Gets or sets the date and time of the last status update.
+        /// Gets or sets the date and time of the last status update. In other words,
+        /// the date and time the gateway was last queried for the status of the scheduled profile/transaction.
         /// </summary>
         /// <value>
         /// A <see cref="System.DateTime" /> representing the date and time of the last status update.
@@ -195,7 +217,26 @@ namespace Rock.Model
         /// <value>
         /// The authorized person alias.
         /// </value>
+        [LavaInclude]
         public virtual PersonAlias AuthorizedPersonAlias { get; set; }
+
+        /// <summary>
+        /// Gets or sets the transaction type <see cref="Rock.Model.DefinedValue"/> indicating the type of transaction that occurred.
+        /// </summary>
+        /// <value>
+        /// A <see cref="Rock.Model.DefinedValue"/> indicating the type of transaction that occurred.
+        /// </value>
+        [DataMember]
+        public virtual DefinedValue TransactionTypeValue { get; set; }
+
+        /// <summary>
+        /// Gets or sets the source type <see cref="Rock.Model.DefinedValue"/> indicating where the transaction originated from; the source of the transaction.
+        /// </summary>
+        /// <value>
+        /// A <see cref="Rock.Model.DefinedValue"/> indicating where the transaction originated from; the source of the transaction.
+        /// </value>
+        [DataMember]
+        public virtual DefinedValue SourceTypeValue { get; set; }
 
         /// <summary>
         /// Gets or sets the gateway.
@@ -224,6 +265,7 @@ namespace Rock.Model
         /// </value>
         [DataMember]
         public virtual DefinedValue TransactionFrequencyValue { get; set; }
+
 
         /// <summary>
         /// Gets or sets the <see cref="Rock.Model.FinancialScheduledTransactionDetail">transaction details</see> for this scheduled transaction.
@@ -259,14 +301,124 @@ namespace Rock.Model
         /// <value>
         /// The total amount.
         /// </value>
+        [LavaInclude]
         public decimal TotalAmount 
         {
             get { return ScheduledTransactionDetails.Sum( d => d.Amount ); }
         }
 
+        /// <summary>
+        /// Gets or sets the history changes.
+        /// </summary>
+        /// <value>
+        /// The history changes.
+        /// </value>
+        [NotMapped]
+        public virtual List<string> HistoryChanges { get; set; }
+
         #endregion
 
         #region Public Methods
+
+        /// <summary>
+        /// Returns a <see cref="System.String" /> that represents this transaction.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this transaction.
+        /// </returns>
+        public override string ToString()
+        {
+            return this.TotalAmount.ToStringSafe();
+        }
+
+        /// <summary>
+        /// Pres the save.
+        /// </summary>
+        /// <param name="dbContext">The database context.</param>
+        /// <param name="entry"></param>
+        public override void PreSaveChanges( Rock.Data.DbContext dbContext, System.Data.Entity.Infrastructure.DbEntityEntry entry )
+        {
+            var rockContext = (RockContext)dbContext;
+
+            HistoryChanges = new List<string>();
+
+            switch ( entry.State )
+            {
+                case System.Data.Entity.EntityState.Added:
+                    {
+                        HistoryChanges.Add( "Created Transaction" );
+
+                        string person = History.GetValue<PersonAlias>( AuthorizedPersonAlias, AuthorizedPersonAliasId, rockContext );
+
+                        History.EvaluateChange( HistoryChanges, "Authorized Person", string.Empty, person );
+                        History.EvaluateChange( HistoryChanges, "Gateway", string.Empty, History.GetValue<FinancialGateway>( FinancialGateway, FinancialGatewayId, rockContext ) );
+                        History.EvaluateChange( HistoryChanges, "Gateway Schedule Id", string.Empty, GatewayScheduleId );
+                        History.EvaluateChange( HistoryChanges, "Transaction Code", string.Empty, TransactionCode );
+                        History.EvaluateChange( HistoryChanges, "Type", (int?)null, TransactionTypeValue, TransactionTypeValueId );
+                        History.EvaluateChange( HistoryChanges, "Source", (int?)null, SourceTypeValue, SourceTypeValueId );
+                        History.EvaluateChange( HistoryChanges, "Frequency", (int?)null, TransactionFrequencyValue, TransactionFrequencyValueId);
+                        History.EvaluateChange( HistoryChanges, "Start Date", (DateTime?)null, StartDate );
+                        History.EvaluateChange( HistoryChanges, "End Date", (DateTime?)null, EndDate );
+                        History.EvaluateChange( HistoryChanges, "Number of Payments", (int?)null, NumberOfPayments );
+                        History.EvaluateChange( HistoryChanges, "Is Active", (bool?)null, IsActive );
+                        History.EvaluateChange( HistoryChanges, "Card Reminder Date", (DateTime?)null, CardReminderDate );
+                        History.EvaluateChange( HistoryChanges, "Last Reminded Date", (DateTime?)null, LastRemindedDate );
+
+                        break;
+                    }
+
+                case System.Data.Entity.EntityState.Modified:
+                    {
+                        string origPerson = History.GetValue<PersonAlias>( null, entry.OriginalValues["AuthorizedPersonAliasId"].ToStringSafe().AsIntegerOrNull(), rockContext );
+                        string person = History.GetValue<PersonAlias>( AuthorizedPersonAlias, AuthorizedPersonAliasId, rockContext );
+                        History.EvaluateChange( HistoryChanges, "Authorized Person", origPerson, person );
+
+                        int? origGatewayId = entry.OriginalValues["FinancialGatewayId"].ToStringSafe().AsIntegerOrNull();
+                        if ( !FinancialGatewayId.Equals( origGatewayId ) )
+                        {
+                            History.EvaluateChange( HistoryChanges, "Gateway", History.GetValue<FinancialGateway>( null, origGatewayId, rockContext ), History.GetValue<FinancialGateway>( FinancialGateway, FinancialGatewayId, rockContext ) );
+                        }
+
+                        History.EvaluateChange( HistoryChanges, "Gateway Schedule Id", entry.OriginalValues["GatewayScheduleId"].ToStringSafe(), GatewayScheduleId );
+                        History.EvaluateChange( HistoryChanges, "Transaction Code", entry.OriginalValues["TransactionCode"].ToStringSafe(), TransactionCode );
+                        History.EvaluateChange( HistoryChanges, "Type", entry.OriginalValues["TransactionTypeValueId"].ToStringSafe().AsIntegerOrNull(), TransactionTypeValue, TransactionTypeValueId );
+                        History.EvaluateChange( HistoryChanges, "Source", entry.OriginalValues["SourceTypeValueId"].ToStringSafe().AsIntegerOrNull(), SourceTypeValue, SourceTypeValueId );
+                        History.EvaluateChange( HistoryChanges, "Frequency", entry.OriginalValues["TransactionFrequencyValueId"].ToStringSafe().AsIntegerOrNull(), TransactionFrequencyValue, TransactionFrequencyValueId );
+                        History.EvaluateChange( HistoryChanges, "Start Date", entry.OriginalValues["StartDate"].ToStringSafe().AsDateTime(), StartDate );
+                        History.EvaluateChange( HistoryChanges, "End Date", entry.OriginalValues["EndDate"].ToStringSafe().AsDateTime(), EndDate );
+                        History.EvaluateChange( HistoryChanges, "Number of Payments", entry.OriginalValues["EndDate"].ToStringSafe().AsIntegerOrNull(), NumberOfPayments );
+                        History.EvaluateChange( HistoryChanges, "Is Active", entry.OriginalValues["IsActive"].ToStringSafe().AsBooleanOrNull(), IsActive );
+                        History.EvaluateChange( HistoryChanges, "Card Reminder Date", entry.OriginalValues["CardReminderDate"].ToStringSafe().AsDateTime(), CardReminderDate );
+                        History.EvaluateChange( HistoryChanges, "Last Reminded Date", entry.OriginalValues["LastRemindedDate"].ToStringSafe().AsDateTime(), LastRemindedDate );
+
+                        break;
+                    }
+
+                case System.Data.Entity.EntityState.Deleted:
+                    {
+                        HistoryChanges.Add( "Deleted Transaction" );
+
+                        break;
+                    }
+            }
+
+            base.PreSaveChanges( dbContext, entry );
+        }
+
+        /// <summary>
+        /// Method that will be called on an entity immediately after the item is saved
+        /// </summary>
+        /// <param name="dbContext">The database context.</param>
+        public override void PostSaveChanges( DbContext dbContext )
+        {
+            if ( HistoryChanges.Any() )
+            {
+                HistoryService.SaveChanges( (RockContext)dbContext, typeof( FinancialScheduledTransaction ), Rock.SystemGuid.Category.HISTORY_FINANCIAL_TRANSACTION.AsGuid(), this.Id, HistoryChanges, true, this.ModifiedByPersonAliasId );
+            }
+
+            base.PostSaveChanges( dbContext );
+        }
+
 
         #endregion
 
@@ -286,6 +438,8 @@ namespace Rock.Model
         public FinancialScheduledTransactionConfiguration()
         {
             this.HasRequired( t => t.AuthorizedPersonAlias ).WithMany().HasForeignKey( t => t.AuthorizedPersonAliasId ).WillCascadeOnDelete( false );
+            this.HasOptional( t => t.TransactionTypeValue ).WithMany().HasForeignKey( t => t.TransactionTypeValueId ).WillCascadeOnDelete( false );
+            this.HasOptional( t => t.SourceTypeValue ).WithMany().HasForeignKey( t => t.SourceTypeValueId ).WillCascadeOnDelete( false );
             this.HasOptional( t => t.FinancialGateway ).WithMany().HasForeignKey( t => t.FinancialGatewayId ).WillCascadeOnDelete( false );
             this.HasOptional( t => t.FinancialPaymentDetail ).WithMany().HasForeignKey( t => t.FinancialPaymentDetailId ).WillCascadeOnDelete( false );
             this.HasRequired( t => t.TransactionFrequencyValue ).WithMany().HasForeignKey( t => t.TransactionFrequencyValueId ).WillCascadeOnDelete( false );

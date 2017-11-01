@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -40,19 +40,22 @@ namespace RockWeb.Blocks.Groups
     [Category( "Groups" )]
     [Description( "Allows a person to register for a group." )]
 
-    [CustomRadioListField("Mode", "The mode to use when displaying registration details.", "Simple^Simple,Full^Full,FullSpouse^Full With Spouse", true, "Simple", "", 0)]
-    [CustomRadioListField( "Group Member Status", "The group member status to use when adding person to group (default: 'Pending'.)", "2^Pending,1^Active,0^Inactive", true, "2", "", 1 )]
-    [DefinedValueField( "2E6540EA-63F0-40FE-BE50-F2A84735E600", "Connection Status", "The connection status to use for new individuals (default: 'Web Prospect'.)", true, false, "368DD475-242C-49C4-A42C-7278BE690CC2", "", 2 )]
-    [DefinedValueField( "8522BADD-2871-45A5-81DD-C76DA07E2E7E", "Record Status", "The record status to use for new individuals (default: 'Pending'.)", true, false, "283999EC-7346-42E3-B807-BCE9B2BABB49", "", 3 )]
-    [WorkflowTypeField( "Workflow", "An optional workflow to start when registration is created. The GroupMember will set as the workflow 'Entity' when processing is started.", false, false, "", "", 4 )]
-    [BooleanField( "Enable Debug", "Shows the fields available to merge in lava.", false, "", 5 )]
+    [GroupTypesField( "Allowed Group Types", "This setting restricts which types of groups a person can be added to, however selecting a specific group via the Group setting will override this restriction.", true, Rock.SystemGuid.GroupType.GROUPTYPE_SMALL_GROUP, "", 0 )]
+    [GroupField( "Group", "Optional group to add person to. If omitted, the group's Guid should be passed via the Query string (GroupGuid=).", false, "", "", 0 )]
+    [BooleanField( "Enable Passing Group Id", "If enabled, allows the ability to pass in a group's Id (GroupId=) instead of the Guid.", true, "", 0 )]
+    [CustomRadioListField("Mode", "The mode to use when displaying registration details.", "Simple^Simple,Full^Full,FullSpouse^Full With Spouse", true, "Simple", "", 1)]
+    [CustomRadioListField( "Group Member Status", "The group member status to use when adding person to group (default: 'Pending'.)", "2^Pending,1^Active,0^Inactive", true, "2", "", 2 )]
+    [DefinedValueField( "2E6540EA-63F0-40FE-BE50-F2A84735E600", "Connection Status", "The connection status to use for new individuals (default: 'Web Prospect'.)", true, false, "368DD475-242C-49C4-A42C-7278BE690CC2", "", 3 )]
+    [DefinedValueField( "8522BADD-2871-45A5-81DD-C76DA07E2E7E", "Record Status", "The record status to use for new individuals (default: 'Pending'.)", true, false, "283999EC-7346-42E3-B807-BCE9B2BABB49", "", 4 )]
+    [WorkflowTypeField( "Workflow", "An optional workflow to start when registration is created. The GroupMember will set as the workflow 'Entity' when processing is started.", false, false, "", "", 5 )]
     [CodeEditorField( "Lava Template", "The lava template to use to format the group details.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 400, true, @"
-", "", 6  )]
-    [LinkedPage("Result Page", "An optional page to redirect user to after they have been registered for the group.", false, "", "", 7)]
+", "", 7 )]
+    [LinkedPage("Result Page", "An optional page to redirect user to after they have been registered for the group.", false, "", "", 8)]
     [CodeEditorField( "Result Lava Template", "The lava template to use to format result message after user has been registered. Will only display if user is not redirected to a Result Page ( previous setting ).", CodeEditorMode.Lava, CodeEditorTheme.Rock, 400, true, @"
-", "", 8 )]
-    [CustomRadioListField( "Auto Fill Form", "If set to FALSE then the form will not load the context of the logged in user (default: 'True'.)", "true^True,false^False", true, "true", "", 9 )]
-    [TextField( "Register Button Alt Text", "Alternate text to use for the Register button (default is 'Register').", false, "", "", 10 )]
+", "", 9 )]
+    [CustomRadioListField( "Auto Fill Form", "If set to FALSE then the form will not load the context of the logged in user (default: 'True'.)", "true^True,false^False", true, "true", "", 10 )]
+    [TextField( "Register Button Alt Text", "Alternate text to use for the Register button (default is 'Register').", false, "", "", 11 )]
+    [BooleanField( "Prevent Overcapacity Registrations", "When set to true, user cannot register for groups that are at capacity or whose default GroupTypeRole are at capacity. If only one spot is available, no spouses can be registered.", true, "", 12 )]
     public partial class GroupRegistration : RockBlock
     {
         #region Fields
@@ -68,6 +71,7 @@ namespace RockWeb.Blocks.Groups
         GroupTypeCache _familyType = null;
         GroupTypeRoleCache _adultRole = null;
         bool _autoFill = true;
+        bool _isValidSettings = true;
 
         #endregion
 
@@ -142,6 +146,7 @@ namespace RockWeb.Blocks.Groups
 
             if ( !CheckSettings() )
             {
+                _isValidSettings = false;
                 nbNotice.Visible = true;
                 pnlView.Visible = false;
             }
@@ -178,7 +183,8 @@ namespace RockWeb.Blocks.Groups
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void btnRegister_Click( object sender, EventArgs e )
         {
-            if ( Page.IsValid )
+            // Check _isValidSettings in case the form was showing and they clicked the visible register button.
+            if ( Page.IsValid && _isValidSettings )
             {
                 var rockContext = new RockContext();
                 var personService = new PersonService( rockContext );
@@ -187,6 +193,7 @@ namespace RockWeb.Blocks.Groups
                 Person spouse = null;
                 Group family = null;
                 GroupLocation homeLocation = null;
+                bool isMatch = false;
 
                 var changes = new List<string>();
                 var spouseChanges = new List<string>();
@@ -210,6 +217,7 @@ namespace RockWeb.Blocks.Groups
                     if ( matches.Count() == 1 )
                     {
                         person = matches.First();
+                        isMatch = true;
                     }
                 }
 
@@ -267,40 +275,49 @@ namespace RockWeb.Blocks.Groups
                 // If using a 'Full' view, save the phone numbers and address
                 if ( !IsSimple )
                 {
-                    SetPhoneNumber( rockContext, person, pnHome, null, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME.AsGuid(), changes );
-                    SetPhoneNumber( rockContext, person, pnCell, cbSms, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE.AsGuid(), changes );
-
-                    string oldLocation = homeLocation != null ? homeLocation.Location.ToString() : string.Empty;
-                    string newLocation = string.Empty;
-
-                    var location = new LocationService( rockContext ).Get( acAddress.Street1, acAddress.Street2, acAddress.City, acAddress.State, acAddress.PostalCode, acAddress.Country );
-                    if ( location != null )
+                    if ( !isMatch || !string.IsNullOrWhiteSpace( pnHome.Number ) )
                     {
-                        if ( homeLocation == null )
+                        SetPhoneNumber( rockContext, person, pnHome, null, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME.AsGuid(), changes );
+                    }
+                    if ( !isMatch || !string.IsNullOrWhiteSpace( pnHome.Number ) )
+                    {
+                        SetPhoneNumber( rockContext, person, pnCell, cbSms, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE.AsGuid(), changes );
+                    }
+
+                    if ( !isMatch || !string.IsNullOrWhiteSpace( acAddress.Street1 ) )
+                    {
+                        string oldLocation = homeLocation != null ? homeLocation.Location.ToString() : string.Empty;
+                        string newLocation = string.Empty;
+
+                        var location = new LocationService( rockContext ).Get( acAddress.Street1, acAddress.Street2, acAddress.City, acAddress.State, acAddress.PostalCode, acAddress.Country );
+                        if ( location != null )
                         {
-                            homeLocation = new GroupLocation();
-                            homeLocation.GroupLocationTypeValueId = _homeAddressType.Id;
-                            family.GroupLocations.Add( homeLocation );
+                            if ( homeLocation == null )
+                            {
+                                homeLocation = new GroupLocation();
+                                homeLocation.GroupLocationTypeValueId = _homeAddressType.Id;
+                                family.GroupLocations.Add( homeLocation );
+                            }
+                            else
+                            {
+                                oldLocation = homeLocation.Location.ToString();
+                            }
+
+                            homeLocation.Location = location;
+                            newLocation = location.ToString();
                         }
                         else
                         {
-                            oldLocation = homeLocation.Location.ToString();
+                            if ( homeLocation != null )
+                            {
+                                homeLocation.Location = null;
+                                family.GroupLocations.Remove( homeLocation );
+                                new GroupLocationService( rockContext ).Delete( homeLocation );
+                            }
                         }
 
-                        homeLocation.Location = location;
-                        newLocation = location.ToString();
+                        History.EvaluateChange( familyChanges, "Home Location", oldLocation, newLocation );
                     }
-                    else
-                    {
-                        if ( homeLocation != null )
-                        {
-                            homeLocation.Location = null;
-                            family.GroupLocations.Remove( homeLocation );
-                            new GroupLocationService( rockContext ).Delete( homeLocation );
-                        }
-                    }
-
-                    History.EvaluateChange( familyChanges, "Home Location", oldLocation, newLocation );
 
                     // Check for the spouse
                     if ( IsFullWithSpouse && !string.IsNullOrWhiteSpace(tbSpouseFirstName.Text) && !string.IsNullOrWhiteSpace(tbSpouseLastName.Text) )
@@ -359,12 +376,11 @@ namespace RockWeb.Blocks.Groups
                 }
 
                 // Check to see if a workflow should be launched for each person
-                WorkflowType workflowType = null;
+                WorkflowTypeCache workflowType = null;
                 Guid? workflowTypeGuid = GetAttributeValue( "Workflow" ).AsGuidOrNull();
                 if ( workflowTypeGuid.HasValue )
                 {
-                    var workflowTypeService = new WorkflowTypeService( rockContext );
-                    workflowType = workflowTypeService.Get( workflowTypeGuid.Value );
+                    workflowType = WorkflowTypeCache.Read( workflowTypeGuid.Value );
                 }
 
                 // Save the registrations ( and launch workflows )
@@ -380,13 +396,6 @@ namespace RockWeb.Blocks.Groups
                 var mergeFields = new Dictionary<string, object>();
                 mergeFields.Add( "Group", _group );
                 mergeFields.Add( "GroupMembers", newGroupMembers );
-
-                bool showDebug = UserCanEdit && GetAttributeValue( "EnableDebug" ).AsBoolean();
-                lResultDebug.Visible = showDebug;
-                if ( showDebug )
-                {
-                    lResultDebug.Text = mergeFields.lavaDebugInfo( _rockContext );
-                }
 
                 string template = GetAttributeValue( "ResultLavaTemplate" );
                 lResult.Text = template.ResolveMergeFields( mergeFields );
@@ -412,13 +421,6 @@ namespace RockWeb.Blocks.Groups
                 // Show lava content
                 var mergeFields = new Dictionary<string, object>();
                 mergeFields.Add( "Group", _group );
-
-                bool showDebug = UserCanEdit && GetAttributeValue( "EnableDebug" ).AsBoolean();
-                lLavaOutputDebug.Visible = showDebug;
-                if ( showDebug )
-                {
-                    lLavaOutputDebug.Text = mergeFields.lavaDebugInfo( _rockContext );
-                }
 
                 string template = GetAttributeValue( "LavaTemplate" );
                 lLavaOverview.Text = template.ResolveMergeFields( mergeFields );
@@ -494,6 +496,53 @@ namespace RockWeb.Blocks.Groups
                         }
                     }
                 }
+               
+                if ( GetAttributeValue( "PreventOvercapacityRegistrations" ).AsBoolean() )
+                {
+                    int openGroupSpots = 2;
+                    int openRoleSpots = 2;
+
+                    // If the group has a GroupCapacity, check how far we are from hitting that.
+                    if ( _group.GroupCapacity.HasValue )
+                    {
+                        openGroupSpots = _group.GroupCapacity.Value - _group.Members
+                            .Where( m => m.GroupMemberStatus == GroupMemberStatus.Active )
+                            .Count();
+                    }
+
+                    // When someone registers for a group on the front-end website, they automatically get added with the group's default
+                    // GroupTypeRole. If that role exists and has a MaxCount, check how far we are from hitting that.
+                    if ( _defaultGroupRole != null && _defaultGroupRole.MaxCount.HasValue )
+                    {
+                        openRoleSpots = _defaultGroupRole.MaxCount.Value - _group.Members
+                            .Where( m => m.GroupRoleId == _defaultGroupRole.Id && m.GroupMemberStatus == GroupMemberStatus.Active )
+                            .Count();
+                    }
+
+                    // Between the group's GroupCapacity and DefaultGroupRole.MaxCount, grab the one we're closest to hitting, and how close we are to
+                    // hitting it.
+                    int openSpots = Math.Min( openGroupSpots, openRoleSpots );
+
+                    // If there's only one spot open, disable the spouse fields and display a warning message.
+                    if ( openSpots == 1 )
+                    {
+                        tbSpouseFirstName.Enabled = false;
+                        tbSpouseLastName.Enabled = false;
+                        pnSpouseCell.Enabled = false;
+                        cbSpouseSms.Enabled = false;
+                        tbSpouseEmail.Enabled = false;
+                        nbWarning.Text = "This group is near its capacity. Only one individual can register.";
+                        nbWarning.Visible = true;
+                    }
+
+                    // If no spots are open, display a message that says so.
+                    if ( openSpots <= 0 )
+                    {
+                        nbNotice.Text = "This group is at or exceeds capacity.";
+                        nbNotice.Visible = true;
+                        pnlView.Visible = false;
+                    }
+                }
             }
         }
 
@@ -504,45 +553,64 @@ namespace RockWeb.Blocks.Groups
         /// <param name="person">The person.</param>
         /// <param name="workflowType">Type of the workflow.</param>
         /// <param name="groupMembers">The group members.</param>
-        private void AddPersonToGroup( RockContext rockContext, Person person, WorkflowType workflowType, List<GroupMember> groupMembers )
+        private void AddPersonToGroup( RockContext rockContext, Person person, WorkflowTypeCache workflowType, List<GroupMember> groupMembers )
         {
             if (person != null )
             {
+                GroupMember groupMember = null;
                 if ( !_group.Members
                     .Any( m => 
                         m.PersonId == person.Id &&
                         m.GroupRoleId == _defaultGroupRole.Id))
                 {
                     var groupMemberService = new GroupMemberService(rockContext);
-                    var groupMember = new GroupMember();
+                    groupMember = new GroupMember();
                     groupMember.PersonId = person.Id;
                     groupMember.GroupRoleId = _defaultGroupRole.Id;
                     groupMember.GroupMemberStatus = (GroupMemberStatus)GetAttributeValue("GroupMemberStatus").AsInteger();
                     groupMember.GroupId = _group.Id;
                     groupMemberService.Add( groupMember );
                     rockContext.SaveChanges();
-
-                    if ( workflowType != null )
+                }
+                else
+                {
+                    GroupMemberStatus status = ( GroupMemberStatus ) GetAttributeValue( "GroupMemberStatus" ).AsInteger();
+                    groupMember = _group.Members.Where( m =>
+                       m.PersonId == person.Id &&
+                       m.GroupRoleId == _defaultGroupRole.Id ).FirstOrDefault();
+                    if (groupMember.GroupMemberStatus != status)
                     {
-                        try
-                        {
-                            List<string> workflowErrors;
-                            var workflow = Workflow.Activate( workflowType, person.FullName );
-                            new WorkflowService( rockContext ).Process( workflow, groupMember, out workflowErrors );
-                        }
-                        catch (Exception ex)
-                        {
-                            ExceptionLogService.LogException( ex, this.Context );
-                        }
+                        var groupMemberService = new GroupMemberService( rockContext );
+
+                        // reload this group member in the current context
+                        groupMember = groupMemberService.Get( groupMember.Id );
+                        groupMember.GroupMemberStatus = status;
+                        rockContext.SaveChanges();
+                    }
+
+                }
+
+                if ( groupMember != null && workflowType != null && ( workflowType.IsActive ?? true ) )
+                {
+                    try
+                    {
+                        List<string> workflowErrors;
+                        var workflow = Workflow.Activate( workflowType, person.FullName );
+                        new WorkflowService( rockContext ).Process( workflow, groupMember, out workflowErrors );
+                    }
+                    catch ( Exception ex )
+                    {
+                        ExceptionLogService.LogException( ex, this.Context );
                     }
                 }
             }
         }
 
         /// <summary>
-        /// Checks the settings.
+        /// Checks the settings.  If false is returned, it's expected that the caller will make
+        /// the nbNotice visible to inform the user of the "settings" error.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>true if settings are valid; false otherwise</returns>
         private bool CheckSettings()
         {
             _rockContext = _rockContext ?? new RockContext();
@@ -560,19 +628,55 @@ namespace RockWeb.Blocks.Groups
             }
             btnRegister.Text = registerButtonText;
 
-            int groupId = PageParameter( "GroupId" ).AsInteger();
-            _group = new GroupService( _rockContext )
-                .Queryable( "GroupType.DefaultGroupRole" ).AsNoTracking()
-                .FirstOrDefault( g => g.Id == groupId );
+            var groupService = new GroupService( _rockContext );
+            bool groupIsFromQryString = true;
+
+            Guid? groupGuid = GetAttributeValue( "Group" ).AsGuidOrNull();
+            if ( groupGuid.HasValue )
+            {
+                _group = groupService.Get( groupGuid.Value );
+                groupIsFromQryString = false;
+            }
+
+            if ( _group == null )
+            {
+                groupGuid = PageParameter( "GroupGuid" ).AsGuidOrNull();
+                if ( groupGuid.HasValue )
+                {
+                    _group = groupService.Get( groupGuid.Value );
+                }
+            }
+
+            if ( _group == null && GetAttributeValue( "EnablePassingGroupId" ).AsBoolean( false ) )
+            {
+                int? groupId = PageParameter( "GroupId" ).AsIntegerOrNull();
+                if ( groupId.HasValue )
+                {
+                    _group = groupService.Get( groupId.Value );
+                }
+            }
+
             if ( _group == null )
             {
                 nbNotice.Heading = "Unknown Group";
-                nbNotice.Text = "<p>This page requires a valid group id parameter, and there was not one provided.</p>";
+                nbNotice.Text = "<p>This page requires a valid group identifying parameter and there was not one provided.</p>";
                 return false;
             }
             else
             {
-                _defaultGroupRole = _group.GroupType.DefaultGroupRole;
+                var groupTypeGuids = this.GetAttributeValue( "AllowedGroupTypes" ).SplitDelimitedValues().AsGuidList();
+
+                if ( groupIsFromQryString && groupTypeGuids.Any() && !groupTypeGuids.Contains( _group.GroupType.Guid ) )
+                {
+                    _group = null;
+                    nbNotice.Heading = "Invalid Group";
+                    nbNotice.Text = "<p>The selected group is a restricted group type therefore this block cannot be used to add people to these groups (unless configured to allow).</p>";
+                    return false;
+                }
+                else
+                {
+                    _defaultGroupRole = _group.GroupType.DefaultGroupRole;
+                }
             }
 
             _dvcConnectionStatus = DefinedValueCache.Read( GetAttributeValue( "ConnectionStatus" ).AsGuid() );
@@ -604,7 +708,6 @@ namespace RockWeb.Blocks.Groups
             }
 
             return true;
-
         }
 
         /// <summary>

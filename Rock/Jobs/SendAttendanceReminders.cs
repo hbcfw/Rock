@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -105,11 +105,10 @@ namespace Rock.Jobs
                     occurrences.Add( group.Id, new List<DateTime>() );
 
                     // Check for a iCal schedule
-                    DDay.iCal.Event calEvent = group.Schedule.GetCalenderEvent();
-                    if ( calEvent != null )
+                    if ( !string.IsNullOrWhiteSpace( group.Schedule.iCalendarContent ) )
                     {
                         // If schedule has an iCal schedule, get occurrences between first and last dates
-                        foreach ( var occurrence in calEvent.GetOccurrences( startDate, endDate ) )
+                        foreach ( var occurrence in group.Schedule.GetOccurrences( startDate, endDate ) )
                         {
                             var startTime = occurrence.Period.StartTime.Value;
                             if ( dates.Contains( startTime.Date ) )
@@ -196,7 +195,7 @@ namespace Rock.Jobs
                 {
                     foreach ( var group in occurrences.Where( o => o.Key == leader.GroupId ) )
                     {
-                        var mergeObjects = GlobalAttributesCache.GetMergeFields( leader.Person );
+                        var mergeObjects = Rock.Lava.LavaHelper.GetCommonMergeFields(  null, leader.Person );
                         mergeObjects.Add( "Person", leader.Person );
                         mergeObjects.Add( "Group", leader.Group );
                         mergeObjects.Add( "Occurrence", group.Value.Max() );
@@ -204,9 +203,11 @@ namespace Rock.Jobs
                         var recipients = new List<RecipientData>();
                         recipients.Add( new RecipientData( leader.Person.Email, mergeObjects ) );
 
-                        Email.Send( dataMap.GetString( "SystemEmail" ).AsGuid(), recipients );
-                        attendanceRemindersSent++;
+                        var emailMessage = new RockEmailMessage( dataMap.GetString( "SystemEmail" ).AsGuid() );
+                        emailMessage.SetRecipients( recipients );
+                        emailMessage.Send();
 
+                        attendanceRemindersSent++;
                     }
                 }
             }

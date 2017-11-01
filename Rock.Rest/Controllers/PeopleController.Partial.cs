@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -38,7 +38,12 @@ namespace Rock.Rest.Controllers
     {
         #region Get
 
-        // GET api/<controller>/5
+        /// <summary>
+        /// GET endpoint to get a single person record
+        /// </summary>
+        /// <param name="id">The Id of the record</param>
+        /// <returns></returns>
+        /// <exception cref="HttpResponseException"></exception>
         [Authenticate, Secured]
         [ActionName( "GetById" )]
         public override Person GetById( int id )
@@ -53,7 +58,11 @@ namespace Rock.Rest.Controllers
             return person;
         }
 
-        // GET api/<controller>(5)
+        /// <summary>
+        /// GET endpoint to get a single person record
+        /// </summary>
+        /// <param name="key">The Id of the record</param>
+        /// <returns></returns>
         [Authenticate, Secured]
         [EnableQuery]
         public override Person Get( [FromODataUri] int key )
@@ -63,11 +72,9 @@ namespace Rock.Rest.Controllers
         }
 
         /// <summary>
-        /// Returns a Queryable of Person records
+        /// Queryable GET endpoint. Note that records that are marked as Deceased are not included
         /// </summary>
-        /// <returns>
-        /// A queryable collection of Person records that matches the supplied Odata query.
-        /// </returns>
+        /// <returns></returns>
         [Authenticate, Secured]
         [EnableQuery]
         public override IQueryable<Person> Get()
@@ -77,7 +84,7 @@ namespace Rock.Rest.Controllers
         }
 
         /// <summary>
-        /// Get api controller with option to include Person records for deceased individuals.
+        /// Queryable GET endpoint with an option to include person records that have been marked as Deceased
         /// </summary>
         /// <param name="includeDeceased">if set to <c>true</c> [include deceased].</param>
         /// <returns></returns>
@@ -92,7 +99,21 @@ namespace Rock.Rest.Controllers
         }
 
         /// <summary>
-        /// Searches the person entit(ies) by email.
+        /// Gets the currently authenticated person
+        /// </summary>
+        /// <returns>A person</returns>
+        /// <exception cref="System.Web.Http.HttpResponseException"></exception>
+        [Authenticate, Secured]
+        [HttpGet]
+        [System.Web.Http.Route( "api/People/GetCurrentPerson" )]
+        public Person GetCurrentPerson()
+        {
+            var rockContext = new Rock.Data.RockContext();
+            return new PersonService( rockContext ).Get( GetPerson().Id );
+        }
+
+        /// <summary>
+        /// Searches the person records based on the specified email address
         /// </summary>
         /// <param name="email">The email.</param>
         /// <returns></returns>
@@ -107,7 +128,7 @@ namespace Rock.Rest.Controllers
         }
 
         /// <summary>
-        /// Searches the person entit(ies) by phone number.
+        /// Searches the person records based on the specified phone number. NOTE that partial matches are included
         /// </summary>
         /// <param name="number">The phone number.</param>
         /// <returns></returns>
@@ -122,7 +143,7 @@ namespace Rock.Rest.Controllers
         }
 
         /// <summary>
-        /// Gets the name of the by user.
+        /// GET a person record based on the specified username
         /// </summary>
         /// <param name="username">The username.</param>
         /// <returns></returns>
@@ -131,14 +152,14 @@ namespace Rock.Rest.Controllers
         [System.Web.Http.Route( "api/People/GetByUserName/{username}" )]
         public Person GetByUserName( string username )
         {
-            int? personId = new UserLoginService( (Rock.Data.RockContext)Service.Context ).Queryable()
+            int? personId = new UserLoginService( ( Rock.Data.RockContext ) Service.Context ).Queryable()
                 .Where( u => u.UserName.Equals( username ) )
                 .Select( a => a.PersonId )
                 .FirstOrDefault();
 
             if ( personId != null )
             {
-                return Service.Queryable().Include( a => a.PhoneNumbers).Include(a => a.Aliases )
+                return Service.Queryable().Include( a => a.PhoneNumbers ).Include( a => a.Aliases )
                     .FirstOrDefault( p => p.Id == personId.Value );
             }
 
@@ -146,7 +167,94 @@ namespace Rock.Rest.Controllers
         }
 
         /// <summary>
-        /// Gets the Person by person alias identifier.
+        /// Gets a list of people's names, email, gender and birthdate, to see if there are potential duplicates.
+        /// For example, you might want to use this during account creation to warn that the person might already have an account.
+        /// </summary>
+        /// <param name="lastName">The last name.</param>
+        /// <param name="emailAddress">The email address.</param>
+        /// <returns></returns>
+        [Authenticate, Secured]
+        [HttpGet]
+        [System.Web.Http.Route( "api/People/GetPotentialDuplicates" )]
+        public IEnumerable<DuplicatePersonInfo> GetPotentialDuplicates( string lastName, string emailAddress )
+        {
+            // return a limited number of fields so that this endpoint could be made available to a wider audience
+            return Get().Where( a => a.Email == emailAddress && a.LastName == lastName ).ToList().Select( a => new DuplicatePersonInfo
+            {
+                Id = a.Id,
+                Name = a.FullName,
+                Email = a.Email,
+                Gender = a.Gender,
+                BirthDay = a.BirthDay,
+                BirthMonth = a.BirthMonth,
+                BirthYear = a.BirthYear
+            } );
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public class DuplicatePersonInfo
+        {
+            /// <summary>
+            /// Gets or sets the identifier.
+            /// </summary>
+            /// <value>
+            /// The identifier.
+            /// </value>
+            public int Id { get; set; }
+
+            /// <summary>
+            /// Gets or sets the name.
+            /// </summary>
+            /// <value>
+            /// The name.
+            /// </value>
+            public string Name { get; set; }
+
+            /// <summary>
+            /// Gets or sets the email.
+            /// </summary>
+            /// <value>
+            /// The email.
+            /// </value>
+            public string Email { get; set; }
+
+            /// <summary>
+            /// Gets or sets the gender.
+            /// </summary>
+            /// <value>
+            /// The gender.
+            /// </value>
+            public Gender Gender { get; set; }
+
+            /// <summary>
+            /// Gets or sets the birth month.
+            /// </summary>
+            /// <value>
+            /// The birth month.
+            /// </value>
+            public int? BirthMonth { get; set;  }
+
+            /// <summary>
+            /// Gets or sets the birth day.
+            /// </summary>
+            /// <value>
+            /// The birth day.
+            /// </value>
+            public int? BirthDay { get; set; }
+
+            /// <summary>
+            /// Gets or sets the birth year.
+            /// </summary>
+            /// <value>
+            /// The birth year.
+            /// </value>
+            public int? BirthYear { get; set; }
+        }
+
+        /// <summary>
+        /// GET the Person by person alias identifier.
         /// </summary>
         /// <param name="personAliasId">The person alias identifier.</param>
         /// <returns></returns>
@@ -156,7 +264,7 @@ namespace Rock.Rest.Controllers
         [System.Web.Http.Route( "api/People/GetByPersonAliasId/{personAliasId}" )]
         public Person GetByPersonAliasId( int personAliasId )
         {
-            int? personId = new PersonAliasService( (Rock.Data.RockContext)Service.Context ).Queryable()
+            int? personId = new PersonAliasService( ( Rock.Data.RockContext ) Service.Context ).Queryable()
                 .Where( u => u.Id.Equals( personAliasId ) ).Select( a => a.PersonId ).FirstOrDefault();
             if ( personId != null )
             {
@@ -174,11 +282,11 @@ namespace Rock.Rest.Controllers
         /// <exception cref="System.Web.Http.HttpResponseException"></exception>
         [Authenticate, Secured]
         [HttpGet]
-        [System.Web.Http.Route("api/People/GetGraduationYear/{gradeOffset}")]
+        [System.Web.Http.Route( "api/People/GetGraduationYear/{gradeOffset}" )]
         public int GetGraduationYear( int gradeOffset )
         {
             int? graduationYear = Person.GraduationYearFromGradeOffset( gradeOffset );
-            if( graduationYear.HasValue )
+            if ( graduationYear.HasValue )
             {
                 return graduationYear.Value;
             }
@@ -209,16 +317,21 @@ namespace Rock.Rest.Controllers
             }
 
             System.Web.HttpContext.Current.Items.Add( "CurrentPerson", GetPerson() );
-            PersonService.SaveNewPerson( person, (Rock.Data.RockContext)Service.Context, null, false );
+            PersonService.SaveNewPerson( person, ( Rock.Data.RockContext ) Service.Context, null, false );
 
             return ControllerContext.Request.CreateResponse( HttpStatusCode.Created, person.Id );
         }
 
+        /// <summary>
+        /// PUT endpoint. Use this to UPDATE a person record
+        /// </summary>
+        /// <param name="id">The identifier.</param>
+        /// <param name="person">The person.</param>
         public override void Put( int id, Person person )
         {
             SetProxyCreation( true );
 
-            var rockContext = (RockContext)Service.Context;
+            var rockContext = ( RockContext ) Service.Context;
             var existingPerson = Service.Get( id );
             if ( existingPerson != null )
             {
@@ -259,7 +372,7 @@ namespace Rock.Rest.Controllers
                 {
                     System.Web.HttpContext.Current.Items.Add( "CurrentPerson", GetPerson() );
 
-                    int? modifiedByPersonAliasId = person.ModifiedAuditValuesAlreadyUpdated ? person.ModifiedByPersonAliasId : (int?)null;
+                    int? modifiedByPersonAliasId = person.ModifiedAuditValuesAlreadyUpdated ? person.ModifiedByPersonAliasId : ( int? ) null;
 
                     HistoryService.SaveChanges(
                         rockContext,
@@ -300,7 +413,7 @@ namespace Rock.Rest.Controllers
 
             System.Web.HttpContext.Current.Items.Add( "CurrentPerson", GetPerson() );
 
-            PersonService.AddPersonToFamily( person, person.Id == 0, familyId, groupRoleId, (Rock.Data.RockContext)Service.Context );
+            PersonService.AddPersonToFamily( person, person.Id == 0, familyId, groupRoleId, ( Rock.Data.RockContext ) Service.Context );
 
             return ControllerContext.Request.CreateResponse( HttpStatusCode.Created, person.Id );
         }
@@ -324,11 +437,11 @@ namespace Rock.Rest.Controllers
             var person = this.Get( personId );
             CheckCanEdit( person );
 
-            PersonService.AddPersonToFamily( person, false, familyId, groupRoleId, (Rock.Data.RockContext)Service.Context );
+            PersonService.AddPersonToFamily( person, false, familyId, groupRoleId, ( Rock.Data.RockContext ) Service.Context );
 
             if ( removeFromOtherFamilies )
             {
-                PersonService.RemovePersonFromOtherFamilies( familyId, personId, (Rock.Data.RockContext)Service.Context );
+                PersonService.RemovePersonFromOtherFamilies( familyId, personId, ( Rock.Data.RockContext ) Service.Context );
             }
 
             return ControllerContext.Request.CreateResponse( HttpStatusCode.Created, person.Id );
@@ -352,7 +465,7 @@ namespace Rock.Rest.Controllers
         [System.Web.Http.Route( "api/People/Search" )]
         public IQueryable<PersonSearchResult> Search( string name, bool includeHtml, bool includeDetails, bool includeBusinesses = false, bool includeDeceased = false )
         {
-            int count = 20;
+            int count = GlobalAttributesCache.Value( "core.PersonPickerFetchCount" ).AsIntegerOrNull() ?? 60;
             bool showFullNameReversed;
             bool allowFirstNameOnly = false;
 
@@ -370,14 +483,19 @@ namespace Rock.Rest.Controllers
 
             if ( includeDetails == false )
             {
-                var simpleResultQry = sortedPersonQry.Select( a => new { a.Id, a.FirstName, a.NickName, a.LastName, a.SuffixValueId, a.RecordTypeValueId, a.RecordStatusValueId } );
-                var simpleResult = simpleResultQry.ToList().Select( a => new PersonSearchResult
+                var personService = this.Service as PersonService;
+
+                var simpleResult = sortedPersonQry.AsNoTracking().ToList().Select( a => new PersonSearchResult
                 {
                     Id = a.Id,
                     Name = showFullNameReversed
                     ? Person.FormatFullNameReversed( a.LastName, a.NickName, a.SuffixValueId, a.RecordTypeValueId )
                     : Person.FormatFullName( a.NickName, a.LastName, a.SuffixValueId, a.RecordTypeValueId ),
-                    IsActive = a.RecordStatusValueId.HasValue && a.RecordStatusValueId == activeRecordStatusValueId
+                    IsActive = a.RecordStatusValueId.HasValue && a.RecordStatusValueId == activeRecordStatusValueId,
+                    RecordStatus = a.RecordStatusValueId.HasValue ? DefinedValueCache.Read( a.RecordStatusValueId.Value ).Value : string.Empty,
+                    Age = Person.GetAge( a.BirthDate ) ?? -1,
+                    FormattedAge = a.FormatAge(),
+                    SpouseName = personService.GetSpouse( a, x => x.Person.NickName )
                 } );
 
                 return simpleResult.AsQueryable();
@@ -417,11 +535,10 @@ namespace Rock.Rest.Controllers
         }
 
         /// <summary>
-        /// Searches the with details.
+        /// Returns a List of PersonSearchRecord based on the sorted person query
         /// </summary>
-        /// <param name="reversed">if set to <c>true</c> [reversed].</param>
         /// <param name="sortedPersonQry">The sorted person qry.</param>
-        /// <param name="rockContext">The rock context.</param>
+        /// <param name="showFullNameReversed">if set to <c>true</c> [show full name reversed].</param>
         /// <returns></returns>
         private List<PersonSearchResult> SearchWithDetails( IQueryable<Person> sortedPersonQry, bool showFullNameReversed )
         {
@@ -516,6 +633,7 @@ namespace Rock.Rest.Controllers
             var familyGroupMember = groupMemberService.Queryable()
                 .Where( a => a.PersonId == person.Id )
                 .Where( a => a.Group.GroupTypeId == groupTypeFamilyId )
+                .OrderBy( a => a.GroupOrder ?? int.MaxValue )
                 .Select( s => new
                 {
                     s.GroupRoleId,
@@ -532,12 +650,12 @@ namespace Rock.Rest.Controllers
                 }
                 else
                 {
-                    personInfoHtml += familyGroupType.Roles.First( a => a.Id == familyGroupMember.GroupRoleId ).Name;
+                    personInfoHtml += "<div class='role'>" + familyGroupType.Roles.First( a => a.Id == familyGroupMember.GroupRoleId ).Name + "</div>";
                 }
 
                 if ( personAge != null )
                 {
-                    personInfoHtml += " <em>(" + personAge.ToString() + " yrs old)</em>";
+                    personInfoHtml += " <em class='age'>(" + person.FormatAge() + " old)</em>";
                 }
 
                 if ( familyGroupMember.GroupRoleId == adultRoleId )
@@ -553,7 +671,7 @@ namespace Rock.Rest.Controllers
                     if ( spouse != null )
                     {
                         string spouseFullName = Person.FormatFullName( spouse.NickName, spouse.LastName, spouse.SuffixValueId );
-                        personInfoHtml += "<p><strong>Spouse:</strong> " + spouseFullName + "</p>";
+                        personInfoHtml += "<p class='spouse'><strong>Spouse:</strong> " + spouseFullName + "</p>";
                         personSearchResult.SpouseName = spouseFullName;
                     }
                 }
@@ -572,7 +690,7 @@ namespace Rock.Rest.Controllers
 
                 if ( location != null )
                 {
-                    string addressHtml = "<h5>Address</h5>" + location.GetFullStreetAddress().ConvertCrLfToHtmlBr();
+                    string addressHtml = "<div class='address'><h5>Address</h5>" + location.GetFullStreetAddress().ConvertCrLfToHtmlBr() + "</div>";
                     personSearchResult.Address = location.GetFullStreetAddress();
                     personInfoHtml += addressHtml;
                 }
@@ -581,9 +699,9 @@ namespace Rock.Rest.Controllers
             // Generate the HTML for Email and PhoneNumbers
             if ( !string.IsNullOrWhiteSpace( person.Email ) || person.PhoneNumbers.Any() )
             {
-                string emailAndPhoneHtml = "<p class='margin-t-sm'>";
-                emailAndPhoneHtml += person.Email;
-                string phoneNumberList = string.Empty;
+                string emailAndPhoneHtml = "<div class='margin-t-sm'>";
+                emailAndPhoneHtml += "<span class='email'>" + person.Email + "</span>";
+                string phoneNumberList = "<div class='phones'>";
                 foreach ( var phoneNumber in person.PhoneNumbers )
                 {
                     var phoneType = DefinedValueCache.Read( phoneNumber.NumberTypeValueId ?? 0 );
@@ -593,26 +711,38 @@ namespace Rock.Rest.Controllers
                         phoneType != null ? phoneType.Value : string.Empty );
                 }
 
-                emailAndPhoneHtml += phoneNumberList + "<p>";
+                emailAndPhoneHtml += phoneNumberList + "</div></div>";
 
                 personInfoHtml += emailAndPhoneHtml;
             }
+
+            // force the link to open a new scrollable,resizable browser window (and make it work in FF, Chrome and IE) http://stackoverflow.com/a/2315916/1755417
+            personInfoHtml += $"<p class='margin-t-sm'><small><a class='cursor-pointer' onclick=\"javascript: window.open('/person/{person.Id}', '_blank', 'scrollbars=1,resizable=1,toolbar=1'); return false;\" data-toggle=\"tooltip\" title=\"View Profile\">View Profile</a></small></p>";
 
             personSearchResult.PickerItemDetailsImageHtml = imageHtml;
             personSearchResult.PickerItemDetailsPersonInfoHtml = personInfoHtml;
             personSearchResult.PickerItemDetailsHtml = string.Format( itemDetailFormat, imageHtml, personInfoHtml );
         }
 
+        /// <summary>
+        /// Obsolete: Gets the search details
+        /// </summary>
+        /// <param name="personId">The person identifier.</param>
+        /// <returns></returns>
         [Authenticate, Secured]
         [HttpGet]
         [System.Web.Http.Route( "api/People/GetSearchDetails/{personId}" )]
-        public string GetImpersonationParameter( int personId )
+        [Obsolete( "Returns incorrect results, will be removed in a future version" )]
+        public string GetImpersonationParameterObsolete( int personId )
         {
+            // NOTE: This route is called GetSearchDetails but really returns an ImpersonationParameter due to a copy/paste bug. 
+            // Marked obsolete but kept around in case anybody was taking advantage of this bug 
+
             string result = string.Empty;
-            
+
             var rockContext = this.Service.Context as Rock.Data.RockContext;
 
-            var person = new PersonService( rockContext ).Get( personId );
+            var person = new PersonService( rockContext ).Queryable().Include( a => a.Aliases ).AsNoTracking().FirstOrDefault( a => a.Id == personId );
 
             if ( person != null )
             {
@@ -620,6 +750,36 @@ namespace Rock.Rest.Controllers
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Creates and stores a new PersonToken for a person using the specified ExpireDateTime, UsageLimit, and Page
+        /// Returns the encrypted URLEncoded Token along with the ImpersonationParameter key in the form of "rckipid={ImpersonationParameter}"
+        /// </summary>
+        /// <param name="personId">The person identifier.</param>
+        /// <param name="expireDateTime">The expire date time.</param>
+        /// <param name="usageLimit">The usage limit.</param>
+        /// <param name="pageId">The page identifier.</param>
+        /// <returns></returns>
+        [Authenticate, Secured]
+        [HttpGet]
+        [System.Web.Http.Route( "api/People/GetImpersonationParameter" )]
+        public string GetImpersonationParameter( int personId, DateTime? expireDateTime = null, int? usageLimit = null, int? pageId = null )
+        {
+            string result = string.Empty;
+
+            var rockContext = this.Service.Context as Rock.Data.RockContext;
+
+            var person = new PersonService( rockContext ).Queryable().Include( a => a.Aliases ).AsNoTracking().FirstOrDefault( a => a.Id == personId );
+
+            if ( person != null )
+            {
+                return person.GetImpersonationParameter( expireDateTime, usageLimit, pageId );
+            }
+            else
+            {
+                throw new HttpResponseException( HttpStatusCode.NotFound );
+            }
         }
 
         /// <summary>
@@ -686,7 +846,7 @@ namespace Rock.Rest.Controllers
                 int? age = person.Age;
                 if ( age.HasValue )
                 {
-                    html.AppendFormat( "<div><strong>Age</strong> {0}</div>" , age );
+                    html.AppendFormat( "<div><strong>Age</strong> {0}</div>", age );
                 }
 
                 if ( !string.IsNullOrWhiteSpace( person.Email ) )
@@ -717,9 +877,10 @@ namespace Rock.Rest.Controllers
         #endregion
 
         /// <summary>
-        /// Deletes the specified identifier.
+        /// DELETE endpoint for a Person Record. NOTE: Person records can not be deleted using REST, so this will always return a 405
         /// </summary>
         /// <param name="id">The identifier.</param>
+        /// <exception cref="HttpResponseException"></exception>
         public override void Delete( int id )
         {
             // we don't want to support DELETE on a Person in ROCK (especially from REST).  So, return a MethodNotAllowed.
@@ -755,7 +916,7 @@ namespace Rock.Rest.Controllers
         ///   <c>true</c> if this instance is active; otherwise, <c>false</c>.
         /// </value>
         public bool IsActive { get; set; }
-        
+
         /// <summary>
         /// Gets or sets the image HTML tag.
         /// </summary>
@@ -765,10 +926,19 @@ namespace Rock.Rest.Controllers
         public string ImageHtmlTag { get; set; }
 
         /// <summary>
-        /// Gets or sets the age.
+        /// Gets or sets the age in years
+        /// NOTE: returns -1 if age is unknown
         /// </summary>
         /// <value>The age.</value>
         public int Age { get; set; }
+
+        /// <summary>
+        /// Gets or sets the formatted age.
+        /// </summary>
+        /// <value>
+        /// The formatted age.
+        /// </value>
+        public string FormattedAge { get; set; }
 
         /// <summary>
         /// Gets or sets the gender.

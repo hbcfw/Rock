@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -74,6 +74,7 @@ namespace RockWeb.Blocks.Core
             ddlPrinter.Items.Clear();
             ddlPrinter.DataSource = new DeviceService( new RockContext() )
                 .GetByDeviceTypeGuid( new Guid( Rock.SystemGuid.DefinedValue.DEVICE_TYPE_PRINTER ) )
+                .OrderBy( d => d.Name )
                 .ToList();
             ddlPrinter.DataBind();
             ddlPrinter.Items.Insert( 0, new ListItem( None.Text, None.IdValue ) );
@@ -194,7 +195,7 @@ namespace RockWeb.Blocks.Core
         /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
         protected void btnSave_Click( object sender, EventArgs e )
         {
-            Location location;
+            Location location = null;
 
             var rockContext = new RockContext();
             LocationService locationService = new LocationService( rockContext );
@@ -203,16 +204,19 @@ namespace RockWeb.Blocks.Core
 
             int locationId = int.Parse( hfLocationId.Value );
 
-            if ( locationId == 0 )
-            {
-                location = new Location();
-                location.Name = string.Empty;
-            }
-            else
+            if ( locationId != 0 )
             {
                 location = locationService.Get( locationId );
                 FlushCampus( locationId );
             }
+
+            if ( location == null )
+            { 
+                location = new Location();
+                location.Name = string.Empty;
+            }
+
+            string previousName = location.Name;
 
             int? orphanedImageId = null;
             if ( location.ImageId != imgImage.BinaryFileId )
@@ -245,7 +249,10 @@ namespace RockWeb.Blocks.Core
             location.GeoFence = geopFence.SelectedValue;
 
             location.IsGeoPointLocked = cbGeoPointLocked.Checked;
-            
+
+            location.SoftRoomThreshold = nbSoftThreshold.Text.AsIntegerOrNull();
+            location.FirmRoomThreshold = nbFirmThreshold.Text.AsIntegerOrNull();
+
             location.LoadAttributes( rockContext );
             Rock.Attribute.Helper.GetEditValues( phAttributeEdits, location );
 
@@ -287,6 +294,13 @@ namespace RockWeb.Blocks.Core
                 location.SaveAttributeValues( rockContext );
 
             } );
+
+            // If this is a names location (or was previouisly)
+            if ( !string.IsNullOrWhiteSpace( location.Name ) || ( previousName ?? string.Empty ) != (location.Name ?? string.Empty ) )
+            {
+                // flush the checkin config
+                Rock.CheckIn.KioskDevice.FlushAll();
+            }
 
             if ( _personId.HasValue )
             {
@@ -366,6 +380,8 @@ namespace RockWeb.Blocks.Core
 
             service.Verify( location, true );
 
+            rockContext.SaveChanges();
+
             acAddress.SetValues( location );
             geopPoint.SetValue( location.GeoPoint );
 
@@ -422,11 +438,14 @@ namespace RockWeb.Blocks.Core
             if ( !locationId.Equals( 0 ) )
             {
                 location = new LocationService( new RockContext() ).Get( locationId );
+                pdAuditDetails.SetEntity( location, ResolveRockUrl( "~" ) );
             }
 
             if ( location == null )
             {
                 location = new Location { Id = 0, IsActive = true, ParentLocationId = parentLocationId };
+                // hide the panel drawer that show created and last modified dates
+                pdAuditDetails.Visible = false;
             }
 
             editAllowed = location.IsAuthorized( Authorization.EDIT, CurrentPerson );
@@ -475,6 +494,8 @@ namespace RockWeb.Blocks.Core
             divAdvSettings.Visible = !_personId.HasValue;
             cbIsActive.Visible = !_personId.HasValue;
             geopFence.Visible = !_personId.HasValue;
+            nbSoftThreshold.Visible = !_personId.HasValue;
+            nbFirmThreshold.Visible = !_personId.HasValue;
 
             if ( location.Id == 0 )
             {
@@ -511,6 +532,9 @@ namespace RockWeb.Blocks.Core
             geopFence.SetValue( location.GeoFence );
 
             cbGeoPointLocked.Checked = location.IsGeoPointLocked ?? false;
+
+            nbSoftThreshold.Text = location.SoftRoomThreshold.HasValue ? location.SoftRoomThreshold.Value.ToString() : "";
+            nbFirmThreshold.Text = location.FirmRoomThreshold.HasValue ? location.FirmRoomThreshold.Value.ToString() : "";
 
             Guid mapStyleValueGuid = GetAttributeValue( "MapStyle" ).AsGuid();
             geopPoint.MapStyleValueGuid = mapStyleValueGuid;
@@ -601,6 +625,16 @@ namespace RockWeb.Blocks.Core
                 descriptionList.Add( "Printer", location.PrinterDevice.Name );
             }
 
+            if ( location.SoftRoomThreshold.HasValue )
+            {
+                descriptionList.Add( "Threshold", location.SoftRoomThreshold.Value.ToString( "N0" ) ); ;
+            }
+
+            if ( location.FirmRoomThreshold.HasValue )
+            {
+                descriptionList.Add( "Threshold (Absolute)", location.FirmRoomThreshold.Value.ToString( "N0" ) ); ;
+            }
+
             string fullAddress = location.GetFullStreetAddress().ConvertCrLfToHtmlBr();
             if ( !string.IsNullOrWhiteSpace( fullAddress ) )
             {
@@ -614,12 +648,14 @@ namespace RockWeb.Blocks.Core
 
             phMaps.Controls.Clear();
             var mapStyleValue = DefinedValueCache.Read( GetAttributeValue( "MapStyle" ) );
+            var googleAPIKey = GlobalAttributesCache.Read().GetValue( "GoogleAPIKey" );
+
             if ( mapStyleValue == null )
             {
                 mapStyleValue = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.MAP_STYLE_ROCK );
             }
 
-            if ( mapStyleValue != null )
+            if ( mapStyleValue != null && ! string.IsNullOrWhiteSpace( googleAPIKey ) )
             {
                 string mapStyle = mapStyleValue.GetAttributeValue( "StaticMapStyle" );
 
@@ -630,7 +666,7 @@ namespace RockWeb.Blocks.Core
                         string markerPoints = string.Format( "{0},{1}", location.GeoPoint.Latitude, location.GeoPoint.Longitude );
                         string mapLink = System.Text.RegularExpressions.Regex.Replace( mapStyle, @"\{\s*MarkerPoints\s*\}", markerPoints );
                         mapLink = System.Text.RegularExpressions.Regex.Replace( mapLink, @"\{\s*PolygonPoints\s*\}", string.Empty );
-                        mapLink += "&sensor=false&size=350x200&zoom=13&format=png";
+                        mapLink += "&sensor=false&size=350x200&zoom=13&format=png&key=" + googleAPIKey;
                         phMaps.Controls.Add( new LiteralControl ( string.Format( "<div class='group-location-map'><img class='img-thumbnail' src='{0}'/></div>", mapLink ) ) );
                     }
 
@@ -639,7 +675,7 @@ namespace RockWeb.Blocks.Core
                         string polygonPoints = "enc:" + location.EncodeGooglePolygon();
                         string mapLink = System.Text.RegularExpressions.Regex.Replace( mapStyle, @"\{\s*MarkerPoints\s*\}", string.Empty );
                         mapLink = System.Text.RegularExpressions.Regex.Replace( mapLink, @"\{\s*PolygonPoints\s*\}", polygonPoints );
-                        mapLink += "&sensor=false&size=350x200&format=png";
+                        mapLink += "&sensor=false&size=350x200&format=png&key=" + googleAPIKey;
                         phMaps.Controls.Add( new LiteralControl( string.Format( "<div class='group-location-map'><img class='img-thumbnail' src='{0}'/></div>", mapLink ) ) );
                     }
                 }

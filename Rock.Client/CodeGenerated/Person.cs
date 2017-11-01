@@ -5,13 +5,13 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 // <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -45,6 +45,9 @@ namespace Rock.Client
 
         /// <summary />
         public int? BirthYear { get; set; }
+
+        /// <summary />
+        public Rock.Client.Enums.CommunicationType CommunicationPreference { get; set; }
 
         /// <summary />
         public int? ConnectionStatusValueId { get; set; }
@@ -103,6 +106,12 @@ namespace Rock.Client
 
         /// <summary />
         public int? MaritalStatusValueId { get; set; }
+
+        /// <summary />
+        public int? MetaPersonicxLifestageClusterId { get; set; }
+
+        /// <summary />
+        public int? MetaPersonicxLifestageGroupId { get; set; }
 
         /// <summary />
         public string MiddleName { get; set; }
@@ -185,6 +194,7 @@ namespace Rock.Client
             this.BirthDay = source.BirthDay;
             this.BirthMonth = source.BirthMonth;
             this.BirthYear = source.BirthYear;
+            this.CommunicationPreference = source.CommunicationPreference;
             this.ConnectionStatusValueId = source.ConnectionStatusValueId;
             this.Email = source.Email;
             this.EmailNote = source.EmailNote;
@@ -202,6 +212,8 @@ namespace Rock.Client
             this.IsSystem = source.IsSystem;
             this.LastName = source.LastName;
             this.MaritalStatusValueId = source.MaritalStatusValueId;
+            this.MetaPersonicxLifestageClusterId = source.MetaPersonicxLifestageClusterId;
+            this.MetaPersonicxLifestageGroupId = source.MetaPersonicxLifestageGroupId;
             this.MiddleName = source.MiddleName;
             this.ModifiedAuditValuesAlreadyUpdated = source.ModifiedAuditValuesAlreadyUpdated;
             this.NickName = source.NickName;
@@ -248,6 +260,12 @@ namespace Rock.Client
 
         /// <summary />
         public DefinedValue MaritalStatusValue { get; set; }
+
+        /// <summary />
+        public MetaPersonicxLifestageCluster MetaPersonicxLifestageCluster { get; set; }
+
+        /// <summary />
+        public MetaPersonicxLifestageGroup MetaPersonicxLifestageGroup { get; set; }
 
         /// <summary />
         public ICollection<PhoneNumber> PhoneNumbers { get; set; }

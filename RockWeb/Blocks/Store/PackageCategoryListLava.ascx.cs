@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -41,7 +41,6 @@ namespace RockWeb.Blocks.Store
     [Category( "Store" )]
     [Description( "Lists categories for Rock Store pages." )]
     [CodeEditorField( "Lava Template", "Lava template to use to display the categories", CodeEditorMode.Lava, CodeEditorTheme.Rock, 400, true, @"{% include '~/Assets/Lava/Store/PackageCategoryListSidebar.lava' %}", "", 2 )]
-    [BooleanField("Enable Debug", "Display a list of merge fields available for lava.", false, "", 3)]
     [LinkedPage( "Detail Page", "Page reference to use for the detail page.", false, "", "", 4 )]
     public partial class PackageCategoryListLava : Rock.Web.UI.RockBlock
     {
@@ -113,32 +112,21 @@ namespace RockWeb.Blocks.Store
             string errorResponse = string.Empty;
             
             PackageCategoryService packageCategoryService = new PackageCategoryService();
-            var categories = packageCategoryService.GetCategories(out errorResponse);
+            var categories = packageCategoryService.GetCategories(out errorResponse).OrderBy(c => c.Name);
 
             // check for errors
             ErrorCheck( errorResponse );
 
-            var mergeFields = new Dictionary<string, object>();
-            mergeFields.Add( "CurrentPerson", CurrentPerson );
-
-            var globalAttributeFields = Rock.Web.Cache.GlobalAttributesCache.GetMergeFields( CurrentPerson );
-            globalAttributeFields.ToList().ForEach( d => mergeFields.Add( d.Key, d.Value ) );
-
+            var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
             mergeFields.Add( "Categories", categories );
 
             // add link to detail page
             Dictionary<string, object> linkedPages = new Dictionary<string, object>();
-            linkedPages.Add( "DetailPage", LinkedPageUrl( "DetailPage", null ) );
+            linkedPages.Add( "DetailPage", LinkedPageRoute( "DetailPage" ) );
             mergeFields.Add( "LinkedPages", linkedPages );
 
             lOutput.Text = GetAttributeValue( "LavaTemplate" ).ResolveMergeFields( mergeFields );
 
-            // show debug info
-            if ( GetAttributeValue( "EnableDebug" ).AsBoolean() && IsUserAuthorized( Authorization.EDIT ) )
-            {
-                lDebug.Visible = true;
-                lDebug.Text = mergeFields.lavaDebugInfo();
-            }
         }
 
         private void ErrorCheck( string errorResponse )

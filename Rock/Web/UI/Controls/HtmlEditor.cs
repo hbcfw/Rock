@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,6 +14,7 @@
 // limitations under the License.
 // </copyright>
 //
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -98,6 +99,34 @@ namespace Rock.Web.UI.Controls
         }
 
         /// <summary>
+        /// Gets or sets the warning text.
+        /// </summary>
+        /// <value>
+        /// The warning text.
+        /// </value>
+        [
+        Bindable( true ),
+        Category( "Appearance" ),
+        DefaultValue( "" ),
+        Description( "The warning block." )
+        ]
+        public string Warning
+        {
+            get
+            {
+                return WarningBlock != null ? WarningBlock.Text : string.Empty;
+            }
+
+            set
+            {
+                if ( WarningBlock != null )
+                {
+                    WarningBlock.Text = value;
+                }
+            }
+        }
+
+        /// <summary>
         /// Gets or sets a value indicating whether this <see cref="RockTextBox"/> is required.
         /// </summary>
         /// <value>
@@ -167,6 +196,14 @@ namespace Rock.Web.UI.Controls
         public HelpBlock HelpBlock { get; set; }
 
         /// <summary>
+        /// Gets or sets the warning block.
+        /// </summary>
+        /// <value>
+        /// The warning block.
+        /// </value>
+        public WarningBlock WarningBlock { get; set; }
+
+        /// <summary>
         /// Gets or sets the required field validator.
         /// </summary>
         /// <value>
@@ -193,6 +230,10 @@ namespace Rock.Web.UI.Controls
         }
 
         #endregion
+
+        private HiddenField _hfDisableVrm;
+        private HiddenFieldWithClass _hfInCodeEditorMode;
+        private CodeEditor _ceEditor;
 
         #region Properties
 
@@ -259,21 +300,61 @@ namespace Rock.Web.UI.Controls
         }
 
         /// <summary>
-        /// Gets or sets the custom javascript that will get executed when the ckeditor 'on change' event occurs
+        /// Gets or sets the custom javascript that will get executed when the editor 'onKeyUp' event occurs.
+        /// Obsolete because it is misleading that this actually is triggered off of the onKeyUp event
         /// </summary>
         /// <value>
         /// The custom on change press script.
         /// </value>
+        [Obsolete( "Use CallbackOnKeyupScript or CallbackOnChangeScript instead" )]
         public string OnChangeScript
         {
             get
             {
-                return ViewState["OnChangeScript"] as string;
+                return CallbackOnKeyupScript;
             }
 
             set
             {
-                ViewState["OnChangeScript"] = value;
+               CallbackOnKeyupScript= value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the custom javascript that will get executed when the editor 'onChange' event occurs
+        /// </summary>
+        /// <value>
+        /// The custom on change press script.
+        /// </value>
+        public string CallbackOnChangeScript
+        {
+            get
+            {
+                return ViewState["CallbackOnChangeScript"] as string;
+            }
+
+            set
+            {
+                ViewState["CallbackOnChangeScript"] = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the custom javascript that will get executed when the editor 'onKeyUp' event occurs
+        /// </summary>
+        /// <value>
+        /// The custom on change press script.
+        /// </value>
+        public string CallbackOnKeyupScript
+        {
+            get
+            {
+                return ViewState["CallbackOnKeyupScript"] as string;
+            }
+
+            set
+            {
+                ViewState["CallbackOnKeyupScript"] = value;
             }
         }
 
@@ -342,6 +423,7 @@ namespace Rock.Web.UI.Controls
             {
                 return ViewState["UserSpecificRoot"] as bool? ?? false;
             }
+
             set
             {
                 ViewState["UserSpecificRoot"] = value;
@@ -395,16 +477,35 @@ namespace Rock.Web.UI.Controls
         }
 
         /// <summary>
-        /// Gets or sets any additional configuration settings for the CKEditor.  Should be in SettingName: SettingValue, ... format.  
-        /// For example: autoParagrapth: false, enterMode: 3,
+        /// Gets or sets the additional configurations.
         /// </summary>
         /// <value>
         /// The additional configurations.
         /// </value>
+        [Obsolete( "Doesn't do anything anymore" )]
         public string AdditionalConfigurations
         {
             get { return ViewState["AdditionalConfigurations"] as string ?? string.Empty; }
             set { ViewState["AdditionalConfigurations"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether [start in code editor mode].
+        /// </summary>
+        /// <value>
+        /// <c>true</c> if [start in code editor mode]; otherwise, <c>false</c>.
+        /// </value>
+        public bool StartInCodeEditorMode
+        {
+            get
+            {
+                return ViewState["StartInCodeEditorMode"] as bool? ?? false;
+            }
+
+            set
+            {
+                ViewState["StartInCodeEditorMode"] = value;
+            }
         }
 
         #endregion
@@ -418,6 +519,7 @@ namespace Rock.Web.UI.Controls
             RequiredFieldValidator = new RequiredFieldValidator();
             RequiredFieldValidator.ValidationGroup = this.ValidationGroup;
             HelpBlock = new HelpBlock();
+            WarningBlock = new WarningBlock();
 
             TextMode = TextBoxMode.MultiLine;
             Rows = 10;
@@ -431,7 +533,57 @@ namespace Rock.Web.UI.Controls
         protected override void OnInit( System.EventArgs e )
         {
             base.OnInit( e );
+
+            if ( this.Visible && !ScriptManager.GetCurrent( this.Page ).IsInAsyncPostBack )
+            {
+                RockPage.AddScriptLink( Page, ResolveUrl( "~/Scripts/summernote/summernote.min.js" ), true );
+                RockPage.AddScriptLink( Page, "~/Scripts/Bundles/RockHtmlEditorPlugins", false );
+            }
+
+            EnsureChildControls();
         }
+
+        /// <summary>
+        /// Raises the <see cref="E:System.Web.UI.Control.Load" /> event.
+        /// </summary>
+        /// <param name="e">The <see cref="T:System.EventArgs" /> object that contains the event data.</param>
+        protected override void OnLoad( EventArgs e )
+        {
+            base.OnLoad( e );
+
+            if ( this.Page.IsPostBack )
+            {
+                if ( this.Page.Request.Params[_hfInCodeEditorMode.UniqueID].AsBoolean() )
+                {
+                    this.Text = _ceEditor.Text;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the text content of the <see cref="T:System.Web.UI.WebControls.TextBox" /> control.
+        /// </summary>
+        public override string Text
+        {
+            get
+            {
+                EnsureChildControls();
+                if ( _hfInCodeEditorMode.Value.AsBoolean() )
+                {
+                    return _ceEditor.Text;
+                }
+                else
+                {
+                    return base.Text;
+                }
+            }
+
+            set
+            {
+                base.Text = value;
+            }
+        }
+
 
         /// <summary>
         /// Called by the ASP.NET page framework to notify server controls that use composition-based implementation to create any child controls they contain in preparation for posting back or rendering.
@@ -441,6 +593,26 @@ namespace Rock.Web.UI.Controls
             base.CreateChildControls();
             Controls.Clear();
             RockControlHelper.CreateChildControls( this, Controls );
+
+            _hfDisableVrm = new HiddenField();
+            _hfDisableVrm.ID = this.ID + "_dvrm";
+            _hfDisableVrm.Value = "True";
+            Controls.Add( _hfDisableVrm );
+
+            _hfInCodeEditorMode = new HiddenFieldWithClass();
+            _hfInCodeEditorMode.CssClass = "js-incodeeditormode";
+            _hfInCodeEditorMode.ID = this.ID + "_hfInCodeEditorMode";
+            Controls.Add( _hfInCodeEditorMode );
+
+            _ceEditor = new CodeEditor();
+            _ceEditor.ID = this.ID + "_codeEditor";
+            _ceEditor.EditorMode = CodeEditorMode.Html;
+            if ( !string.IsNullOrEmpty(this.CallbackOnChangeScript) )
+            {
+                _ceEditor.OnChangeScript = this.CallbackOnChangeScript;
+            }
+
+            Controls.Add( _ceEditor );
         }
 
         /// <summary>
@@ -451,11 +623,18 @@ namespace Rock.Web.UI.Controls
         {
             if ( this.Visible )
             {
+                if ( this.StartInCodeEditorMode )
+                {
+                    _ceEditor.Text = this.Text;
+                    this.Text = "";
+                }
+
                 RockControlHelper.RenderControl( this, writer );
+                _hfDisableVrm.RenderControl( writer );
+                _hfInCodeEditorMode.RenderControl( writer );
+                _ceEditor.RenderControl( writer );
             }
         }
-
-        private static string _fingerPrintVersion = null;
 
         /// <summary>
         /// Renders the base control.
@@ -463,106 +642,11 @@ namespace Rock.Web.UI.Controls
         /// <param name="writer">The writer.</param>
         public void RenderBaseControl( HtmlTextWriter writer )
         {
-            // NOTE: Some of the plugins in the Full (72 plugin) build of CKEditor are buggy, so we are just using the Standard edition. 
-            // This is why some of the items don't appear in the RockCustomConfiguFull toolbar (like the Justify commands)
-            string ckeditorInitScriptFormat = @"
-// ensure that ckEditor.js link is added to page
-if (!$('#ckeditorJsLib').length) {{
-    // by default, jquery adds a cache-busting parameter on dynamically added script tags. set the ajaxSetup cache:true to prevent this
-    $.ajaxSetup({{ cache: true }});
-    $('head').prepend(""<script id='ckeditorJsLib' src='{12}' />"");
-}}
-
-var pluginTimestamp = '_v{14}'
-if ( !(CKEDITOR.timestamp.indexOf(pluginTimestamp) >=0) )
-{{
-    CKEDITOR.timestamp = CKEDITOR.timestamp + pluginTimestamp;
-}}
-
-// allow i tags to be empty (for font awesome)
-CKEDITOR.dtd.$removeEmpty['i'] = false
-
-// In IE, the CKEditor doesn't accept keyboard input when loading again within the same page instance.  Destroy fixes it, but destroy throws an exception in Chrome
-if (CKEDITOR.instances.{0}) {{
-    try
-    {{
-        CKEDITOR.instances.{0}.destroy();
-    }}
-    catch (ex)
-    {{
-        // ignore error
-    }}
-}}
-  
-CKEDITOR.replace('{0}', {{ 
-    {11}
-    allowedContent: true,
-    toolbar: Rock.htmlEditor.toolbar_RockCustomConfig{1},
-    removeButtons: '',
-    baseFloatZIndex: 200000,  // set zindex to be 200000 so it will be on top of our modals (100000)
-    entities: false, // stop CKEditor from using HTML entities in the editor output. Prevents single quote from getting escaped, etc
-    htmlEncodeOutput: true,
-    extraPlugins: '{5}',
-    resize_maxWidth: '{3}',
-    rockFileBrowserOptions: {{ 
-    documentFolderRoot: '{6}', 
-    imageFolderRoot: '{7}',
-    imageFileTypeWhiteList: '{8}',
-    fileTypeBlackList: '{9}'
-    }},
-    rockMergeFieldOptions: {{ mergeFields: '{10}' }},
-    rockTheme: '{13}',
-    on : {{
-        change: function (e) {{
-            // update the underlying TextElement on every little change (when in WYSIWIG mode) to ensure that Posting and Validation works consistently (doing it OnSubmit or OnBlur misses some cases)
-            e.editor.updateElement();  
-            {4}
-        }},
-        instanceReady: function (e) {{
-
-            CKEDITOR.instances.{0}.updateElement();
-
-            // update the underlying TextElement when there is a change event in SOURCE mode
-            $('#cke_{0}').on( 'change paste', '.cke_source', function(e, data) {{
-                CKEDITOR.instances.{0}.updateElement();
-            }});
-
-            // In IE, clicking the Source button does not cause the .cke_source to lose focus 
-            // and fire the onchange event, so also updateElement when source button is clicked
-            $('#cke_{0} .cke_button__source').click( function(e, data) {{
-                CKEDITOR.instances.{0}.updateElement();
-            }});
-
-            // set the height
-            if ('{2}' != '') {{
-              var topHeight = $('#' + e.editor.id + '_top').height();
-              var contentHeight = '{2}'.replace('px','') - topHeight - 40;
-              $('#' + e.editor.id + '_contents').css('height', contentHeight);
-            }}
-        }}
-    }}
-}}
-);
-            ";
-
-            string customOnChangeScript = null;
-
-            if ( !string.IsNullOrWhiteSpace( this.OnChangeScript ) )
-            {
-                customOnChangeScript = @"
-                // custom on change script 
-                " + this.OnChangeScript;
-            }
-
-            List<string> enabledPlugins = new List<string>();
-            enabledPlugins.Add( "justify" );
-            if ( MergeFields.Any() )
-            {
-                enabledPlugins.Add( "rockmergefield" );
-            }
+            bool rockMergeFieldEnabled = MergeFields.Any();
+            bool rockFileBrowserEnabled = false;
 
             // only show the File/Image plugin if they have Auth to the file browser page
-            var fileBrowserPage = new Rock.Model.PageService( new RockContext() ).Get( Rock.SystemGuid.Page.CKEDITOR_ROCKFILEBROWSER_PLUGIN_FRAME.AsGuid() );
+            var fileBrowserPage = new Rock.Model.PageService( new RockContext() ).Get( Rock.SystemGuid.Page.HTMLEDITOR_ROCKFILEBROWSER_PLUGIN_FRAME.AsGuid() );
             if ( fileBrowserPage != null )
             {
                 var currentPerson = this.RockBlock().CurrentPerson;
@@ -570,7 +654,7 @@ CKEDITOR.replace('{0}', {{
                 {
                     if ( fileBrowserPage.IsAuthorized( Authorization.VIEW, currentPerson ) )
                     {
-                        enabledPlugins.Add( "rockfilebrowser" );
+                        rockFileBrowserEnabled = true;
                     }
                 }
             }
@@ -592,81 +676,112 @@ CKEDITOR.replace('{0}', {{
                 }
             }
 
-            // Make sure that if additional configurations are defined, that the string ends in a comma.
-            if ( !string.IsNullOrWhiteSpace( this.AdditionalConfigurations ) && !this.AdditionalConfigurations.Trim().EndsWith( "," ) )
+            string callbacksOption = string.Empty;
+            if ( !string.IsNullOrEmpty( this.CallbackOnKeyupScript ) || !string.IsNullOrEmpty( this.CallbackOnChangeScript ) )
             {
-                this.AdditionalConfigurations = this.AdditionalConfigurations.Trim() + ",";
+                callbacksOption =
+$@" 
+onKeyup: function(e) {{  
+    {this.CallbackOnKeyupScript}  
+}},
+onChange: function(contents, $editable) {{  
+    {this.CallbackOnChangeScript}  
+}}
+";
+             }
+
+
+            string summernoteInitScript = $@"
+function pageLoad() {{
+  // remove any leftover popovers that summernote might have created and orphaned  
+  $('.note-popover.popover').hide();
+}}
+
+$(document).ready( function() {{
+
+    // workaround for https://github.com/summernote/summernote/issues/2017 and/or https://github.com/summernote/summernote/issues/1984
+    if(!!document.createRange) {{
+      document.getSelection().removeAllRanges();
+    }}
+
+    var summerNoteEditor_{this.ClientID} = $('#{this.ClientID}').summernote({{
+        height: '{this.Height}', //set editable area's height
+        toolbar: Rock.htmlEditor.toolbar_RockCustomConfig{this.Toolbar.ConvertToString()},
+
+        popover: {{
+          image: [
+            ['custom1', ['rockimagelink']],
+            ['imagesize', ['imageSize100', 'imageSize50', 'imageSize25']],
+            ['custom2', ['rockimagebrowser']],
+            ['float', ['floatLeft', 'floatRight', 'floatNone']],
+            ['remove', ['removeMedia']]
+          ],
+          link: [
+            ['link', ['linkDialogShow', 'unlink']]
+          ],
+          air: [
+            ['color', ['color']],
+            ['font', ['bold', 'underline', 'clear']],
+            ['para', ['ul', 'paragraph']],
+            ['table', ['table']],
+            ['insert', ['link', 'picture']]
+          ]
+        }},
+
+        callbacks: {{
+           {callbacksOption} 
+        }},
+
+        buttons: {{
+            rockfilebrowser: RockFileBrowser,
+            rockimagebrowser: RockImageBrowser, 
+            rockimagelink: RockImageLink, 
+            rockmergefield: RockMergeField,
+            rockcodeeditor: RockCodeEditor,
+            rockpastetext: RockPasteText,
+            rockpastefromword: RockPasteFromWord
+        }},
+
+        rockFileBrowserOptions: {{ 
+            enabled: {rockFileBrowserEnabled.ToTrueFalse().ToLower()},
+            documentFolderRoot: '{Rock.Security.Encryption.EncryptString( documentFolderRoot )}', 
+            imageFolderRoot: '{Rock.Security.Encryption.EncryptString( imageFolderRoot )}',
+            imageFileTypeWhiteList: '{imageFileTypeWhiteList}',
+            fileTypeBlackList: '{fileTypeBlackList}'
+        }},
+
+        rockMergeFieldOptions: {{ 
+            enabled: {rockMergeFieldEnabled.ToTrueFalse().ToLower()},
+            mergeFields: '{this.MergeFields.AsDelimited( "," )}' 
+        }},
+        rockTheme: '{( ( RockPage ) this.Page ).Site.Theme}',
+
+        codeEditorOptions: {{
+            controlId: '{_ceEditor.ClientID}',
+            inCodeEditorModeHiddenFieldId: '{_hfInCodeEditorMode.ClientID}'
+        }},
+    }});
+
+    if ({StartInCodeEditorMode.ToTrueFalse().ToLower()} && RockCodeEditor) {{
+        RockCodeEditor(summerNoteEditor_{this.ClientID}.data('summernote'), true).click();
+    }}
+
+}});
+";
+            ScriptManager.RegisterStartupScript( this, this.GetType(), "summernote_init_script_" + this.ClientID, summernoteInitScript, true );
+
+            // add script on demand only when there will be an htmleditor rendered
+            if ( ScriptManager.GetCurrent( this.Page ).IsInAsyncPostBack )
+            {
+                ScriptManager.RegisterClientScriptInclude( this.Page, this.Page.GetType(), "summernote-lib", ( (RockPage)this.Page ).ResolveRockUrl( "~/Scripts/summernote/summernote.min.js", true ) );
+                var bundleUrl = System.Web.Optimization.BundleResolver.Current.GetBundleUrl( "~/Scripts/Bundles/RockHtmlEditorPlugins" );
+                ScriptManager.RegisterClientScriptInclude( this.Page, this.Page.GetType(), "summernote-plugins", bundleUrl );
             }
 
-            string ckEditorLib = ( (RockPage)this.Page ).ResolveRockUrl( "~/Scripts/ckeditor/ckeditor.js", true );
-
-            try
-            {
-                //// ckeditor dynamically loads plugin js files, so our normal fingerprinting won't work and could cause the cache to be stale
-                //// so, get a fingerprint from the latest plug .js file and use that in addition to the regular ckeditor timestamp
-                if ( _fingerPrintVersion == null )
-                {
-                    var ckpluginsFolderName = System.Web.Hosting.HostingEnvironment.MapPath( "~/Scripts/ckeditor/plugins" );
-
-                    if ( System.IO.Directory.Exists( ckpluginsFolderName ) )
-                    {
-                        var lastUpdatedFile = new System.IO.DirectoryInfo( ckpluginsFolderName ).EnumerateFiles( "*.js", System.IO.SearchOption.AllDirectories ).OrderByDescending( a => a.LastWriteTime ).FirstOrDefault();
-                        if ( lastUpdatedFile != null )
-                        {
-                            _fingerPrintVersion = lastUpdatedFile.LastWriteTime.Ticks.ToString();
-                        }
-                        else
-                        {
-                            _fingerPrintVersion = "0";
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                // ignore exception and just
-                _fingerPrintVersion = "0";
-            }
-
-            string ckeditorInitScript = string.Format( ckeditorInitScriptFormat,
-                this.ClientID,                                                  // {0}
-                this.Toolbar.ConvertToString(),                                 // {1}
-                this.Height,                                                    // {2}
-                this.ResizeMaxWidth ?? 0,                                       // {3}
-                customOnChangeScript,                                           // {4}
-                enabledPlugins.AsDelimited( "," ),                              // {5}
-                Rock.Security.Encryption.EncryptString( documentFolderRoot ),   // {6} encrypt the folders so the folder can only be configured on the server
-                Rock.Security.Encryption.EncryptString( imageFolderRoot ),      // {7}
-                imageFileTypeWhiteList,                                         // {8}
-                fileTypeBlackList,                                              // {9}
-                this.MergeFields.AsDelimited( "," ),                            // {10}
-                this.AdditionalConfigurations,                                  // {11}
-                ckEditorLib,                                                    // {12}
-                ( (RockPage)this.Page ).Site.Theme,                             // {13}
-                _fingerPrintVersion                                              // {14}
-                );
-
-            ScriptManager.RegisterStartupScript( this, this.GetType(), "ckeditor_init_script_" + this.ClientID, ckeditorInitScript, true );
+            // set this textbox hidden until we can run the js to attach summernote to it
+            this.Style[HtmlTextWriterStyle.Display] = "none";
 
             base.RenderControl( writer );
-        }
-
-        /// <summary>
-        /// Processes the postback data for the <see cref="T:System.Web.UI.WebControls.TextBox" /> control.
-        /// </summary>
-        /// <param name="postDataKey">The index within the posted collection that references the content to load.</param>
-        /// <param name="postCollection">The collection posted to the server.</param>
-        /// <returns>
-        /// true if the posted content is different from the last posting; otherwise, false.
-        /// </returns>
-        protected override bool LoadPostData( string postDataKey, System.Collections.Specialized.NameValueCollection postCollection )
-        {
-            if ( base.LoadPostData( postDataKey, postCollection ) )
-            {
-                base.Text = HttpUtility.HtmlDecode( base.Text );
-                return true;
-            }
-            return false;
         }
     }
 }

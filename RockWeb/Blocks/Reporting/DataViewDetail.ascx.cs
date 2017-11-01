@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -43,6 +43,7 @@ namespace RockWeb.Blocks.Reporting
 
     [LinkedPage( "Data View Detail Page", "The page to display a data view.", false, order: 0 )]
     [LinkedPage( "Report Detail Page", "The page to display a report.", false, order: 1 )]
+    [LinkedPage( "Group Detail Page", "The page to display a group.", false, order: 2 )]
     [IntegerField( "Database Timeout", "The number of seconds to wait before reporting a database timeout.", false, 180, order: 3 )]
     public partial class DataViewDetail : RockBlock, IDetailBlock
     {
@@ -79,11 +80,14 @@ namespace RockWeb.Blocks.Reporting
                 {
                     btnToggleResults.Text = "Hide Results <i class='fa fa-chevron-up'></i>";
                     btnToggleResults.ToolTip = "Hide Results";
-
+                    btnToggleResults.RemoveCssClass( "btn-primary" );
+                    btnToggleResults.AddCssClass( "btn-default" );
                 }
                 else
                 {
                     btnToggleResults.Text = "Show Results <i class='fa fa-chevron-down'></i>";
+                    btnToggleResults.RemoveCssClass( "btn-default" );
+                    btnToggleResults.AddCssClass( "btn-primary" );
                     btnToggleResults.ToolTip = "Show Results";
                 }
 
@@ -504,12 +508,15 @@ $(document).ready(function() {
             if ( !dataViewId.Equals( 0 ) )
             {
                 dataView = dataViewService.Get( dataViewId );
+                pdAuditDetails.SetEntity( dataView, ResolveRockUrl( "~" ) );
             }
 
             if ( dataView == null )
             {
                 dataView = new DataView { Id = 0, IsSystem = false, CategoryId = parentCategoryId };
                 dataView.Name = string.Empty;
+                // hide the panel drawer that show created and last modified dates
+                pdAuditDetails.Visible = false;
             }
 
             if ( !dataView.IsAuthorized( Authorization.VIEW, CurrentPerson ) )
@@ -519,6 +526,7 @@ $(document).ready(function() {
 
             pnlDetails.Visible = true;
             hfDataViewId.Value = dataView.Id.ToString();
+            hlblEditDataViewId.Text = "Id: " + dataView.Id.ToString();
 
             // render UI based on Authorized and IsSystem
             bool readOnly = false;
@@ -616,6 +624,7 @@ $(document).ready(function() {
             SetEditMode( false );
             hfDataViewId.SetValue( dataView.Id );
             lReadOnlyTitle.Text = dataView.Name.FormatAsHtmlTitle();
+            hlblDataViewId.Text = "Id: " + dataView.Id.ToString();
 
             lDescription.Text = dataView.Description;
 
@@ -661,7 +670,7 @@ $(document).ready(function() {
             var rockContext = new RockContext();
             DataViewService dataViewService = new DataViewService( rockContext );
 
-            var dataViews = dataViewService.Queryable()
+            var dataViews = dataViewService.Queryable().AsNoTracking()
                 .Where( d => d.DataViewFilter.ChildFilters
                     .Any( f => f.Selection == dataView.Id.ToString()
                         && f.EntityTypeId == dataViewFilterEntityId ) );
@@ -688,7 +697,7 @@ $(document).ready(function() {
             StringBuilder sbReports = new StringBuilder();
 
             ReportService reportService = new ReportService( rockContext );
-            var reports = reportService.Queryable().Where( r => r.DataViewId == dataView.Id );
+            var reports = reportService.Queryable().AsNoTracking().Where( r => r.DataViewId == dataView.Id );
             var reportDetailPage = GetAttributeValue( "ReportDetailPage" );
 
             foreach ( var report in reports )
@@ -705,6 +714,32 @@ $(document).ready(function() {
 
             descriptionListReports.Add( "Reports", sbReports );
             lReports.Text = descriptionListReports.Html;
+
+            // Groups using DataView in Group Sync
+            DescriptionList descriptionListGroupSync = new DescriptionList();
+            StringBuilder sbGroups = new StringBuilder();
+
+            GroupService groupService = new GroupService( rockContext );
+            var groups = groupService.Queryable().AsNoTracking().Where( g => g.SyncDataViewId == dataView.Id );
+            var groupDetailPage = GetAttributeValue( "GroupDetailPage" );
+
+            if ( groups.Count() > 0 )
+            {
+                foreach ( var group in groups )
+                {
+                    if ( !string.IsNullOrWhiteSpace( groupDetailPage ) )
+                    {
+                        sbGroups.Append( "<a href=\"" + LinkedPageUrl( "GroupDetailPage", new Dictionary<string, string>() { { "GroupId", group.Id.ToString() } } ) + "\">" + group.Name + "</a><br/>" );
+                    }
+                    else
+                    {
+                        sbGroups.Append( group.Name + "<br/>" );
+                    }
+                }
+
+                descriptionListGroupSync.Add( "Groups", sbGroups );
+                lGroups.Text = descriptionListGroupSync.Html;
+            }
 
             ShowReport( dataView );
         }
@@ -783,7 +818,8 @@ $(document).ready(function() {
         {
             grid.DataSource = null;
 
-            if ( !this.ShowResults )
+            // Only respect the ShowResults option if fetchRowCount is null
+            if ( !this.ShowResults && fetchRowCount == null )
             {
                 return false;
             }

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -116,7 +116,7 @@ namespace Rock.Web.UI.Controls
             _rangeValidator.Display = ValidatorDisplay.Dynamic;
             _rangeValidator.CssClass = "validation-error help-inline";
             
-            _rangeValidator.Type = System.Web.UI.WebControls.ValidationDataType.Integer;
+            _rangeValidator.Type = this.NumberType;
             _rangeValidator.MinimumValue = int.MinValue.ToString();
             _rangeValidator.MaximumValue = int.MaxValue.ToString();
 
@@ -134,28 +134,32 @@ namespace Rock.Web.UI.Controls
             _rangeValidator.MaximumValue = this.MaximumValue;
             string dataTypeText = string.Empty;
 
-            int minValue = MinimumValue.AsIntegerOrNull() ?? int.MinValue;
-            int maxValue = MaximumValue.AsIntegerOrNull() ?? int.MaxValue;
+            decimal minValue = MinimumValue.AsDecimalOrNull() ?? decimal.MinValue;
+            decimal maxValue = MaximumValue.AsDecimalOrNull() ?? decimal.MaxValue;
 
             string rangeMessageFormat = null;
 
-            if ( _rangeValidator.Type == ValidationDataType.Integer )
+            // if they are in the valid range, but not an integer, they'll see this message
+            switch( _rangeValidator.Type )
             {
-                // if they are in the valid range, but not an integer, they'll see this message
-                rangeMessageFormat = "{0} must be an integer";
+                case ValidationDataType.Integer: rangeMessageFormat = "{0} must be an integer"; break;
+                case ValidationDataType.Double: rangeMessageFormat = "{0} must be a decimal amount"; break;
+                case ValidationDataType.Currency: rangeMessageFormat = "{0} must be a currency amount"; break;
+                case ValidationDataType.Date: rangeMessageFormat = "{0} must be a date"; break;
+                case ValidationDataType.String: rangeMessageFormat = "{0} must be a string"; break;
             }
 
-            if ( minValue > int.MinValue)
+            if ( minValue > decimal.MinValue)
             {
                 rangeMessageFormat = "{0} must be at least " + MinimumValue;
             }
             
-            if ( maxValue < int.MaxValue )
+            if ( maxValue < decimal.MaxValue )
             {
                 rangeMessageFormat = "{0} must be at most " + MaximumValue;
             }
 
-            if ( ( minValue > int.MinValue ) && ( maxValue < int.MaxValue ) )
+            if ( ( minValue > decimal.MinValue ) && ( maxValue < decimal.MaxValue ) )
             {
                 rangeMessageFormat = string.Format( "{{0}} must be between {0} and {1} ", MinimumValue, MaximumValue );
             }
@@ -167,6 +171,17 @@ namespace Rock.Web.UI.Controls
 
             _rangeValidator.ValidationGroup = this.ValidationGroup;
             _rangeValidator.RenderControl( writer );
+        }
+
+        /// <summary>
+        /// Renders the base control.
+        /// </summary>
+        /// <param name="writer">The writer.</param>
+        public override void RenderBaseControl( HtmlTextWriter writer )
+        {
+            this.Attributes["pattern"] = "[0-9]*";
+
+            base.RenderBaseControl( writer );
         }
     }
 }

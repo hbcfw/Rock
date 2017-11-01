@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,6 +17,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Web.UI;
+using System.Web.UI.WebControls;
 using Rock.Data;
 using Rock.Model;
 
@@ -27,6 +29,22 @@ namespace Rock.Web.UI.Controls
     /// </summary>
     public class AccountPicker : ItemPicker
     {
+        #region Controls
+
+        /// <summary>
+        /// The Select All button
+        /// </summary>
+        private HyperLink _btnSelectAll;
+
+        #endregion
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AccountPicker"/> class.
+        /// </summary>
+        public AccountPicker() : base()
+        {
+            this.ShowSelectChildren = true;
+        }
 
         /// <summary>
         /// Gets or sets a value indicating whether [display active only].
@@ -36,11 +54,44 @@ namespace Rock.Web.UI.Controls
         /// </value>
         public bool DisplayActiveOnly
         {
-            get { return ViewState["DisplayActiveOnly"] as bool? ?? false; }
-            set 
+            get
             {
-                ViewState["DisplayActiveOnly"] = value;  
+                return ViewState["DisplayActiveOnly"] as bool? ?? false;
+            }
+
+            set
+            {
+                ViewState["DisplayActiveOnly"] = value;
                 this.ItemRestUrlExtraParams = "/" + value.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Called by the ASP.NET page framework to notify server controls that use composition-based implementation to create any child controls they contain in preparation for posting back or rendering.
+        /// </summary>
+        protected override void CreateChildControls()
+        {
+            base.CreateChildControls();
+
+            _btnSelectAll = new HyperLink();
+            _btnSelectAll.ID = "_btnSelectAll";
+            _btnSelectAll.CssClass = "btn btn-default btn-xs js-select-all pull-right";
+            _btnSelectAll.Text = "Select All";
+
+            this.Controls.Add( _btnSelectAll );
+        }
+
+        /// <summary>
+        /// Render any additional picker actions
+        /// </summary>
+        /// <param name="writer">The writer.</param>
+        public override void RenderCustomPickerActions( HtmlTextWriter writer )
+        {
+            base.RenderCustomPickerActions( writer );
+
+            if ( this.AllowMultiSelect )
+            {
+                _btnSelectAll.RenderControl( writer );
             }
         }
 
@@ -48,14 +99,14 @@ namespace Rock.Web.UI.Controls
         /// Raises the <see cref="E:System.Web.UI.Control.Init" /> event.
         /// </summary>
         /// <param name="e">An <see cref="T:System.EventArgs" /> object that contains the event data.</param>
-        protected override void OnInit(EventArgs e)
+        protected override void OnInit( EventArgs e )
         {
-            base.OnInit(e);
+            base.OnInit( e );
             this.ItemRestUrlExtraParams = "/" + DisplayActiveOnly.ToString();
             this.IconCssClass = "fa fa-building-o";
+            this.CssClass = "picker-lg";
         }
-        
-        
+
         /// <summary>
         /// Sets the value.
         /// </summary>
@@ -91,6 +142,39 @@ namespace Rock.Web.UI.Controls
         }
 
         /// <summary>
+        /// Returns a list of the ancestor FinancialAccounts of the specified FinancialAccount.
+        /// If the ParentFinancialAccount property of the FinancialAccount is not populated, it is assumed to be a top-level node.
+        /// </summary>
+        /// <param name="financialAccount">The financial account.</param>
+        /// <param name="ancestorFinancialAccountIds">The ancestor financial account ids.</param>
+        /// <returns></returns>
+        private List<int> GetFinancialAccountAncestorsIdList( FinancialAccount financialAccount, List<int> ancestorFinancialAccountIds = null )
+        {
+            if ( ancestorFinancialAccountIds == null )
+            {
+                ancestorFinancialAccountIds = new List<int>();
+            }
+
+            if ( financialAccount == null )
+            {
+                return ancestorFinancialAccountIds;
+            }
+
+            // If we have encountered this node previously in our tree walk, there is a recursive loop in the tree.
+            if ( ancestorFinancialAccountIds.Contains( financialAccount.Id ) )
+            {
+                return ancestorFinancialAccountIds;
+            }
+
+            // Create or add this node to the history stack for this tree walk.
+            ancestorFinancialAccountIds.Insert( 0, financialAccount.Id );
+
+            ancestorFinancialAccountIds = this.GetFinancialAccountAncestorsIdList( financialAccount.ParentAccount, ancestorFinancialAccountIds );
+
+            return ancestorFinancialAccountIds;
+        }
+
+        /// <summary>
         /// Sets the values.
         /// </summary>
         /// <param name="accounts">The accounts.</param>
@@ -102,31 +186,28 @@ namespace Rock.Web.UI.Controls
             {
                 var ids = new List<string>();
                 var names = new List<string>();
-                List<int> parentAccountIds = new List<int>();
+                var parentIds = new List<int>();
 
-                foreach ( var account in financialAccounts )
+                foreach ( var account in accounts )
                 {
                     if ( account != null )
                     {
                         ids.Add( account.Id.ToString() );
-                        names.Add( account.PublicName );
+                        names.Add( account.Name );
                         var parentAccount = account.ParentAccount;
-
-                        while ( parentAccount != null )
+                        var accountParentIds = GetFinancialAccountAncestorsIdList( parentAccount );
+                        foreach ( var accountParentId in accountParentIds )
                         {
-                            if ( parentAccountIds.Contains( parentAccount.Id ) )
+                            if ( !parentIds.Contains( accountParentId ) )
                             {
-                                // infinite recursion
-                                break;
+                                parentIds.Add( accountParentId );
                             }
-
-                            parentAccountIds.Insert( 0, parentAccount.Id );
-                            parentAccount = parentAccount.ParentAccount;
                         }
                     }
                 }
 
-                InitialItemParentIds = parentAccountIds.AsDelimited( "," );
+                // NOTE: Order is important (parents before children)
+                InitialItemParentIds = parentIds.AsDelimited( "," );
                 ItemIds = ids;
                 ItemNames = names;
             }
@@ -167,6 +248,5 @@ namespace Rock.Web.UI.Controls
         {
             get { return "~/api/financialaccounts/getchildren/"; }
         }
-
     }
 }

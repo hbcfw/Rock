@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,6 +16,7 @@
 //
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
 
@@ -146,6 +147,139 @@ namespace Rock.Web.Cache
             }
         }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether this instance is indexing enabled.
+        /// </summary>
+        /// <value>
+        /// <c>true</c> if this instance is indexing enabled; otherwise, <c>false</c>.
+        /// </value>
+        public bool IsIndexingEnabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this instance is indexing supported.
+        /// </summary>
+        /// <value>
+        /// <c>true</c> if this instance is indexing supported; otherwise, <c>false</c>.
+        /// </value>
+        public bool IsIndexingSupported { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this instance is analytic supported.
+        /// </summary>
+        /// <value>
+        /// <c>true</c> if this instance is analytic supported; otherwise, <c>false</c>.
+        /// </value>
+        [Obsolete]
+        public bool IsAnalyticSupported { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this instance is analytic historical supported.
+        /// </summary>
+        /// <value>
+        /// <c>true</c> if this instance is analytic historical supported; otherwise, <c>false</c>.
+        /// </value>
+        [Obsolete]
+        public bool IsAnalyticHistoricalSupported { get; set; }
+
+        /// <summary>
+        /// Determines whether [is analytics supported] [the specified entity type qualifier column].
+        /// </summary>
+        /// <param name="entityTypeQualifierColumn">The entity type qualifier column.</param>
+        /// <param name="entityTypeQualifierValue">The entity type qualifier value.</param>
+        /// <returns>
+        ///   <c>true</c> if [is analytics supported] [the specified entity type qualifier column]; otherwise, <c>false</c>.
+        /// </returns>
+        public bool IsAnalyticsSupported( string entityTypeQualifierColumn, string entityTypeQualifierValue )
+        {
+            Type type = this.GetEntityType();
+
+            if ( type != null )
+            {
+                return type.GetCustomAttributes( true ).OfType<AnalyticsAttribute>()
+                        .Any( x =>
+                            ( string.IsNullOrEmpty( x.EntityTypeQualifierColumn ) && string.IsNullOrEmpty( entityTypeQualifierColumn ) )
+                                || ( x.EntityTypeQualifierColumn == entityTypeQualifierColumn && x.EntityTypeQualifierValue == entityTypeQualifierValue )
+                            );
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Determines whether [is analytics historical supported] [the specified entity type qualifier column].
+        /// </summary>
+        /// <param name="entityTypeQualifierColumn">The entity type qualifier column.</param>
+        /// <param name="entityTypeQualifierValue">The entity type qualifier value.</param>
+        /// <returns>
+        ///   <c>true</c> if [is analytics historical supported] [the specified entity type qualifier column]; otherwise, <c>false</c>.
+        /// </returns>
+        public bool IsAnalyticsHistoricalSupported( string entityTypeQualifierColumn, string entityTypeQualifierValue )
+        {
+            Type type = this.GetEntityType();
+
+            if ( type != null )
+            {
+                return type.GetCustomAttributes( true ).OfType<AnalyticsAttribute>()
+                        .Where( a => a.SupportsHistory )
+                        .Any( x =>
+                            ( string.IsNullOrEmpty( x.EntityTypeQualifierColumn ) && string.IsNullOrEmpty( entityTypeQualifierColumn ) )
+                                || ( x.EntityTypeQualifierColumn == entityTypeQualifierColumn && x.EntityTypeQualifierValue == entityTypeQualifierValue )
+                            );
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether this instance support dynamically added Attributes for the Analytic Tables for the specified Attribute
+        /// </summary>
+        /// <param name="entityTypeQualifierColumn">The entity type qualifier column.</param>
+        /// <param name="entityTypeQualifierValue">The entity type qualifier value.</param>
+        /// <returns>
+        ///   <c>true</c> if [is analytic attributes supported] [the specified attribute]; otherwise, <c>false</c>.
+        /// </returns>
+        /// <value></value>
+        public bool IsAnalyticAttributesSupported( string entityTypeQualifierColumn, string entityTypeQualifierValue )
+        {
+            Type type = this.GetEntityType();
+
+            if ( type != null )
+            {
+                return type.GetCustomAttributes( true ).OfType<AnalyticsAttribute>()
+                        .Where( a => a.SupportsAttributes )
+                        .Any( x =>
+                            ( string.IsNullOrEmpty( x.EntityTypeQualifierColumn ) && string.IsNullOrEmpty( entityTypeQualifierColumn ) )
+                                || ( x.EntityTypeQualifierColumn == entityTypeQualifierColumn && x.EntityTypeQualifierValue == entityTypeQualifierValue )
+                            );
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Gets or sets the index result template.
+        /// </summary>
+        /// <value>
+        /// The index result template.
+        /// </value>
+        public string IndexResultTemplate { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the index document URL.
+        /// </summary>
+        /// <value>
+        /// The index document URL.
+        /// </value>
+        public string IndexDocumentUrl { get; set; }
+
+        /// <summary>
+        /// Gets or sets a lava template that can be used for generating a link to view details for this entity (i.e. "~/person/{{ Entity.Id }}").
+        /// </summary>
+        /// <value>
+        /// The link URL.
+        /// </value>
+        public string LinkUrlLavaTemplate { get; set; }
+
         #endregion
 
         #region Methods
@@ -182,6 +316,11 @@ namespace Rock.Web.Cache
                 this.IsSecured = entityType.IsSecured;
                 this.SingleValueFieldTypeId = entityType.SingleValueFieldTypeId;
                 this.MultiValueFieldTypeId = entityType.MultiValueFieldTypeId;
+                this.IsIndexingEnabled = entityType.IsIndexingEnabled;
+                this.IsIndexingSupported = entityType.IsIndexingSupported;
+                this.IndexResultTemplate = entityType.IndexResultTemplate;
+                this.IndexDocumentUrl = entityType.IndexDocumentUrl;
+                this.LinkUrlLavaTemplate = entityType.LinkUrlLavaTemplate;
 
                 _entityTypes.AddOrUpdate( entityType.Name, entityType.Id, ( k, v ) => entityType.Id );
             }
@@ -456,6 +595,37 @@ namespace Rock.Web.Cache
         }
 
         /// <summary>
+        /// Alls this instance.
+        /// </summary>
+        /// <returns></returns>
+        public static List<EntityTypeCache> All()
+        {
+            List<EntityTypeCache> entityTypes = new List<EntityTypeCache>();
+            var entityTypeIds = GetOrAddExisting( "Rock:EntityType:All", () => LoadAll() );
+            if ( entityTypeIds != null )
+            {
+                foreach ( int entityTypeId in entityTypeIds )
+                {
+                    var entityTypeCache = EntityTypeCache.Read( entityTypeId );
+                    entityTypes.Add( entityTypeCache );
+                }
+            }
+            return entityTypes;
+        }
+
+        private static List<int> LoadAll()
+        {
+            using ( var rockContext = new RockContext() )
+            {
+                return new EntityTypeService( rockContext )
+                    .Queryable().AsNoTracking()
+                    .OrderBy( c => c.Name )
+                    .Select( c => c.Id )
+                    .ToList();
+            }
+        }
+
+        /// <summary>
         /// Removes entityType from cache
         /// </summary>
         /// <param name="id"></param>
@@ -471,6 +641,8 @@ namespace Rock.Web.Cache
             // rebuild the _entityTypes dictionary 
             var _keepEntityTypes = _entityTypes.Where( a => a.Value != id );
             _entityTypes = new ConcurrentDictionary<string, int>( _keepEntityTypes );
+
+            FlushCache( "Rock:EntityType:All" );
         }
 
         #endregion

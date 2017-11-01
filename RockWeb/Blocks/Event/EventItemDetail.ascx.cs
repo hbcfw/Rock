@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -138,6 +138,19 @@ namespace RockWeb.Blocks.Event
             RockPage.AddScriptLink( ResolveRockUrl( "~/Scripts/imagesloaded.min.js" ) );
             RockPage.AddScriptLink( ResolveRockUrl( "~/Scripts/jquery.fluidbox.min.js" ) );
             ScriptManager.RegisterStartupScript( lImage, lImage.GetType(), "image-fluidbox", "$('.photo a').fluidbox();", true );
+
+            string deleteScript = @"
+    $('a.js-delete-event').click(function( e ){
+        e.preventDefault();
+        Rock.dialogs.confirm('Are you sure you want to delete this event? All of the event occurrences will also be deleted!', function (result) {
+            if (result) {
+                window.location = e.target.href ? e.target.href : e.target.parentElement.href;
+            }
+        });
+    });
+";
+            ScriptManager.RegisterStartupScript( btnDelete, btnDelete.GetType(), "deleteInstanceScript", deleteScript, true );
+
         }
 
         /// <summary>
@@ -286,7 +299,12 @@ namespace RockWeb.Blocks.Event
                 }
             }
 
-            NavigateToParentPage();
+            var qryParams = new Dictionary<string, string>();
+            if ( _calendarId.HasValue )
+            {
+                qryParams.Add( "EventCalendarId", _calendarId.Value.ToString() );
+            }
+            NavigateToParentPage( qryParams );
         }
 
         /// <summary>
@@ -604,6 +622,7 @@ namespace RockWeb.Blocks.Event
             if ( !eventItemId.Equals( 0 ) )
             {
                 eventItem = GetEventItem( eventItemId, rockContext );
+                pdAuditDetails.SetEntity( eventItem, ResolveRockUrl( "~" ) );
             }
 
             if ( eventItem == null )
@@ -612,6 +631,8 @@ namespace RockWeb.Blocks.Event
                 eventItem.IsApproved = _canApprove;
                 var calendarItem = new EventCalendarItem { EventCalendarId = ( _calendarId ?? 0 ) };
                 eventItem.EventCalendarItems.Add( calendarItem );
+                // hide the panel drawer that show created and last modified dates
+                pdAuditDetails.Visible = false;
             }
 
             eventItem.LoadAttributes( rockContext );
@@ -801,7 +822,7 @@ namespace RockWeb.Blocks.Event
                             var rl = new RockLiteral();
                             rl.ID = "attr_" + attr.Key;
                             rl.Label = attr.Value.Name;
-                            rl.Text = attr.Value.FieldType.Field.FormatValueAsHtml( null, value, attr.Value.QualifierValues, false );
+                            rl.Text = attr.Value.FieldType.Field.FormatValueAsHtml( null, attr.Value.EntityTypeId, eventCalendarItem.Id, value, attr.Value.QualifierValues, false );
                             phAttributesView.Controls.Add( rl );
                         }
                     }

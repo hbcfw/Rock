@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -149,7 +149,7 @@ namespace Rock.Field.Types
                     else
                     {
                         var filePath = System.Web.VirtualPathUtility.ToAbsolute( "~/GetFile.ashx" );
-                        return string.Format( "<a href='{0}?guid={1}' title='{2}' class='btn btn-sm btn-default'>View</a>", filePath, binaryFileInfo.Guid, System.Web.HttpUtility.HtmlEncode(binaryFileInfo.FileName) );
+                        return string.Format( "<a href='{0}?guid={1}' title='{2}' class='btn btn-xs btn-default'>View</a>", filePath, binaryFileInfo.Guid, System.Web.HttpUtility.HtmlEncode(binaryFileInfo.FileName) );
                     }
                 }
             }

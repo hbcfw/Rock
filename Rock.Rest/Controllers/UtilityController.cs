@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,6 +20,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
+using Rock.VersionInfo;
+using Rock.Rest.Filters;
 
 namespace Rock.Rest.Controllers
 {
@@ -103,6 +105,36 @@ namespace Rock.Rest.Controllers
             }
 
             return 0;
+        }
+
+        /// <summary>
+        /// Gets the rock semantic version number.
+        /// </summary>
+        /// <returns></returns>
+        [System.Web.Http.Route( "api/Utility/GetRockSemanticVersionNumber" )]
+        [HttpGet]
+        public string GetRockSemanticVersionNumber()
+        {
+            return VersionInfo.VersionInfo.GetRockSemanticVersionNumber();
+        }
+
+        /// <summary>
+        /// Initiates a new workflow
+        /// </summary>
+        /// <param name="fromNumber">From number.</param>
+        /// <param name="toNumber">To number.</param>
+        /// <param name="message">The message.</param>
+        /// <returns></returns>
+        //[Authenticate, Secured]
+        [HttpPost]
+        [System.Web.Http.Route( "api/Utility/TextToWorkflow/{fromNumber}/{toNumber}/{message}" )]
+        public string TextToWorkflow( string fromNumber, string toNumber, string message )
+        {
+            string processResponse = string.Empty;
+
+            Rock.Utility.TextToWorkflow.MessageRecieved( toNumber, fromNumber, message, out processResponse );
+
+            return processResponse;
         }
     }
 }

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -82,7 +82,7 @@ namespace Rock.Model
         }
 
         /// <summary>
-        /// Gets the PersonAlias the by alias identifier.
+        /// Gets the PersonAlias the by AliasPersonId
         /// </summary>
         /// <param name="aliasPersonId">The alias person identifier.</param>
         /// <returns></returns>
@@ -162,8 +162,13 @@ namespace Rock.Model
         /// <returns></returns>
         public virtual PersonAlias GetByAliasEncryptedKey( string encryptedKey )
         {
-            string publicKey = Rock.Security.Encryption.DecryptString( encryptedKey );
-            return GetByAliasPublicKey( publicKey );
+            if ( encryptedKey.IsNotNullOrWhitespace() )
+            {
+                string publicKey = Rock.Security.Encryption.DecryptString( encryptedKey );
+                return GetByAliasPublicKey( publicKey );
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -182,8 +187,7 @@ namespace Rock.Model
                     Guid guid = new Guid( idParts[1] );
 
                     PersonAlias personAlias = GetByAliasId( id );
-
-                    if ( personAlias != null && personAlias.AliasPersonGuid.CompareTo( guid ) == 0 )
+                    if ( personAlias != null && personAlias.AliasPersonGuid.HasValue && personAlias.AliasPersonGuid.Value.CompareTo( guid ) == 0 )
                     {
                         return personAlias;
                     }

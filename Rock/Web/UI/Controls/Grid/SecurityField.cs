@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -214,12 +214,17 @@ namespace Rock.Web.UI.Controls
             }
 
             // Get Id
-            object dataValue = DataBinder.Eval( container.DataItem, "id" );
-            if ( dataValue != DBNull.Value )
+            var idValue = DataBinder.Eval( container.DataItem, "id" ) as int?;
+            if ( idValue.HasValue && idValue > 0 )
             {
                 string url = page.ResolveUrl( string.Format( "~/Secure/{0}/{1}?t={2}&pb=&sb=Done",
-                    EntityTypeId, dataValue.ToString(), title ) );
+                    EntityTypeId, idValue.ToString(), title ) );
                 lnk.Attributes.Add( "href", "javascript: Rock.controls.modal.show($(this), '" + url.EscapeQuotes() + "')" );
+                lnk.Visible = true;
+            }
+            else
+            {
+                lnk.Visible = false;
             }
         }
     }

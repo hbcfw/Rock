@@ -1,13 +1,13 @@
 
-// Theme Colors *open*
+// Theme Colors *show in editor*
 @theme-1: #2c3e50;  // blue header
 @theme-1-text: #fff;
 //--
-@theme-2: #2C3E50; // blue
+@theme-2: #2c3e50; // blue
 @theme-2-text: #fff;
 //--
 @theme-3: #ecf0f1; // gray
-@theme-3-text: #333333;
+@theme-3-text: #333;
 //--
 @theme-4: #18bc9c; // seafoam green
 @theme-4-text: #fff;
@@ -24,7 +24,7 @@
 @theme-8: @gray-light;
 @theme-8-text: #fff;
 
-// Text *open*
+// Text *show in editor*
 @text-color:             #6a6a6a; // The default text color. #color
 @link-color:             @theme-4; // The color for all links.
 @link-hover-color:       lighten(@link-color, 15%); // The rollover color for all links.
@@ -35,6 +35,9 @@
 @headings-font-family:    "Montserrat", sans-serif; // Font used for headings.
 @font-size-base:          15px; // The default text size.
 @line-height-base:        1.428571429; // The default line height.
+//--
+@body-bg:           #fff; // The background color of the page.
+
 
 //// Heading Sizes
 @font-size-h1:            floor(@font-size-base * 2.60); // ~36px
@@ -46,12 +49,12 @@
 
 // Bootstrap Colors
 
-//// Bootstrap Colors {The primary colors defined by the Bootstrap framework. [More Information](http://getbootstrap.com/customize/#colors)}
+//// Bootstrap Colors *show in editor* {The primary colors defined by the Bootstrap framework. [More Information](http://getbootstrap.com/customize/#colors)}
 @brand-primary:         @theme-2;
-@brand-success:         #18BC9C;
-@brand-info:            #3498DB;
-@brand-warning:         #F39C12;
-@brand-danger:          #E74C3C;
+@brand-success:         #18bc9c;
+@brand-info:            #3498db;
+@brand-warning:         #f39c12;
+@brand-danger:          #e74c3c;
 //--
 @gray-darker:            lighten(#000, 13.5%);
 @gray-dark:              lighten(#000, 20%);
@@ -60,7 +63,7 @@
 @gray-lighter:           #efefef;
 
 // Page Areas *open*
-@body-bg:           #fff; // The background color of the page.
+
 
 //// Header
 @header-bg:         @theme-1; // The header background color.
@@ -126,7 +129,7 @@
 @input-border-radius:            @border-radius-base;       // The border radius of input fields.
 @input-border-focus:             #66afe9;                   // The border color of active inputs.
 @input-color-placeholder:        lighten(@text-color, 40%); // The text color of input placeholder text.
-@input-group-addon-bg:           #F0F0F0;                   // Used for pre (dollar signs, etc.) and post ( percent signs) input addons as well as picker backgrounds.
+@input-group-addon-bg:           #f0f0f0;                   // Used for pre (dollar signs, etc.) and post ( percent signs) input addons as well as picker backgrounds.
 @input-group-addon-border-color: @input-border;             // Used for pre (dollar signs, etc.) and post ( percent signs) input addons as well as picker borders (highly recommended that you use the same color as the input border).
 
 //// Picker
@@ -184,7 +187,7 @@
 @grid-row-odd-color: @text-color;   // The odd rows text color.
 
 //// Hover
-@grid-hover-bg: #D5E6ED;            // Row background color when hovered over.
+@grid-hover-bg: #d5e6ed;            // Row background color when hovered over.
 @grid-hover-color: @text-color;     // Row text color when hovered over.
 
 //// Section Headers
@@ -321,7 +324,7 @@
 @tree-rollover-bg: lighten(@theme-2, 20%);         // Background color of the rollover for items in the treeview.
 @tree-rollover-color: @theme-2-text;      // Text color of the rollover for items in the treeview.
 @tree-selected-bg: #6a6a6a;         // Background color of selected items in the treeview.
-@tree-selected-color: #ffffff;      // Text color of selected items in the treeview.
+@tree-selected-color: #fff;      // Text color of selected items in the treeview.
 
 // Buttons
 @btn-font-weight:                normal;

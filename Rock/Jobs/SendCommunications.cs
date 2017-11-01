@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -52,34 +52,23 @@ namespace Rock.Jobs
         public virtual void Execute( IJobExecutionContext context )
         {
             JobDataMap dataMap = context.JobDetail.JobDataMap;
-            var beginWindow = RockDateTime.Now.AddDays( 0 - dataMap.GetInt( "ExpirationPeriod" ) );
-            var endWindow = RockDateTime.Now.AddMinutes( 0 - dataMap.GetInt( "DelayPeriod" ) );
+            int expirationDays = dataMap.GetInt( "ExpirationPeriod" );
+            int delayMinutes = dataMap.GetInt( "DelayPeriod" );
 
             var rockContext = new RockContext();
-            var qryPendingRecipients = new CommunicationRecipientService( rockContext ).Queryable().Where( a => a.Status == CommunicationRecipientStatus.Pending );
-
-            var qry = new CommunicationService( rockContext ).Queryable()
-                .Where( c =>
-                    c.Status == CommunicationStatus.Approved &&
-                    qryPendingRecipients.Where( r => r.CommunicationId == c.Id ).Any() &&
-                    (
-                        ( !c.FutureSendDateTime.HasValue && c.CreatedDateTime.HasValue && c.CreatedDateTime.Value.CompareTo( beginWindow ) >= 0 && c.CreatedDateTime.Value.CompareTo( endWindow ) <= 0 ) ||
-                        ( c.FutureSendDateTime.HasValue && c.FutureSendDateTime.Value.CompareTo( beginWindow ) >= 0 && c.FutureSendDateTime.Value.CompareTo( endWindow ) <= 0 )
-                    ) );
+            var qry = new CommunicationService( rockContext )
+                .GetQueued( expirationDays, delayMinutes, false, false )
+                .OrderBy( c => c.Id );
 
             var exceptionMsgs = new List<string>();
             int communicationsSent = 0;
-
+            
             foreach ( var comm in qry.AsNoTracking().ToList() )
             {
                 try
                 {
-                    var medium = comm.Medium;
-                    if ( medium != null )
-                    {
-                        medium.Send( comm );
-                        communicationsSent++;
-                    }
+                    Rock.Model.Communication.Send( comm );
+                    communicationsSent++;
                 }
 
                 catch ( Exception ex )
@@ -101,6 +90,27 @@ namespace Rock.Jobs
             if ( exceptionMsgs.Any() )
             {
                 throw new Exception( "One or more exceptions occurred sending communications..." + Environment.NewLine + exceptionMsgs.AsDelimited( Environment.NewLine ) );
+            }
+
+            // check for communications that have not been sent but are past the expire date. Mark them as failed and set a warning.
+            var beginWindow = RockDateTime.Now.AddDays( 0 - expirationDays );
+            var qryExpired = new CommunicationService( rockContext ).Queryable()
+                .Where( c =>
+                    c.Status == CommunicationStatus.Approved &&
+                    c.Recipients.Any( r => r.Status == CommunicationRecipientStatus.Pending ) &&
+                    (
+                        (!c.FutureSendDateTime.HasValue && c.CreatedDateTime.HasValue && c.CreatedDateTime.Value.CompareTo( beginWindow ) < 0 ) ||
+                        (c.FutureSendDateTime.HasValue && c.FutureSendDateTime.Value.CompareTo( beginWindow ) < 0 )
+                    ) );
+
+            foreach ( var comm in qryExpired.ToList() )
+            {
+                foreach ( var recipient in comm.Recipients.Where( r => r.Status == CommunicationRecipientStatus.Pending ) )
+                {
+                    recipient.Status = CommunicationRecipientStatus.Failed;
+                    recipient.StatusNote = "Communication was not sent before the expire window (possibly due to delayed approval).";
+                    rockContext.SaveChanges();
+                }
             }
 
         }

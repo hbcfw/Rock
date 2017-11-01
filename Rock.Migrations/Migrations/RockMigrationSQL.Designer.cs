@@ -19,7 +19,7 @@ namespace Rock.Migrations.Migrations {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     public class RockMigrationSQL {
@@ -1394,6 +1394,2353 @@ namespace Rock.Migrations.Migrations {
         public static string _201603241157527_UpdateIndexes {
             get {
                 return ResourceManager.GetString("_201603241157527_UpdateIndexes", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to DECLARE @GroupTypeEntityTypeId int = ( SELECT TOP 1 [Id] FROM [EntityType] WHERE [Name] = &apos;Rock.Model.GroupType&apos; )
+        ///DECLARE @CheckInTemplatePurposeId int = ( SELECT TOP 1 [Id] FROM [DefinedValue] WHERE [Guid] = &apos;4A406CB0-495B-4795-B788-52BDFDE00B01&apos; )
+        ///IF @GroupTypeEntityTypeId IS NOT NULL AND @CheckInTemplatePurposeId IS NOT NULL
+        ///BEGIN
+        ///
+        ///    UPDATE [Attribute] SET [EntityTypeQualifierValue] = CAST( @CheckInTemplatePurposeId AS varchar) 
+        ///    WHERE [EntityTypeId] = @GroupTypeEntityTypeId
+        ///    AND [EntityT [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201604251529438_CheckinEnhancement {
+            get {
+                return ResourceManager.GetString("_201604251529438_CheckinEnhancement", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to /* HtmlContent */
+        ///UPDATE HtmlContent
+        ///SET Content = REPLACE(Content, &apos;GlobalAttribute.OrganizationAddress&apos;, &apos;&apos;&apos;Global&apos;&apos; | Attribute:&apos;&apos;OrganizationAddress&apos;&apos;&apos;)
+        ///WHERE [Guid] IN (
+        ///        &apos;9C6D118B-6C7D-46C3-ACEC-4CF586DCE81F&apos;
+        ///        ,&apos;FBC4C931-6B27-4AFA-A1DE-C72DB75493A6&apos;
+        ///        ,&apos;A51C28B4-DC64-4D72-91D5-B73CAF8B5958&apos;
+        ///        ,&apos;320864D0-8872-4E94-A0C0-B53E03645EE4&apos;
+        ///        ,&apos;B89605CF-C111-4A1B-9228-29A78EA9DA25&apos;
+        ///        ,&apos;8458375D-3F98-461C-ACF1-1A1CF08806B8&apos;
+        ///        ,&apos;939ADB18-D2A9-4444-BB07-4E33C1 [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201604251529438_UpdateLegacyLava {
+            get {
+                return ResourceManager.GetString("_201604251529438_UpdateLegacyLava", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spCheckin_AttendanceAnalyticsQuery_AttendeeFirstDates]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spCheckin_AttendanceAnalyticsQuery_AttendeeFirstDates]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        ///        This function return people who attended based on selected filter criteria and the first 5 dates they ever attended the selected group type
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		* PersonId
+        ///		* TimeAttending
+        ///		* SundayDate
+        ///	&lt;/returns&gt;
+        ///	&lt;param [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201604281205403_AttendanceAnalyticsGroupTypes_AttendeeFirstDates {
+            get {
+                return ResourceManager.GetString("_201604281205403_AttendanceAnalyticsGroupTypes_AttendeeFirstDates", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS ( SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[vCheckin_GroupTypeAttendance]&apos;) AND type = N&apos;V&apos; )
+        ///DROP VIEW [dbo].[vCheckin_GroupTypeAttendance]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This view returns distinct attendance dates for a person and group type
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		* GroupTypeId
+        ///        * PersonId
+        ///		* SundayDate
+        ///	&lt;/returns&gt;
+        ///	&lt;remarks&gt;	
+        ///	&lt;/remarks&gt;
+        ///	&lt;code&gt;
+        ///		SELECT * FROM [vCheckin_GroupTypeAttendance] WHERE [GroupTypeId] = 14
+        ///	&lt;/code&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///CREATE VI [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201604281205403_AttendanceAnalyticsGroupTypes_GroupTypeAttendance {
+            get {
+                return ResourceManager.GetString("_201604281205403_AttendanceAnalyticsGroupTypes_GroupTypeAttendance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spCheckin_AttendanceAnalyticsQuery_NonAttendees]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spCheckin_AttendanceAnalyticsQuery_NonAttendees]
+        ///GO
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function returns any person ids for people that have attended previously but who have not attended since the beginning date
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		* PersonId 
+        ///		* SundayDate - Last time attended
+        ///	&lt;/returns&gt;
+        ///	&lt;param name=&apos;GroupTypeIds&apos; dataty [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201604281205403_AttendanceAnalyticsGroupTypes_NonAttendee {
+            get {
+                return ResourceManager.GetString("_201604281205403_AttendanceAnalyticsGroupTypes_NonAttendee", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spCrm_FamilyAnalyticsEraDataset]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spCrm_FamilyAnalyticsEraDataset]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This stored procedure returns a data set used by the Rock eRA job to add/remove
+        ///		people from being an eRA. It should not be modified as it will be updated in the
+        ///		future to meet additional requirements.
+        ///
+        ///		The goal of the query is to return both those that meet the eRA requiremen [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201605021826400_FamilyAnalyticsUpdates_spCrm_FamilyAnalyticsEraDataset {
+            get {
+                return ResourceManager.GetString("_201605021826400_FamilyAnalyticsUpdates_spCrm_FamilyAnalyticsEraDataset", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spCrm_FamilyAnalyticsAttendance]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spCrm_FamilyAnalyticsAttendance]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This stored procedure updates several attributes related to a person&apos;s
+        ///		attendance.
+        ///	&lt;/summary&gt;
+        ///	
+        ///	&lt;remarks&gt;	
+        ///		For eRA we only consider adults for the critieria.
+        ///	&lt;/remarks&gt;
+        ///	&lt;code&gt;
+        ///		EXEC [dbo].[spCrm_FamilyAnalyticsAttendance] 
+        ///	&lt;/code&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///
+        ///CREATE PROCEDURE [dbo [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201605021826400_FamilyAnalyticsUpdates_spCrm_spCrm_FamilyAnalyticsAttendance {
+            get {
+                return ResourceManager.GetString("_201605021826400_FamilyAnalyticsUpdates_spCrm_spCrm_FamilyAnalyticsAttendance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spCrm_FamilyAnalyticsUpdateVisitDates]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spCrm_FamilyAnalyticsUpdateVisitDates]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This stored procedure attempts to update an indivdiual&apos;s first and second visit
+        ///		attributes. Below are a few points of interest on the logic.
+        ///
+        ///		+ A child&apos;s date will only be calculated looking at their check-in data.
+        ///		+ An adult&apos;s date will be calculated looking at t [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201605021826400_FamilyAnalyticsUpdates_spCrm_spCrm_FamilyAnalyticsUpdateVisitDates {
+            get {
+                return ResourceManager.GetString("_201605021826400_FamilyAnalyticsUpdates_spCrm_spCrm_FamilyAnalyticsUpdateVisitDat" +
+                        "es", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spCheckin_BadgeAttendance]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spCheckin_BadgeAttendance]
+        ///GO
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function returns the attendance data needed for the Attendance Badge. If no family role (adult/child)
+        ///		is given it is looked up.  If the individual is an adult it will return family attendance if it&apos;s a child
+        ///		it will return the individual&apos;s attendance. If a person is in two families once a [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201605022007364_AttendanceBadgeSpUpdates_spCheckin_BadgeAttendance {
+            get {
+                return ResourceManager.GetString("_201605022007364_AttendanceBadgeSpUpdates_spCheckin_BadgeAttendance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spCheckin_WeeksAttendedInDuration]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spCheckin_WeeksAttendedInDuration]
+        ///GO
+        ///
+        ////*
+        ///    &lt;doc&gt;
+        ///	    &lt;summary&gt;
+        /// 		    This function returns the number of weekends a member of a family has attended a weekend service
+        ///		    in the last X weeks.
+        ///	    &lt;/summary&gt;
+        ///
+        ///	    &lt;returns&gt;
+        ///		    * Number of weeks
+        ///	    &lt;/returns&gt;
+        ///	    &lt;param name=&quot;&quot;PersonId&quot;&quot; datatype=&quot;&quot;int&quot;&quot;&gt;The person id to use [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201605022007364_AttendanceBadgeSpUpdates_spCheckin_WeeksAttendedInDuration {
+            get {
+                return ResourceManager.GetString("_201605022007364_AttendanceBadgeSpUpdates_spCheckin_WeeksAttendedInDuration", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to /*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        ///		This stored procedure returns the Mailing Addresses and any CustomMessages for the Contribution Statement, but not the actual transactions
+        ///		The StatementGenerator utility uses this procedure along with querying transactions thru REST to generate statements
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		* PersonId
+        ///		* GroupId
+        ///		* AddressPersonNames
+        ///		* Street1
+        ///		* Street2
+        ///		* City
+        ///		* State
+        ///		* PostalCode
+        ///		* StartDate
+        ///		* EndDate
+        ///		* CustomMessage1
+        ///		* CustomMessage2
+        ///	&lt;/returns&gt;
+        ///	&lt;par [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201605180005401_ScheduledTxnSource_ContributionStatementQuery {
+            get {
+                return ResourceManager.GetString("_201605180005401_ScheduledTxnSource_ContributionStatementQuery", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to /*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function returns either the FullName of the specified Person or a list of names of family members
+        ///        In the case of a group (family), it will return the names of the adults of the family. If there are no adults in the family, the names of the non-adults will be listed
+        ///        Example1 (specific person): Bob Smith 
+        ///        Example2 (family with kids): Bill and Sally Jones
+        ///        Example3 (different lastnames): Jim Jackson and Betty Sanders
+        ///        Example4 (just kids [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201605180005401_ScheduledTxnSource_GetFamilyTitle {
+            get {
+                return ResourceManager.GetString("_201605180005401_ScheduledTxnSource_GetFamilyTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to -- Rename a workflow setting attribute
+        ///UPDATE [Attribute] SET
+        ///    [Name] = &apos;Use Same Options&apos;,
+        ///    [Key] = &apos;core_checkin_UseSameOptions&apos;
+        ///WHERE [Guid] = &apos;EC7FA927-95D0-44A8-8AB3-2D74A9FA2F26&apos;
+        ///
+        ///-- Fix the ordering of the Person Search workflow activity
+        ///DECLARE @ActivityTypeId int = ( SELECT TOP 1 [Id] FROM [WorkflowActivityType] WHERE [Guid] = &apos;EB744DF1-E454-482C-B111-80A54EF8A674&apos; )
+        ///
+        ///DECLARE @EntityTypeId int = ( SELECT TOP 1 [Id] FROM [EntityType] WHERE [Name] = &apos;Rock.Workflow.Action.CheckIn.LoadLo [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201605232234462_FamilyCheckinType {
+            get {
+                return ResourceManager.GetString("_201605232234462_FamilyCheckinType", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spFinance_GivingAnalyticsQuery]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        ///		This stored procedure returns data used by the giving analytics block
+        ///	&lt;/summary&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///CREATE PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery]
+        ///	  @StartDate datetime = NULL
+        ///	, @EndDate datetime = NULL
+        ///	, @MinAmount decimal(18,2) = NULL
+        ///	, @MaxAmount decimal(18,2) = NULL
+        ///	, @ [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201605311330117_GivingAnalyticsLastGift {
+            get {
+                return ResourceManager.GetString("_201605311330117_GivingAnalyticsLastGift", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spFinance_PledgeAnalyticsQuery]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spFinance_PledgeAnalyticsQuery]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        ///		This stored procedure returns data used by the pledge analytics block
+        ///	&lt;/summary&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///CREATE PROCEDURE [dbo].[spFinance_PledgeAnalyticsQuery]
+        ///	  @AccountId int
+        ///	, @StartDate datetime = NULL
+        ///	, @EndDate datetime = NULL
+        ///	, @MinAmountPledged decimal(18,2) = NULL
+        ///	, @MaxAmountP [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201606061302147_PledgeAnalyticsChildAccounts {
+            get {
+                return ResourceManager.GetString("_201606061302147_PledgeAnalyticsChildAccounts", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spFinance_GivingAnalyticsQuery_AccountTotals]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_AccountTotals]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        ///		This stored procedure returns account totals for each giving id based on filter values
+        ///	&lt;/summary&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///CREATE PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_AccountTotals]
+        ///	  @StartDate datetime = NULL
+        ///	, @EndDate datetime = NULL
+        ///	, @AccountIds va [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201606091237191_GivingAnalyticsRefactor_AccountTotals {
+            get {
+                return ResourceManager.GetString("_201606091237191_GivingAnalyticsRefactor_AccountTotals", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spFinance_GivingAnalyticsQuery_FirstLastEverDates]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_FirstLastEverDates]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        ///		This stored procedure returns the first ever, and last ever dates that each giving id
+        ///		gave a contribution to a tax deductible account
+        ///	&lt;/summary&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///CREATE PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_FirstLastEverDates]
+        ///AS
+        ///
+        ///BEGIN        /// [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201606091237191_GivingAnalyticsRefactor_FirstLastEverDates {
+            get {
+                return ResourceManager.GetString("_201606091237191_GivingAnalyticsRefactor_FirstLastEverDates", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spFinance_GivingAnalyticsQuery_PersonSummary]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_PersonSummary]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        ///		This stored procedure returns data used by the giving analytics block
+        ///	&lt;/summary&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///CREATE PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_PersonSummary]
+        ///	  @StartDate datetime = NULL
+        ///	, @EndDate datetime = NULL
+        ///	, @MinAmount decimal(18,2) = NULL [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201606091237191_GivingAnalyticsRefactor_PersonSummary {
+            get {
+                return ResourceManager.GetString("_201606091237191_GivingAnalyticsRefactor_PersonSummary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spFinance_GivingAnalyticsQuery_TransactionData]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_TransactionData]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        ///		This stored procedure returns account totals for each giving leader based on filter values
+        ///	&lt;/summary&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///CREATE PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_TransactionData]
+        ///	  @StartDate datetime = NULL
+        ///	, @EndDate datetime = NULL
+        ///	, @Acc [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201606091237191_GivingAnalyticsRefactor_TransactionData {
+            get {
+                return ResourceManager.GetString("_201606091237191_GivingAnalyticsRefactor_TransactionData", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to -- Add back defined value indexes that were removed
+        ///IF EXISTS ( SELECT * FROM sys.indexes WHERE name=&apos;IX_QualifierValueId&apos; AND object_id = OBJECT_ID(N&apos;[dbo].[Attendance]&apos;) )
+        ///DROP INDEX [IX_QualifierValueId] ON [dbo].[Attendance]
+        ///GO
+        ///
+        ///CREATE NONCLUSTERED INDEX [IX_QualifierValueId] ON [dbo].[Attendance] ( [QualifierValueId] ASC )
+        ///WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+        ///GO
+        ///
+        ///I [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201606231511599_RegistrationWorkflow_Indexes {
+            get {
+                return ResourceManager.GetString("_201606231511599_RegistrationWorkflow_Indexes", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spCrm_PersonDuplicateFinder]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spCrm_PersonDuplicateFinder]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This stored procedure detects potential duplicate person records and stores the results in [PersonDuplicate]
+        ///	&lt;/summary&gt;
+        ///	
+        ///	&lt;remarks&gt;	
+        ///		Uses the following constants:
+        ///			* Group Type - Family: &apos;790E3215-3B10-442B-AF69-616C0DCB998E&apos;
+        ///            * Location Type - Home: &apos;8C52E53C-2A66-435A- [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201607102235065_ScheduledTransactionType {
+            get {
+                return ResourceManager.GetString("_201607102235065_ScheduledTransactionType", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to /*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This stored procedure updates several attributes related to a person&apos;s
+        ///		attendance.
+        ///	&lt;/summary&gt;
+        ///	
+        ///	&lt;remarks&gt;	
+        ///		For eRA we only consider adults for the critieria.
+        ///	&lt;/remarks&gt;
+        ///	&lt;code&gt;
+        ///		EXEC [dbo].[spCrm_FamilyAnalyticsAttendance] 
+        ///	&lt;/code&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///
+        ///ALTER PROCEDURE [dbo].[spCrm_FamilyAnalyticsAttendance]
+        ///	
+        ///AS
+        ///BEGIN
+        ///	
+        ///	-- configuration of the duration in weeks
+        ///	DECLARE @EntryAttendanceDurationWeeks int = 16
+        ///		
+        ///	DECLARE @cACTIVE_RECORD_STATUS_VALUE_GUID uniquei [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201608101635463_PledgeGroup_SP1 {
+            get {
+                return ResourceManager.GetString("_201608101635463_PledgeGroup_SP1", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to /*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This stored procedure returns a data set used by the Rock eRA job to add/remove
+        ///		people from being an eRA. It should not be modified as it will be updated in the
+        ///		future to meet additional requirements.
+        ///
+        ///		The goal of the query is to return both those that meet the eRA requirements as well
+        ///		as those that are marked as already being an eRA and the criteria to ensure that
+        ///		they still should be an era.
+        ///	&lt;/summary&gt;
+        ///	
+        ///	&lt;remarks&gt;	
+        ///		For eRA we only consider adults for the c [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201608101635463_PledgeGroup_SP2 {
+            get {
+                return ResourceManager.GetString("_201608101635463_PledgeGroup_SP2", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spFinance_GivingAnalyticsQuery_AccountTotals]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_AccountTotals]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        ///		This stored procedure returns account totals for each giving id based on filter values
+        ///	&lt;/summary&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///CREATE PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_AccountTotals]
+        ///	  @StartDate datetime = NULL
+        ///	, @EndDate datetime = NULL
+        ///	, @AccountIds va [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201608171937068_GivingAnalyticsAccounts_AccountTotals {
+            get {
+                return ResourceManager.GetString("_201608171937068_GivingAnalyticsAccounts_AccountTotals", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spFinance_GivingAnalyticsQuery_FirstLastEverDates]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_FirstLastEverDates]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        ///		This stored procedure returns the first ever, and last ever dates that each giving id
+        ///		gave a contribution to a tax deductible account
+        ///	&lt;/summary&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///CREATE PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_FirstLastEverDates]
+        ///AS
+        ///
+        ///BEGIN        /// [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201608171937068_GivingAnalyticsAccounts_FirstLastEverDates {
+            get {
+                return ResourceManager.GetString("_201608171937068_GivingAnalyticsAccounts_FirstLastEverDates", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spFinance_GivingAnalyticsQuery_PersonSummary]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_PersonSummary]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        ///		This stored procedure returns data used by the giving analytics block
+        ///	&lt;/summary&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///CREATE PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_PersonSummary]
+        ///	  @StartDate datetime = NULL
+        ///	, @EndDate datetime = NULL
+        ///	, @MinAmount decimal(18,2) = NULL [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201608171937068_GivingAnalyticsAccounts_PersonSummary {
+            get {
+                return ResourceManager.GetString("_201608171937068_GivingAnalyticsAccounts_PersonSummary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spFinance_GivingAnalyticsQuery_TransactionData]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_TransactionData]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        ///		This stored procedure returns account totals for each giving leader based on filter values
+        ///	&lt;/summary&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///CREATE PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_TransactionData]
+        ///	  @StartDate datetime = NULL
+        ///	, @EndDate datetime = NULL
+        ///	, @Acc [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201608171937068_GivingAnalyticsAccounts_TransactionData {
+            get {
+                return ResourceManager.GetString("_201608171937068_GivingAnalyticsAccounts_TransactionData", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to -- todo
+        ///-- add routes to pages
+        ///-- rss on messages
+        ///
+        ///--
+        ///-- Lookups
+        ///--
+        ///DECLARE @ChannelItemEntityId int = ( SELECT TOP 1 [Id] FROM [EntityType] WHERE [Name] = &apos;Rock.Model.ContentChannelItem&apos; )
+        ///
+        ///DECLARE @ImageFieldTypeId int = ( SELECT TOP 1 [Id] FROM [FieldType] WHERE [Guid] = &apos;97F8157D-A8C8-4AB3-96A2-9CB2A9049E6D&apos; )
+        ///DECLARE @MemoFieldTypeId int = ( SELECT TOP 1 [Id] FROM [FieldType] WHERE [Guid] = &apos;C28C7BF3-A552-4D77-9408-DEDCF760CED0&apos; )
+        ///DECLARE @TextFieldTypeId int = ( SELECT TOP 1 [Id] FROM [Fiel [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201608172242214_Podcasting {
+            get {
+                return ResourceManager.GetString("_201608172242214_Podcasting", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spCrm_FamilyAnalyticsAttendance]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spCrm_FamilyAnalyticsAttendance]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This stored procedure updates several attributes related to a person&apos;s
+        ///		attendance.
+        ///	&lt;/summary&gt;
+        ///	
+        ///	&lt;remarks&gt;	
+        ///		For eRA we only consider adults for the critieria.
+        ///	&lt;/remarks&gt;
+        ///	&lt;code&gt;
+        ///		EXEC [dbo].[spCrm_FamilyAnalyticsAttendance] 
+        ///	&lt;/code&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///
+        ///CREATE PROCEDURE [dbo [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201610031959052_FamilyAnalyticsUpdate_spCrm_FamilyAnalyticsAttendance {
+            get {
+                return ResourceManager.GetString("_201610031959052_FamilyAnalyticsUpdate_spCrm_FamilyAnalyticsAttendance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spCrm_FamilyAnalyticsEraDataset]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spCrm_FamilyAnalyticsEraDataset]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This stored procedure returns a data set used by the Rock eRA job to add/remove
+        ///		people from being an eRA. It should not be modified as it will be updated in the
+        ///		future to meet additional requirements.
+        ///
+        ///		The goal of the query is to return both those that meet the eRA requiremen [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201610031959052_FamilyAnalyticsUpdate_spCrm_FamilyAnalyticsEraDataset {
+            get {
+                return ResourceManager.GetString("_201610031959052_FamilyAnalyticsUpdate_spCrm_FamilyAnalyticsEraDataset", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF EXISTS(SELECT * FROM sys.indexes WHERE name=&apos;IX_ForeignId&apos; AND object_id = OBJECT_ID(&apos;Note&apos;))
+        ///BEGIN
+        ///	DROP INDEX [IX_ForeignId] ON [Note]
+        ///END
+        ///IF EXISTS(SELECT * FROM sys.indexes WHERE name=&apos;IX_ForeignGuid&apos; AND object_id = OBJECT_ID(&apos;Note&apos;))
+        ///BEGIN
+        ///	DROP INDEX [IX_ForeignGuid] ON [Note]
+        ///END
+        ///IF EXISTS(SELECT * FROM sys.indexes WHERE name=&apos;IX_ForeignKey&apos; AND object_id = OBJECT_ID(&apos;Note&apos;))
+        ///BEGIN
+        ///	DROP INDEX [IX_ForeignKey] ON [Note]
+        ///END
+        ///IF EXISTS(SELECT * FROM sys.indexes WHERE name=&apos;IX_ForeignId&apos;  [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201610312310571_ConnectionGroupConfig_DropIndexes {
+            get {
+                return ResourceManager.GetString("_201610312310571_ConnectionGroupConfig_DropIndexes", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to /****** Object:  StoredProcedure [dbo].[spCheckin_AttendanceAnalyticsQuery_AttendeeLastAttendance]    Script Date: 10/27/2016 9:07:30 AM ******/
+        ///IF EXISTS ( SELECT * FROM [sysobjects] WHERE [id] = OBJECT_ID(N&apos;[dbo].[spCheckin_AttendanceAnalyticsQuery_AttendeeLastAttendance]&apos;) AND OBJECTPROPERTY([id], N&apos;IsProcedure&apos;) = 1 )
+        ///DROP PROCEDURE [dbo].[spCheckin_AttendanceAnalyticsQuery_AttendeeLastAttendance]
+        ///GO
+        ///
+        ////****** Object:  StoredProcedure [dbo].[spCheckin_AttendanceAnalyticsQuery_AttendeeLastAttendance] [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201610312310571_ConnectionGroupConfig_spCheckin_AttendanceAnalyticsQuery_AttendeeLastAttendance {
+            get {
+                return ResourceManager.GetString("_201610312310571_ConnectionGroupConfig_spCheckin_AttendanceAnalyticsQuery_Attende" +
+                        "eLastAttendance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF object_id(&apos;[dbo].[ufnCrm_GetAge]&apos;) IS NOT NULL
+        ///BEGIN
+        ///  DROP FUNCTION [dbo].[ufnCrm_GetAge]
+        ///END
+        ///GO
+        ///
+        ///SET ANSI_NULLS ON
+        ///GO
+        ///
+        ///SET QUOTED_IDENTIFIER ON
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function returns the age given a birthdate.
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		The age based on birthdate
+        ///	&lt;/returns&gt;
+        ///	&lt;remarks&gt;
+        ///		
+        ///	&lt;/remarks&gt;
+        ///	&lt;code&gt;
+        ///		SELECT [dbo].[ufnCrm_GetAge]( &apos;2000-01-01&apos;)
+        ///	&lt;/code&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///
+        ///CREATE FUNCTION [dbo].[ufnCrm_GetAge](@BirthDate datetime) 
+        ///
+        ///RETURNS INT WITH SCHEMABINDIN [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201610312310571_ConnectionGroupConfig_ufnCrm_GetAge {
+            get {
+                return ResourceManager.GetString("_201610312310571_ConnectionGroupConfig_ufnCrm_GetAge", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF object_id(&apos;[dbo].[ufnCrm_GetGradeOffset]&apos;) IS NOT NULL
+        ///BEGIN
+        ///  DROP FUNCTION [dbo].[ufnCrm_GetGradeOffset]
+        ///END
+        ///GO
+        ///
+        ///SET ANSI_NULLS ON
+        ///GO
+        ///
+        ///SET QUOTED_IDENTIFIER ON
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function returns the grade offset given a graduation date. The offset can then be used with defined value to find grade
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		The grade offset based on graduation date
+        ///	&lt;/returns&gt;
+        ///	&lt;remarks&gt;
+        ///		
+        ///	&lt;/remarks&gt;
+        ///	&lt;code&gt;
+        ///		SELECT [dbo].[ufnCrm_GetGradeOffset]( 2018, null )
+        ///	&lt; [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201610312310571_ConnectionGroupConfig_ufnCrm_GetGradeOffset {
+            get {
+                return ResourceManager.GetString("_201610312310571_ConnectionGroupConfig_ufnCrm_GetGradeOffset", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF object_id(&apos;[dbo].[ufnCrm_GetParentEmails]&apos;) IS NOT NULL
+        ///BEGIN
+        ///  DROP FUNCTION [dbo].[ufnCrm_GetParentEmails]
+        ///END
+        ///GO
+        ///
+        ///SET ANSI_NULLS ON
+        ///GO
+        ///SET QUOTED_IDENTIFIER ON
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function returns the emails of any parents in any family for the selected person id
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		The parent emails
+        ///	&lt;/returns&gt;
+        ///	&lt;remarks&gt;
+        ///		
+        ///	&lt;/remarks&gt;
+        ///	&lt;code&gt;
+        ///		SELECT [dbo].[ufnCrm_GetParentEmails]( 3 )
+        ///	&lt;/code&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///
+        ///CREATE FUNCTION [dbo].[ufnCrm_GetParentEmails] [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201610312310571_ConnectionGroupConfig_ufnCrm_GetParentEmails {
+            get {
+                return ResourceManager.GetString("_201610312310571_ConnectionGroupConfig_ufnCrm_GetParentEmails", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF object_id(&apos;[dbo].[ufnCrm_GetParentNames]&apos;) IS NOT NULL
+        ///BEGIN
+        ///  DROP FUNCTION [dbo].[ufnCrm_GetParentNames]
+        ///END
+        ///GO
+        ///
+        ///SET ANSI_NULLS ON
+        ///GO
+        ///SET QUOTED_IDENTIFIER ON
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function returns the names of any parents in any family for the selected person id
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		The parent names
+        ///	&lt;/returns&gt;
+        ///	&lt;remarks&gt;
+        ///		
+        ///	&lt;/remarks&gt;
+        ///	&lt;code&gt;
+        ///		SELECT [dbo].[ufnCrm_GetParentNames]( 3 )
+        ///	&lt;/code&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///
+        ///CREATE FUNCTION [dbo].[ufnCrm_GetParentNames](@Pers [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201610312310571_ConnectionGroupConfig_ufnCrm_GetParentNames {
+            get {
+                return ResourceManager.GetString("_201610312310571_ConnectionGroupConfig_ufnCrm_GetParentNames", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF object_id(&apos;[dbo].[ufnCrm_GetParentPhones]&apos;) IS NOT NULL
+        ///BEGIN
+        ///  DROP FUNCTION [dbo].[ufnCrm_GetParentPhones]
+        ///END
+        ///GO
+        ///
+        ///SET ANSI_NULLS ON
+        ///GO
+        ///SET QUOTED_IDENTIFIER ON
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function returns the Phones of any parents in any family for the selected person id
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		The parent Phone numbers
+        ///	&lt;/returns&gt;
+        ///	&lt;remarks&gt;
+        ///		
+        ///	&lt;/remarks&gt;
+        ///	&lt;code&gt;
+        ///		SELECT [dbo].[ufnCrm_GetParentPhones]( 3, &apos;Mobile&apos; )
+        ///	&lt;/code&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///
+        ///CREATE FUNCTION [dbo].[ufnCrm [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201610312310571_ConnectionGroupConfig_ufnCrm_GetParentPhones {
+            get {
+                return ResourceManager.GetString("_201610312310571_ConnectionGroupConfig_ufnCrm_GetParentPhones", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF object_id(&apos;[dbo].[ufnUtility_CsvToTable]&apos;) IS NOT NULL
+        ///BEGIN
+        ///  DROP FUNCTION [dbo].[ufnUtility_CsvToTable]
+        ///END
+        ///GO
+        ///
+        ///SET ANSI_NULLS ON
+        ///GO
+        ///
+        ///SET QUOTED_IDENTIFIER ON
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function converts a comma-delimited string of values into a table of values
+        ///        It comes from http://www.sqlservercentral.com/articles/Tally+Table/72993/
+        ///	&lt;/summary&gt;
+        ///	&lt;returns&gt;
+        ///		* id
+        ///	&lt;/returns&gt;
+        ///	&lt;remarks&gt;
+        ///		Used by spFinance_ContributionStatementQuery
+        ///	&lt;/remarks&gt;
+        ///	&lt;code&gt;
+        ///		SELECT * F [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201610312310571_ConnectionGroupConfig_ufnUtility_CsvToTable {
+            get {
+                return ResourceManager.GetString("_201610312310571_ConnectionGroupConfig_ufnUtility_CsvToTable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to -- Hotfix 006
+        ///    DECLARE @AttributeId INT = ( SELECT TOP 1 [Id] FROM [Attribute] WHERE [Guid] = &apos;3D24A4D2-90AF-4FDD-8CE2-7D1F9B76104B&apos; )
+        ///    UPDATE [AttributeValue] 
+        ///	SET [value] = &apos;67bd09b0-0c6e-44e7-a8eb-0e71551f3e6b&apos;
+        ///	WHERE [AttributeId] = @AttributeId
+        ///
+        ///    SET @AttributeId = ( SELECT TOP 1 [Id] FROM [Attribute] WHERE [Guid] = &apos;39D260A5-A976-4DA9-B3E0-7381E9B8F3D5&apos; )
+        ///    UPDATE [AttributeValue] 
+        ///	SET [value] = &apos;a1cbdaa4-94dd-4156-8260-5a3781e39fd0&apos;
+        ///	WHERE [AttributeId] = @AttributeId
+        ///
+        ///
+        ///-- Ho [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201612121647292_HotFixesFrom6_1 {
+            get {
+                return ResourceManager.GetString("_201612121647292_HotFixesFrom6_1", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to /*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function rebuilds the database indexes.
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///	&lt;/returns&gt;
+        ///	&lt;param name=&apos;PageCountLimit&apos; datatype=&apos;int&apos;&gt;The number of page counts the index must have in order to be considered for re-indexing (default 100).&lt;/param&gt;
+        ///	&lt;param name=&apos;MinFragmentation&apos; datatype=&apos;int&apos;&gt;The minimum amount of fragmentation a index must have to be considered for re-indexing (default 10).&lt;/param&gt;
+        ///	&lt;param name=&apos;MinFragmentationRebuild&apos; datatype=&apos;int&apos;&gt;The minimum amount of fragmentat [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201701022126386_DataMaintenanceJob {
+            get {
+                return ResourceManager.GetString("_201701022126386_DataMaintenanceJob", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsDimAttendanceDate]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsDimAttendanceDate
+        ///GO
+        ///
+        ///CREATE VIEW [dbo].[AnalyticsDimAttendanceDate]
+        ///AS
+        ///SELECT d.DateKey AS [AttendanceDateKey]
+        ///    ,*
+        ///FROM AnalyticsDimDate d
+        ///WHERE d.DateKey &gt;= (
+        ///        SELECT MIN(fa.AttendanceDateKey)
+        ///        FROM AnalyticsFactAttendance fa
+        ///        )
+        ///    AND d.DateKey &lt;= (
+        ///        SELECT MAX(fa.AttendanceDateKey)
+        ///        FROM AnalyticsFactAttendance fa
+        ///        )
+        ///.
+        /// </summary>
+        public static string _201701040116351_Analytics1_AnalyticsDimAttendanceDate {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_AnalyticsDimAttendanceDate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsDimAttendanceLocation]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsDimAttendanceLocation
+        ///GO
+        ///
+        ///CREATE VIEW AnalyticsDimAttendanceLocation
+        ///AS
+        ///SELECT l.Id [LocationId]
+        ///	,l.Name
+        ///	 ,l.Street1 [Street1]
+        ///    ,l.Street2 [Street2]
+        ///    ,l.City [City]
+        ///    ,l.County [County]
+        ///    ,l.[State] [State]
+        ///    ,l.Country [Country]
+        ///    ,l.PostalCode [PostalCode]
+        ///    ,l.GeoPoint [GeoPoint]
+        ///    ,l.GeoFence [GeoFence]
+        ///    ,l.GeoPoint.Lat [Latitude]
+        ///    ,l.GeoPoint.Long [Longitude]
+        ///FROM [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201701040116351_Analytics1_AnalyticsDimAttendanceLocation {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_AnalyticsDimAttendanceLocation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsDimFamilyCurrent]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsDimFamilyCurrent
+        ///GO
+        ///
+        ///CREATE VIEW AnalyticsDimFamilyCurrent
+        ///AS
+        ///SELECT * FROM AnalyticsDimFamilyHistorical where CurrentRowIndicator = 1.
+        /// </summary>
+        public static string _201701040116351_Analytics1_AnalyticsDimFamilyCurrent {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_AnalyticsDimFamilyCurrent", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsDimFamilyHeadOfHousehold]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsDimFamilyHeadOfHousehold
+        ///GO
+        ///
+        ///CREATE VIEW AnalyticsDimFamilyHeadOfHousehold
+        ///AS
+        ///SELECT * FROM AnalyticsDimPersonCurrent.
+        /// </summary>
+        public static string _201701040116351_Analytics1_AnalyticsDimFamilyHeadOfHousehold {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_AnalyticsDimFamilyHeadOfHousehold", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsDimFamilyHistorical]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsDimFamilyHistorical
+        ///GO
+        ///
+        ///CREATE VIEW AnalyticsDimFamilyHistorical
+        ///AS
+        ///SELECT asfh.*
+        ///    ,isnull(c.NAME, &apos;None&apos;) [CampusName]
+        ///    ,isnull(c.ShortCode, &apos;None&apos;) [CampusShortCode]
+        ///    ,mailingLocation.Street1 [MailingAddressStreet1]
+        ///    ,mailingLocation.Street2 [MailingAddressStreet2]
+        ///    ,mailingLocation.City [MailingAddressCity]
+        ///    ,mailingLocation.County [MailingAddressCounty]
+        ///    ,mailingLocation.[State [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201701040116351_Analytics1_AnalyticsDimFamilyHistorical {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_AnalyticsDimFamilyHistorical", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsDimFinancialAccount]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsDimFinancialAccount
+        ///GO
+        ///
+        ///CREATE VIEW AnalyticsDimFinancialAccount
+        ///AS
+        ///SELECT fa.Id [AccountId]
+        ///    ,fa.[Name]
+        ///    ,fa.[PublicName]
+        ///    ,fa.[Description]
+        ///    ,fa.[PublicDescription]
+        ///    ,CASE fa.[IsTaxDeductible]
+        ///        WHEN 1
+        ///            THEN &apos;Taxable&apos;
+        ///        ELSE &apos;Not Taxable&apos;
+        ///        END [TaxStatus]
+        ///    ,fa.[GlCode]
+        ///    ,fa.[Order]
+        ///    ,CASE fa.IsActive
+        ///        WHEN 1
+        ///            THEN &apos;Active&apos; [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201701040116351_Analytics1_AnalyticsDimFinancialAccount {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_AnalyticsDimFinancialAccount", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsDimFinancialBatch]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsDimFinancialBatch
+        ///GO
+        ///
+        ///CREATE VIEW AnalyticsDimFinancialBatch
+        ///AS
+        ///SELECT fb.Id [BatchId]
+        ///    ,fb.[Name]
+        ///    ,fb.[BatchStartDateTime]
+        ///    ,fb.[BatchEndDateTime]
+        ///    ,CASE fb.[Status]
+        ///        WHEN 0
+        ///            THEN &apos;Pending&apos;
+        ///        WHEN 1
+        ///            THEN &apos;Open&apos;
+        ///        WHEN 2
+        ///            THEN &apos;Closed&apos;
+        ///        ELSE NULL
+        ///        END [Status]
+        ///    ,c.NAME [Campus]
+        ///    ,fb.[AccountingSystemCode]
+        ///    ,f [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201701040116351_Analytics1_AnalyticsDimFinancialBatch {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_AnalyticsDimFinancialBatch", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsDimFinancialTransactionDate]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsDimFinancialTransactionDate
+        ///GO
+        ///
+        ///CREATE VIEW [dbo].[AnalyticsDimFinancialTransactionDate]
+        ///AS
+        ///SELECT d.DateKey AS [TransactionDateKey]
+        ///    ,*
+        ///FROM AnalyticsDimDate d
+        ///WHERE d.DateKey &gt;= (
+        ///        SELECT MIN(ft.TransactionDateKey)
+        ///        FROM AnalyticsFactFinancialTransaction ft
+        ///        )
+        ///    AND d.DateKey &lt;= (
+        ///        SELECT MAX(ft.TransactionDateKey)
+        ///        FROM AnalyticsFactFinancialTransact [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201701040116351_Analytics1_AnalyticsDimFinancialTransactionDate {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_AnalyticsDimFinancialTransactionDate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsDimFinancialTransactionType]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsDimFinancialTransactionType
+        ///GO
+        ///
+        ///CREATE VIEW AnalyticsDimFinancialTransactionType
+        ///AS
+        ///SELECT dv.Id [TransactionTypeId]
+        ///    ,dv.Value [Name]
+        ///    ,dv.[Description]
+        ///    ,dv.[Order]
+        ///FROM DefinedValue dv
+        ///JOIN DefinedType dt ON dv.DefinedTypeId = dt.Id
+        ///WHERE dt.[Guid] = &apos;FFF62A4B-5D88-4DEB-AF8F-8E6178E41FE5&apos;
+        ///.
+        /// </summary>
+        public static string _201701040116351_Analytics1_AnalyticsDimFinancialTransactionType {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_AnalyticsDimFinancialTransactionType", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsDimPersonBirthDate]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsDimPersonBirthDate
+        ///GO
+        ///
+        ///CREATE VIEW [dbo].AnalyticsDimPersonBirthDate
+        ///AS
+        ///SELECT d.DateKey AS [BirthDateKey]
+        ///    ,*
+        ///FROM AnalyticsDimDate d
+        ///WHERE d.DateKey &gt;= (
+        ///        SELECT MIN(ph.BirthDateKey)
+        ///        FROM AnalyticsDimPersonHistorical ph
+        ///        )
+        ///    AND d.DateKey &lt;= (
+        ///        SELECT MAX(ph.BirthDateKey)
+        ///        FROM AnalyticsDimPersonHistorical ph
+        ///        )
+        ///.
+        /// </summary>
+        public static string _201701040116351_Analytics1_AnalyticsDimPersonBirthDate {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_AnalyticsDimPersonBirthDate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsDimPersonCurrent]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsDimPersonCurrent
+        ///GO
+        ///
+        ///CREATE VIEW AnalyticsDimPersonCurrent
+        ///AS
+        ///SELECT * FROM AnalyticsDimPersonHistorical where CurrentRowIndicator = 1.
+        /// </summary>
+        public static string _201701040116351_Analytics1_AnalyticsDimPersonCurrent {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_AnalyticsDimPersonCurrent", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsDimPersonHistorical]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsDimPersonHistorical
+        ///GO
+        ///
+        ///CREATE VIEW AnalyticsDimPersonHistorical
+        ///AS
+        ///SELECT asph.*
+        ///    ,ms.Value [MaritalStatus]
+        ///    ,cs.Value [ConnectionStatus]
+        ///    ,rr.Value [ReviewReason]
+        ///    ,rs.Value [RecordStatus]
+        ///    ,rsr.Value [RecordStatusReason]
+        ///    ,rt.Value [RecordType]
+        ///    ,ps.Value [Suffix]
+        ///    ,pt.Value [Title]
+        ///    ,CASE asph.Gender
+        ///        WHEN 1
+        ///            THEN &apos;Male&apos;
+        ///        WHEN 2
+        ///             [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201701040116351_Analytics1_AnalyticsDimPersonHistorical {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_AnalyticsDimPersonHistorical", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsFactAttendance]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsFactAttendance
+        ///GO
+        ///
+        ///-- select top 10000 * from AnalyticsFactAttendance order by Id desc
+        ///CREATE VIEW AnalyticsFactAttendance
+        ///AS
+        ///SELECT asa.*
+        ///    ,isnull(at.NAME, &apos;None&apos;) [AttendanceTypeName]
+        ///    ,isnull(l.NAME, &apos;None&apos;) [LocationName]
+        ///    ,isnull(c.NAME, &apos;None&apos;) [CampusName]
+        ///    ,isnull(c.ShortCode, &apos;None&apos;) [CampusShortCode]
+        ///    ,isnull(s.NAME, &apos;None&apos;) [ScheduleName]
+        ///    ,isnull(g.NAME, &apos;None&apos;) [GroupName]
+        ///   [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201701040116351_Analytics1_AnalyticsFactAttendance {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_AnalyticsFactAttendance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsFactFinancialTransaction]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsFactFinancialTransaction
+        ///GO
+        ///
+        ///--select count(*) from AnalyticsFactFinancialTransaction 2185726
+        ///CREATE VIEW AnalyticsFactFinancialTransaction
+        ///AS
+        ///SELECT asft.*
+        ///    ,isnull(tt.NAME, &apos;None&apos;) [TransactionType]
+        ///    ,isnull(ts.Value, &apos;None&apos;) [TransactionSource]
+        ///    ,CASE asft.IsScheduled
+        ///        WHEN 1
+        ///            THEN &apos;Scheduled&apos;
+        ///        ELSE &apos;Non-Scheduled&apos;
+        ///        END [ScheduleType]
+        ///    ,adfcAuthoriz [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201701040116351_Analytics1_AnalyticsFactFinancialTransaction {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_AnalyticsFactFinancialTransaction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to UPDATE Attribute
+        ///SET IsAnalytic = 1
+        ///WHERE [Key] IN (
+        ///        &apos;BackgroundCheckDate&apos;
+        ///        ,&apos;BackgroundChecked&apos;
+        ///        ,&apos;BaptismDate&apos;
+        ///        ,&apos;core_CurrentlyAnEra&apos;
+        ///        ,&apos;core_EraStartDate&apos;
+        ///        ,&apos;core_EraFirstGave&apos;
+        ///        ,&apos;core_EraLastGave&apos;
+        ///        ,&apos;core_EraTimesGiven52Wks&apos;
+        ///        ,&apos;core_EraTimesGiven6Wks&apos;
+        ///        ,&apos;core_TimesCheckedIn16Wks&apos;
+        ///        ,&apos;Employer&apos;
+        ///        ,&apos;FirstVisit&apos;
+        ///        ,&apos;SecondVisit&apos;
+        ///        )
+        ///    AND EntityTypeId IN (
+        ///        SELECT Id
+        ///        FROM Enti [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201701040116351_Analytics1_SetAttributesIsAnalytics {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_SetAttributesIsAnalytics", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF EXISTS (
+        ///        SELECT *
+        ///        FROM [sysobjects]
+        ///        WHERE [id] = OBJECT_ID(N&apos;[dbo].[spAnalytics_ETL_Attendance]&apos;)
+        ///            AND OBJECTPROPERTY([id], N&apos;IsProcedure&apos;) = 1
+        ///        )
+        ///    DROP PROCEDURE [dbo].spAnalytics_ETL_Attendance
+        ///GO
+        ///
+        ///-- EXECUTE [dbo].[spAnalytics_ETL_Attendance] 
+        ///CREATE PROCEDURE [dbo].spAnalytics_ETL_Attendance
+        ///AS
+        ///BEGIN
+        ///    DECLARE @MinDateTime DATETIME = DATEFROMPARTS(1900, 1, 1)
+        ///        ,@EtlDateTime DATETIME = SysDateTime();
+        ///
+        ///    -- insert records into [[An [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201701040116351_Analytics1_spAnalytics_ETL_Attendance {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_spAnalytics_ETL_Attendance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF EXISTS (
+        ///        SELECT *
+        ///        FROM [sysobjects]
+        ///        WHERE [id] = OBJECT_ID(N&apos;[dbo].[spAnalytics_ETL_Family]&apos;)
+        ///            AND OBJECTPROPERTY([id], N&apos;IsProcedure&apos;) = 1
+        ///        )
+        ///    DROP PROCEDURE [dbo].spAnalytics_ETL_Family
+        ///GO
+        ///
+        ///-- EXECUTE [dbo].[spAnalytics_ETL_Family] 
+        ///CREATE PROCEDURE [dbo].spAnalytics_ETL_Family
+        ///AS
+        ///BEGIN
+        ///    DECLARE @EtlDate DATE = convert(DATE, SysDateTime())
+        ///        ,@MaxExpireDate DATE = DateFromParts(9999, 1, 1)
+        ///        ,@RecordStatusActiveId INT = (
+        ///      [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201701040116351_Analytics1_spAnalytics_ETL_Family {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_spAnalytics_ETL_Family", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF EXISTS (
+        ///        SELECT *
+        ///        FROM [sysobjects]
+        ///        WHERE [id] = OBJECT_ID(N&apos;[dbo].[spAnalytics_ETL_FinancialTransaction]&apos;)
+        ///            AND OBJECTPROPERTY([id], N&apos;IsProcedure&apos;) = 1
+        ///        )
+        ///    DROP PROCEDURE [dbo].spAnalytics_ETL_FinancialTransaction
+        ///GO
+        ///
+        ///-- truncate table [AnalyticsSourceFinancialTransaction]
+        ///-- EXECUTE [dbo].[spAnalytics_ETL_FinancialTransaction] 
+        ///CREATE PROCEDURE [dbo].[spAnalytics_ETL_FinancialTransaction]
+        ///AS
+        ///BEGIN
+        ///    DECLARE @MinDateTime DATETIME = DATEFROMPA [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201701040116351_Analytics1_spAnalytics_ETL_FinancialTransaction {
+            get {
+                return ResourceManager.GetString("_201701040116351_Analytics1_spAnalytics_ETL_FinancialTransaction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to /*
+        ///&lt;doc&gt;
+        ///    &lt;summary&gt;
+        ///         This function returns the address of the person provided.
+        ///    &lt;/summary&gt;
+        ///
+        ///    &lt;returns&gt;
+        ///        Address of the person.
+        ///    &lt;/returns&gt;
+        ///    &lt;remarks&gt;
+        ///        This function allows you to request an address for a specific person. It will return
+        ///        the first address of that type (multiple address are possible if the individual is in
+        ///        multiple families). 
+        ///        
+        ///        You can provide the address type by specifing &apos;Home&apos;, &apos;Previous&apos;, 
+        ///        &apos;Work&apos;. F [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201706060019549_GroupRequirementsGroupType_ufnCrm_GetAddress {
+            get {
+                return ResourceManager.GetString("_201706060019549_GroupRequirementsGroupType_ufnCrm_GetAddress", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to /*
+        ///    &lt;doc&gt;
+        ///	    &lt;summary&gt;
+        /// 		    This function returns the most likely spouse for the person [Id] provided
+        ///	    &lt;/summary&gt;
+        ///
+        ///	    &lt;returns&gt;
+        ///		    Person [Id] of the most likely spouse; otherwise returns NULL
+        ///	    &lt;/returns&gt;
+        ///	    &lt;remarks&gt;
+        ///		
+        ///
+        ///	    &lt;/remarks&gt;
+        ///	    &lt;code&gt;
+        ///		    SELECT [dbo].[ufnCrm_GetSpousePersonIdFromPersonId](3) -- Ted Decker (married) 
+        ///		    SELECT [dbo].[ufnCrm_GetSpousePersonIdFromPersonId](7) -- Ben Jones (single)
+        ///	    &lt;/code&gt;
+        ///    &lt;/doc&gt;
+        ///    */
+        ///
+        ///    ALTER FUNCTION  [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201706060019549_GroupRequirementsGroupType_ufnCrm_GetSpousePersonIdFromPersonId {
+            get {
+                return ResourceManager.GetString("_201706060019549_GroupRequirementsGroupType_ufnCrm_GetSpousePersonIdFromPersonId", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF object_id(&apos;[dbo].[ufnCrm_GetGradeOffset]&apos;) IS NOT NULL
+        ///BEGIN
+        ///  DROP FUNCTION [dbo].[ufnCrm_GetGradeOffset]
+        ///END
+        ///GO
+        ///
+        ///SET ANSI_NULLS ON
+        ///GO
+        ///
+        ///SET QUOTED_IDENTIFIER ON
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function returns the grade offset given a graduation date. The offset can then be used with defined value to find grade
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		The grade offset based on graduation date
+        ///	&lt;/returns&gt;
+        ///	&lt;remarks&gt;
+        ///		
+        ///	&lt;/remarks&gt;
+        ///	&lt;code&gt;
+        ///		SELECT [dbo].[ufnCrm_GetGradeOffset]( 2018, null )
+        ///	&lt; [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201706141234225_CommunicationQueueAlertJob_ufnCrm_GetGradeOffset {
+            get {
+                return ResourceManager.GetString("_201706141234225_CommunicationQueueAlertJob_ufnCrm_GetGradeOffset", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to -- create stored proc that retrieves a binaryfile record
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function returns the BinaryFile for a given Id or Guid, depending on which is specified
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		* BinaryFile record
+        ///	&lt;/returns&gt;
+        ///	&lt;param name=&apos;Id&apos; datatype=&apos;int&apos;&gt;The binary id to use&lt;/param&gt;
+        ///	&lt;param name=&apos;Guid&apos; datatype=&apos;uniqueidentifier&apos;&gt;The binaryfile guid to use&lt;/param&gt;
+        ///	&lt;remarks&gt;	
+        ///	&lt;/remarks&gt;
+        ///	&lt;code&gt;
+        ///		EXEC [dbo].[spCore_BinaryFileGet] 14, null -- car-promo.jpg
+        ///	&lt;/code&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///ALTE [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201707101648235_CommonBlockTypes_spCore_BinaryFileGet {
+            get {
+                return ResourceManager.GetString("_201707101648235_CommonBlockTypes_spCore_BinaryFileGet", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to /*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function rebuilds the database indexes.
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///	&lt;/returns&gt;
+        ///	&lt;param name=&apos;PageCountLimit&apos; datatype=&apos;int&apos;&gt;The number of page counts the index must have in order to be considered for re-indexing (default 100).&lt;/param&gt;
+        ///	&lt;param name=&apos;MinFragmentation&apos; datatype=&apos;int&apos;&gt;The minimum amount of fragmentation a index must have to be considered for re-indexing (default 10).&lt;/param&gt;
+        ///	&lt;param name=&apos;MinFragmentationRebuild&apos; datatype=&apos;int&apos;&gt;The minimum amount of fragmentat [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201707171725146_UniversalSearchPages_spDbaRebuildIndexes {
+            get {
+                return ResourceManager.GetString("_201707171725146_UniversalSearchPages_spDbaRebuildIndexes", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spCheckin_AttendanceAnalyticsQuery_NonAttendees]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spCheckin_AttendanceAnalyticsQuery_NonAttendees]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function returns any person ids for people that have attended previously but who have not attended since the beginning date
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		* PersonId 
+        ///		* SundayDate - Last time attended
+        ///	&lt;/returns&gt;
+        ///	&lt;param name=&apos;GroupTypeIds&apos; data [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201707182207536_AttendanceAnalyticsQuery_NonAttendees {
+            get {
+                return ResourceManager.GetString("_201707182207536_AttendanceAnalyticsQuery_NonAttendees", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spCheckin_AttendanceAnalyticsQuery_Attendees]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spCheckin_AttendanceAnalyticsQuery_Attendees]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function returns the people that attended based on selected filter criteria
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		* Id 
+        ///		* NickName
+        ///		* LastName
+        ///	&lt;/returns&gt;
+        ///	&lt;param name=&apos;GroupTypeId&apos; datatype=&apos;int&apos;&gt;The Check-in Area Group Type Id (only attendance for this a [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201707182207536_AttendanceAnalyticsScheduleFilter_Attendees {
+            get {
+                return ResourceManager.GetString("_201707182207536_AttendanceAnalyticsScheduleFilter_Attendees", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &apos;A&apos;&apos;mya&apos;,0,4,&apos;US&apos;,&apos;EN&apos;,4,100,0
+        ///&apos;A&apos;&apos;Niyah&apos;,0,3,&apos;US&apos;,&apos;EN&apos;,3,100,0
+        ///&apos;A&apos;&apos;riyah&apos;,0,3,&apos;US&apos;,&apos;EN&apos;,3,100,0
+        ///&apos;Aaden&apos;,22,0,&apos;US&apos;,&apos;EN&apos;,22,0,100
+        ///&apos;Aadyn&apos;,3,0,&apos;US&apos;,&apos;EN&apos;,3,0,100
+        ///&apos;Aaiden&apos;,5,0,&apos;US&apos;,&apos;EN&apos;,5,0,100
+        ///&apos;Aalaya&apos;,0,3,&apos;US&apos;,&apos;EN&apos;,3,100,0
+        ///&apos;Aalayah&apos;,0,3,&apos;US&apos;,&apos;EN&apos;,3,100,0
+        ///&apos;Aaleyah&apos;,0,3,&apos;US&apos;,&apos;EN&apos;,3,100,0
+        ///&apos;Aaliah&apos;,0,3,&apos;US&apos;,&apos;EN&apos;,3,100,0
+        ///&apos;Aalijah&apos;,3,0,&apos;US&apos;,&apos;EN&apos;,3,0,100
+        ///&apos;Aaliya&apos;,0,7,&apos;US&apos;,&apos;EN&apos;,7,100,0
+        ///&apos;Aaliyah&apos;,0,424,&apos;US&apos;,&apos;EN&apos;,424,100,0
+        ///&apos;Aaliyana&apos;,0,3,&apos;US&apos;,&apos;EN&apos;,3,100,0
+        ///&apos;Aallyah&apos;,0,3,&apos;US&apos;,&apos;EN&apos;,3,100,0
+        ///&apos;Aalyah&apos;,0,4,&apos;US&apos; [rest of....
+        /// </summary>
+        public static string _201707311527250_FirstNameGender {
+            get {
+                return ResourceManager.GetString("_201707311527250_FirstNameGender", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &apos;SMITH&apos;,1,2376206,880.85
+        ///&apos;JOHNSON&apos;,2,1857160,688.44
+        ///&apos;WILLIAMS&apos;,3,1534042,568.66
+        ///&apos;BROWN&apos;,4,1380145,511.62
+        ///&apos;JONES&apos;,5,1362755,505.17
+        ///&apos;MILLER&apos;,6,1127803,418.07
+        ///&apos;DAVIS&apos;,7,1072335,397.51
+        ///&apos;GARCIA&apos;,8,858289,318.17
+        ///&apos;RODRIGUEZ&apos;,9,804240,298.13
+        ///&apos;WILSON&apos;,10,783051,290.27
+        ///&apos;MARTINEZ&apos;,11,775072,287.32
+        ///&apos;ANDERSON&apos;,12,762394,282.62
+        ///&apos;TAYLOR&apos;,13,720370,267.04
+        ///&apos;THOMAS&apos;,14,710696,263.45
+        ///&apos;HERNANDEZ&apos;,15,706372,261.85
+        ///&apos;MOORE&apos;,16,698671,259
+        ///&apos;MARTIN&apos;,17,672711,249.37
+        ///&apos;JACKSON&apos;,18,666125,246.93
+        ///&apos;THOMPSON&apos;,19,644368,2 [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201707311527250_LastName {
+            get {
+                return ResourceManager.GetString("_201707311527250_LastName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &apos;Abigail&apos;,&apos;Abbey&apos;,2,18
+        ///&apos;Abigail&apos;,&apos;Abbi&apos;,2,11
+        ///&apos;Abigail&apos;,&apos;Abbie&apos;,2,27
+        ///&apos;Abigail&apos;,&apos;Abby&apos;,2,238
+        ///&apos;Abigail&apos;,&apos;Abi&apos;,2,21
+        ///&apos;Addison&apos;,&apos;Addie&apos;,2,19
+        ///&apos;Addison&apos;,&apos;Addy&apos;,2,21
+        ///&apos;Adrian&apos;,&apos;Adrián&apos;,1,20
+        ///&apos;Alejandra&apos;,&apos;Alex&apos;,2,11
+        ///&apos;Alejandro&apos;,&apos;Alex&apos;,1,44
+        ///&apos;Alexander&apos;,&apos;Alex&apos;,1,287
+        ///&apos;Alexander&apos;,&apos;Xander&apos;,1,15
+        ///&apos;Alexandra&apos;,&apos;Alex&apos;,2,146
+        ///&apos;Alexandra&apos;,&apos;Ali&apos;,2,21
+        ///&apos;Alexandra&apos;,&apos;Allie&apos;,2,29
+        ///&apos;Alexandra&apos;,&apos;Ally&apos;,2,11
+        ///&apos;Alexandra&apos;,&apos;Lexi&apos;,2,18
+        ///&apos;Alexandra&apos;,&apos;Lexie&apos;,2,12
+        ///&apos;Alexandria&apos;,&apos;Alex&apos;,2,65
+        ///&apos;Alexandria&apos;,&apos;Ali&apos;,2,11
+        ///&apos;Alexis&apos;,&apos;Lexi&apos;,2, [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201707311527250_NickName {
+            get {
+                return ResourceManager.GetString("_201707311527250_NickName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &apos;01&apos;,&apos;Summit Estates&apos;,&apos;Summit Estates combines above-average wealth and education. These late-30s to early-60s households with children and teens rank high for household income (5th), home value (2nd) and net worth (1st). Fully 70% have earned a college of post-graduate degree. Summit Estates create time in their often professional-dual-income-with-children schedules for cultural activities, sports, fitness and travel. They generally are not heavy TV viewers, but references include financial channels, sport [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201707311527250_PersonicxCluster {
+            get {
+                return ResourceManager.GetString("_201707311527250_PersonicxCluster", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &apos;01Y&apos;,&apos;Starting Out&apos;,&apos;Members of the Starting Out group are mostly renters in their mid-to-late-20s with entry-level jobs and an eye to the future – changing jobs, getting engaged, becoming parents. They have an avid interest in video games of all kinds; in fact, many are seen as video game experts by family and friends. Often without landlines in their homes, they think of their cell phones as a source of entertainment, using their mobile devices and the internet to watch TV and movies and listen to music  [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201707311527250_PersonicxGroup {
+            get {
+                return ResourceManager.GetString("_201707311527250_PersonicxGroup", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spFinance_GivingAnalyticsQuery_AccountTotals]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_AccountTotals]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        ///		This stored procedure returns account totals for each giving id based on filter values
+        ///	&lt;/summary&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///CREATE PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_AccountTotals]
+        ///	  @StartDate datetime = NULL
+        ///	, @EndDate datetime = NULL
+        ///	, @AccountIds va [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201708162105164_AnalyticsPerformance_AccountTotals {
+            get {
+                return ResourceManager.GetString("_201708162105164_AnalyticsPerformance_AccountTotals", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spCheckin_AttendanceAnalyticsQuery_AttendeeDates]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spCheckin_AttendanceAnalyticsQuery_AttendeeDates]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function returns attendee person ids and the dates they attended based on selected filter criteria
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		* PersonId
+        ///		* SundayDate
+        ///		* MonthDate
+        ///		* Year Date
+        ///	&lt;/returns&gt;
+        ///	&lt;param name=&apos;GroupTypeId&apos; datatype=&apos;int&apos;&gt;The C [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201708162105164_AnalyticsPerformance_AttendeeDates {
+            get {
+                return ResourceManager.GetString("_201708162105164_AnalyticsPerformance_AttendeeDates", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spCheckin_AttendanceAnalyticsQuery_AttendeeFirstDates]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spCheckin_AttendanceAnalyticsQuery_AttendeeFirstDates]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        ///        This function return people who attended based on selected filter criteria and the first 5 dates they ever attended the selected group type
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		* PersonId
+        ///		* TimeAttending
+        ///		* SundayDate
+        ///	&lt;/returns&gt;
+        ///	&lt;param [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201708162105164_AnalyticsPerformance_AttendeeFirstDates {
+            get {
+                return ResourceManager.GetString("_201708162105164_AnalyticsPerformance_AttendeeFirstDates", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spCheckin_AttendanceAnalyticsQuery_AttendeeLastAttendance]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spCheckin_AttendanceAnalyticsQuery_AttendeeLastAttendance]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        ///        This function return people who attended based on selected filter criteria and the first 5 dates they ever attended the selected group type
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		* PersonId
+        ///		* TimeAttending
+        ///		* SundayDate
+        ///	&lt;/returns&gt;        /// [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201708162105164_AnalyticsPerformance_AttendeeLastAttendance {
+            get {
+                return ResourceManager.GetString("_201708162105164_AnalyticsPerformance_AttendeeLastAttendance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spCheckin_AttendanceAnalyticsQuery_Attendees]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spCheckin_AttendanceAnalyticsQuery_Attendees]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function returns the people that attended based on selected filter criteria
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		* Id 
+        ///		* NickName
+        ///		* LastName
+        ///	&lt;/returns&gt;
+        ///	&lt;param name=&apos;GroupTypeId&apos; datatype=&apos;int&apos;&gt;The Check-in Area Group Type Id (only attendance for this a [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201708162105164_AnalyticsPerformance_Attendees {
+            get {
+                return ResourceManager.GetString("_201708162105164_AnalyticsPerformance_Attendees", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to CREATE NONCLUSTERED INDEX [IX_AccountId_TransactionId_Amount]
+        ///ON [dbo].[FinancialTransactionDetail] ([AccountId])
+        ///INCLUDE ([TransactionId],[Amount])
+        ///GO
+        ///
+        ///CREATE NONCLUSTERED INDEX [IX_TransactionDateTime_SourceType_AuthorizedPerson_PaymentDetails]
+        ///ON [dbo].[FinancialTransaction] ([TransactionDateTime])
+        ///INCLUDE ([Id],[SourceTypeValueId],[AuthorizedPersonAliasId],[FinancialPaymentDetailId])
+        ///GO.
+        /// </summary>
+        public static string _201708162105164_AnalyticsPerformance_Indexes {
+            get {
+                return ResourceManager.GetString("_201708162105164_AnalyticsPerformance_Indexes", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spCheckin_AttendanceAnalyticsQuery_NonAttendees]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spCheckin_AttendanceAnalyticsQuery_NonAttendees]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        /// 		This function returns any person ids for people that have attended previously but who have not attended since the beginning date
+        ///	&lt;/summary&gt;
+        ///
+        ///	&lt;returns&gt;
+        ///		* PersonId 
+        ///		* SundayDate - Last time attended
+        ///	&lt;/returns&gt;
+        ///	&lt;param name=&apos;GroupTypeIds&apos; data [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201708162105164_AnalyticsPerformance_NonAttendees {
+            get {
+                return ResourceManager.GetString("_201708162105164_AnalyticsPerformance_NonAttendees", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spFinance_GivingAnalyticsQuery_PersonSummary]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_PersonSummary]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        ///		This stored procedure returns data used by the giving analytics block
+        ///	&lt;/summary&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///CREATE PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_PersonSummary]
+        ///	  @StartDate datetime = NULL
+        ///	, @EndDate datetime = NULL
+        ///	, @MinAmount decimal(18,2) = NULL [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201708162105164_AnalyticsPerformance_PersonSummary {
+            get {
+                return ResourceManager.GetString("_201708162105164_AnalyticsPerformance_PersonSummary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N&apos;[dbo].[spFinance_GivingAnalyticsQuery_TransactionData]&apos;) AND type in (N&apos;P&apos;, N&apos;PC&apos;))
+        ///DROP PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_TransactionData]
+        ///GO
+        ///
+        ////*
+        ///&lt;doc&gt;
+        ///	&lt;summary&gt;
+        ///		This stored procedure returns account totals for each giving leader based on filter values
+        ///	&lt;/summary&gt;
+        ///&lt;/doc&gt;
+        ///*/
+        ///CREATE PROCEDURE [dbo].[spFinance_GivingAnalyticsQuery_TransactionData]
+        ///	  @StartDate datetime = NULL
+        ///	, @EndDate datetime = NULL
+        ///	, @Acc [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201708162105164_AnalyticsPerformance_TransactionData {
+            get {
+                return ResourceManager.GetString("_201708162105164_AnalyticsPerformance_TransactionData", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to /* Create the System &apos;Blank&apos; communication template */
+        ///DELETE
+        ///FROM CommunicationTemplate
+        ///WHERE [Guid] = &apos;A3C7F623-7F6F-4C48-B66F-CBEE2DF30B6A&apos;
+        ///
+        ///INSERT INTO [dbo].[CommunicationTemplate] (
+        ///	[Name]
+        ///	,[Description]
+        ///	,[IsSystem]
+        ///	,[Subject]
+        ///	,[MediumDataJson]
+        ///	,[Guid]
+        ///	,[Message]
+        ///	)
+        ///VALUES (
+        ///	&apos;Blank&apos;
+        ///	,&apos;A template without predefined content that can be used to create email and SMS communications&apos;
+        ///	,1
+        ///	,&apos;&apos;
+        ///	,&apos;{}&apos;
+        ///	,&apos;A3C7F623-7F6F-4C48-B66F-CBEE2DF30B6A&apos;
+        ///	,
+        ///	&apos;&lt;html&gt;
+        ///&lt;head&gt;
+        ///&lt;title&gt;A Respons [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201709082257551_Communications2_AddCommunicationTemplates {
+            get {
+                return ResourceManager.GetString("_201709082257551_Communications2_AddCommunicationTemplates", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF EXISTS (
+        ///        SELECT *
+        ///        FROM [sysobjects]
+        ///        WHERE [id] = OBJECT_ID(N&apos;[dbo].[spAnalytics_ETL_Attendance]&apos;)
+        ///            AND OBJECTPROPERTY([id], N&apos;IsProcedure&apos;) = 1
+        ///        )
+        ///    DROP PROCEDURE [dbo].spAnalytics_ETL_Attendance
+        ///GO
+        ///
+        ///-- EXECUTE [dbo].[spAnalytics_ETL_Attendance] 
+        ///CREATE PROCEDURE [dbo].spAnalytics_ETL_Attendance
+        ///AS
+        ///BEGIN
+        ///    DECLARE @MinDateTime DATETIME = DATEFROMPARTS(1900, 1, 1)
+        ///        ,@EtlDateTime DATETIME = SysDateTime();
+        ///
+        ///    -- insert records into [[An [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201709131136468_spAnalytics_ETL_Attendance {
+            get {
+                return ResourceManager.GetString("_201709131136468_spAnalytics_ETL_Attendance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF EXISTS (
+        ///        SELECT *
+        ///        FROM [sysobjects]
+        ///        WHERE [id] = OBJECT_ID(N&apos;[dbo].[spAnalytics_ETL_FinancialTransaction]&apos;)
+        ///            AND OBJECTPROPERTY([id], N&apos;IsProcedure&apos;) = 1
+        ///        )
+        ///    DROP PROCEDURE [dbo].spAnalytics_ETL_FinancialTransaction
+        ///GO
+        ///
+        ///-- truncate table [AnalyticsSourceFinancialTransaction]
+        ///-- EXECUTE [dbo].[spAnalytics_ETL_FinancialTransaction] 
+        ///CREATE PROCEDURE [dbo].[spAnalytics_ETL_FinancialTransaction]
+        ///AS
+        ///BEGIN
+        ///    DECLARE @MinDateTime DATETIME = DATEFROMPA [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201709131136468_spAnalytics_ETL_FinancialTransaction {
+            get {
+                return ResourceManager.GetString("_201709131136468_spAnalytics_ETL_FinancialTransaction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsDimAttendanceDate]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsDimAttendanceDate
+        ///GO
+        ///
+        ///CREATE VIEW [dbo].[AnalyticsDimAttendanceDate]
+        ///AS
+        ///SELECT d.DateKey AS [AttendanceDateKey]
+        ///    ,*
+        ///FROM AnalyticsSourceDate d
+        ///WHERE d.DateKey &gt;= (
+        ///        SELECT MIN(x.AttendanceDateKey)
+        ///        FROM AnalyticsFactAttendance x
+        ///        )
+        ///    AND d.DateKey &lt;= (
+        ///        SELECT MAX(x.AttendanceDateKey)
+        ///        FROM AnalyticsFactAttendance x
+        ///        )
+        ///.
+        /// </summary>
+        public static string _201709191729044_Analytics2_AnalyticsDimAttendanceDate {
+            get {
+                return ResourceManager.GetString("_201709191729044_Analytics2_AnalyticsDimAttendanceDate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsDimFamilyHeadOfHouseholdBirthDate]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsDimFamilyHeadOfHouseholdBirthDate
+        ///GO
+        ///
+        ///CREATE VIEW [dbo].AnalyticsDimFamilyHeadOfHouseholdBirthDate
+        ///AS
+        ///SELECT d.DateKey AS [BirthDateKey]
+        ///    ,*
+        ///FROM AnalyticsSourceDate d
+        ///WHERE d.DateKey &gt;= (
+        ///        SELECT MIN(x.BirthDateKey)
+        ///        FROM AnalyticsDimFamilyHeadOfHousehold x
+        ///        )
+        ///    AND d.DateKey &lt;= (
+        ///        SELECT MAX(x.BirthDateKey)
+        ///        FROM AnalyticsDimFamilyHeadOfHousehol [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201709191729044_Analytics2_AnalyticsDimFamilyHeadOfHouseholdBirthDate {
+            get {
+                return ResourceManager.GetString("_201709191729044_Analytics2_AnalyticsDimFamilyHeadOfHouseholdBirthDate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsDimFinancialTransactionDate]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsDimFinancialTransactionDate
+        ///GO
+        ///
+        ///CREATE VIEW [dbo].[AnalyticsDimFinancialTransactionDate]
+        ///AS
+        ///SELECT d.DateKey AS [TransactionDateKey]
+        ///    ,*
+        ///FROM AnalyticsSourceDate d
+        ///WHERE d.DateKey &gt;= (
+        ///        SELECT MIN(x.TransactionDateKey)
+        ///        FROM AnalyticsFactFinancialTransaction x
+        ///        )
+        ///    AND d.DateKey &lt;= (
+        ///        SELECT MAX(x.TransactionDateKey)
+        ///        FROM AnalyticsFactFinancialTransact [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201709191729044_Analytics2_AnalyticsDimFinancialTransactionDate {
+            get {
+                return ResourceManager.GetString("_201709191729044_Analytics2_AnalyticsDimFinancialTransactionDate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsDimPersonCurrentBirthDate]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsDimPersonCurrentBirthDate
+        ///GO
+        ///
+        ///CREATE VIEW [dbo].AnalyticsDimPersonCurrentBirthDate
+        ///AS
+        ///SELECT d.DateKey AS [BirthDateKey]
+        ///    ,*
+        ///FROM AnalyticsSourceDate d
+        ///WHERE d.DateKey &gt;= (
+        ///        SELECT MIN(x.BirthDateKey)
+        ///        FROM AnalyticsDimPersonCurrent x
+        ///        )
+        ///    AND d.DateKey &lt;= (
+        ///        SELECT MAX(x.BirthDateKey)
+        ///        FROM AnalyticsDimPersonCurrent x
+        ///        )
+        ///.
+        /// </summary>
+        public static string _201709191729044_Analytics2_AnalyticsDimPersonCurrentBirthDate {
+            get {
+                return ResourceManager.GetString("_201709191729044_Analytics2_AnalyticsDimPersonCurrentBirthDate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsDimPersonHistoricalBirthDate]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsDimPersonHistoricalBirthDate
+        ///GO
+        ///
+        ///CREATE VIEW [dbo].AnalyticsDimPersonHistoricalBirthDate
+        ///AS
+        ///SELECT d.DateKey AS [BirthDateKey]
+        ///    ,*
+        ///FROM AnalyticsSourceDate d
+        ///WHERE d.DateKey &gt;= (
+        ///        SELECT MIN(x.BirthDateKey)
+        ///        FROM AnalyticsDimPersonHistorical x
+        ///        )
+        ///    AND d.DateKey &lt;= (
+        ///        SELECT MAX(x.BirthDateKey)
+        ///        FROM AnalyticsDimPersonHistorical x
+        ///        )
+        ///.
+        /// </summary>
+        public static string _201709191729044_Analytics2_AnalyticsDimPersonHistoricalBirthDate {
+            get {
+                return ResourceManager.GetString("_201709191729044_Analytics2_AnalyticsDimPersonHistoricalBirthDate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to /* MP: Create the System &apos;Blank&apos; communication template */
+        ///UPDATE Communication
+        ///SET CommunicationTemplateId = NULL
+        ///WHERE CommunicationTemplateId IN (
+        ///		SELECT Id
+        ///		FROM CommunicationTemplate
+        ///		WHERE [Guid] = &apos;A3C7F623-7F6F-4C48-B66F-CBEE2DF30B6A&apos;
+        ///		)
+        ///
+        ///DELETE
+        ///FROM CommunicationTemplate
+        ///WHERE [Guid] = &apos;A3C7F623-7F6F-4C48-B66F-CBEE2DF30B6A&apos;
+        ///
+        ///INSERT INTO [dbo].[CommunicationTemplate] (
+        ///	[Name]
+        ///	,[Description]
+        ///	,[IsSystem]
+        ///	,[Subject]
+        ///	,[MediumDataJson]
+        ///	,[Guid]
+        ///	,[Message]
+        ///	)
+        ///VALUES (
+        ///	&apos;B [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201709222257442_CommunicationSMSAttachments_AddCommunicationTemplates {
+            get {
+                return ResourceManager.GetString("_201709222257442_CommunicationSMSAttachments_AddCommunicationTemplates", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &apos;01&apos;,&apos;Summit Estates&apos;,&apos;Summit Estates combines above-average wealth and education. These late-30s to early-60s households with children and teens rank high for household income (5th), home value (2nd) and net worth (1st). Fully 70% have earned a college of post-graduate degree. Summit Estates create time in their often professional-dual-income-with-children schedules for cultural activities, sports, fitness and travel. They generally are not heavy TV viewers, but references include financial channels, sport [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201709231340508_PersonicxCluster {
+            get {
+                return ResourceManager.GetString("_201709231340508_PersonicxCluster", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to 
+        ///DECLARE @WorkflowTypeId int = ( SELECT TOP 1 [Id] FROM [WorkflowType] WHERE [Guid] = &apos;16D12EF7-C546-4039-9036-B73D118EDC90&apos; )
+        ///DECLARE @WFEntityTypeId int = ( SELECT TOP 1 [Id] FROM [EntityType] WHERE [Guid] = &apos;3540E9A7-FE30-43A9-8B0A-A372B63DFC93&apos; )
+        ///DECLARE @EncryptedTextFieldTypeId int = ( SELECT TOP 1 [Id] FROM [FieldType] WHERE [Guid] = &apos;36167F3E-8CB2-44F9-9022-102F171FBC9A&apos; )
+        ///DECLARE @SSNFieldTypeId int = ( SELECT TOP 1 [Id] FROM [FieldType] WHERE [Guid] = &apos;4722C99A-C078-464A-968F-13AB5E8E318F&apos; )
+        /// [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201710021015059_BackgroundCheckSSN {
+            get {
+                return ResourceManager.GetString("_201710021015059_BackgroundCheckSSN", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to /* MP: Create/Update the System &apos;Blank&apos; communication template */
+        ///UPDATE Communication
+        ///SET CommunicationTemplateId = NULL
+        ///WHERE CommunicationTemplateId IN (
+        ///		SELECT Id
+        ///		FROM CommunicationTemplate
+        ///		WHERE [Guid] = &apos;A3C7F623-7F6F-4C48-B66F-CBEE2DF30B6A&apos;
+        ///		)
+        ///
+        ///DELETE
+        ///FROM CommunicationTemplate
+        ///WHERE [Guid] = &apos;A3C7F623-7F6F-4C48-B66F-CBEE2DF30B6A&apos;
+        ///
+        ///INSERT INTO [dbo].[CommunicationTemplate] (
+        ///	[Name]
+        ///	,[Description]
+        ///	,[IsSystem]
+        ///	,[IsActive]
+        ///	,[Subject]
+        ///	,[MediumDataJson]
+        ///	,[Guid]
+        ///	,[Messag [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201710021015059_BlankCommTemplate {
+            get {
+                return ResourceManager.GetString("_201710021015059_BlankCommTemplate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to -- delete existing shortcodes
+        ///DELETE FROM [LavaShortcode] WHERE [Guid] IN (&apos;D8B431AA-13EA-4F5F-9D6E-85B6D26EB72A&apos;, &apos;B579B014-735E-4D9C-9DEF-00D4FBCECE21&apos;, &apos;4284B1C9-E73D-4162-8AEE-13A03CAF2938&apos;)
+        ///
+        ///-- YouTube
+        ///INSERT INTO [LavaShortCode]
+        ///	([Name], [Description], [Documentation], [IsSystem], [IsActive], [TagName], [Markup], [TagType], [EnabledLavaCommands], [Parameters], [Guid])
+        ///	VALUES
+        ///	(&apos;YouTube&apos;,&apos;Creates a responsive YouTube embed from just a simple video id.&apos;,&apos;&lt;p&gt;Embedding a YouTube video is easy, ri [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201710031453003_InitialShortcodesLoad {
+            get {
+                return ResourceManager.GetString("_201710031453003_InitialShortcodesLoad", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to DECLARE @simpleCommunicationEntryBlockId INT = (
+        /// SELECT TOP 1 Id
+        /// FROM [Block]
+        /// WHERE [Guid] = &apos;BD9B2F32-AB18-4761-80C9-FDA4DBEEA9EC&apos;
+        /// )
+        ///DECLARE @wizardCommunicationEntryBlockId INT = (
+        /// SELECT TOP 1 Id
+        /// FROM [Block]
+        /// WHERE [Guid] = &apos;82D5B1A0-1C17-464E-9EC5-414549FB44C7&apos;
+        /// )
+        ///DECLARE @simpleCommunicationEntryBlockTypeId INT = (
+        /// SELECT TOP 1 Id
+        /// FROM [BlockType]
+        /// WHERE [Guid] = &apos;D9834641-7F39-4CFA-8CB2-E64068127565&apos;
+        /// );
+        ///DECLARE @wizardCommunicationEntryBlockTypeId INT = (
+        /// SELECT TOP 1 Id
+        /// F [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201710051632496_Analytics3_CommunicationBlockSettings {
+            get {
+                return ResourceManager.GetString("_201710051632496_Analytics3_CommunicationBlockSettings", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to -- Update DefaultValue for Email Medium&apos;s Unsubscribe HTML
+        ///UPDATE Attribute
+        ///SET DefaultValue = &apos;
+        ///&lt;p style=&apos;&apos;float: right;&apos;&apos;&gt;
+        ///    &lt;small&gt;&lt;a href=&apos;&apos;{{ &apos;&apos;Global&apos;&apos; | Attribute:&apos;&apos;PublicApplicationRoot&apos;&apos; }}Unsubscribe/{{ Person | PersonTokenCreate:43200,3 }}?CommunicationId={{ Communication.Id }}&apos;&apos;&gt;Unsubscribe&lt;/a&gt;&lt;/small&gt;
+        ///&lt;/p&gt;
+        ///&apos;
+        ///WHERE [Guid] = &apos;2942EFCB-9BCF-4A16-9A78-D6149E2EAAD3&apos;
+        ///	AND DefaultValue = &apos;
+        ///&lt;p style=&apos;&apos;float: right;&apos;&apos;&gt;
+        ///    &lt;small&gt;&lt;a href=&apos;&apos;{{ &apos;&apos;Global&apos;&apos; | Attribute:&apos;&apos;PublicApplicationRoot&apos;&apos;  [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201710061805334_CommunicationListGroup_UpdateEmailMediumAttributeValues {
+            get {
+                return ResourceManager.GetString("_201710061805334_CommunicationListGroup_UpdateEmailMediumAttributeValues", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsFactAttendance]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsFactAttendance
+        ///GO
+        ///
+        ///-- select top 10000 * from AnalyticsFactAttendance order by Id desc
+        ///CREATE VIEW AnalyticsFactAttendance
+        ///AS
+        ///SELECT asa.*
+        ///    ,adphPerson.PrimaryFamilyKey [FamilyKey]
+        ///	,adpcPerson.PrimaryFamilyKey [CurrentFamilyKey]
+        ///    ,isnull(at.NAME, &apos;None&apos;) [AttendanceTypeName]
+        ///    ,isnull(l.NAME, &apos;None&apos;) [LocationName]
+        ///    ,isnull(c.NAME, &apos;None&apos;) [CampusName]
+        ///    ,isnull(c.ShortCode, &apos;None&apos;) [CampusSho [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201710131721219_InteractionRelatedEntity_AnalyticsFactAttendance {
+            get {
+                return ResourceManager.GetString("_201710131721219_InteractionRelatedEntity_AnalyticsFactAttendance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF OBJECT_ID(N&apos;[dbo].[AnalyticsFactFinancialTransaction]&apos;, &apos;V&apos;) IS NOT NULL
+        ///    DROP VIEW AnalyticsFactFinancialTransaction
+        ///GO
+        ///
+        ///CREATE VIEW AnalyticsFactFinancialTransaction
+        ///AS
+        ///SELECT asft.*
+        ///    ,isnull(tt.Value, &apos;None&apos;) [TransactionType]
+        ///    ,isnull(ts.Value, &apos;None&apos;) [TransactionSource]
+        ///    ,CASE asft.IsScheduled
+        ///        WHEN 1
+        ///            THEN &apos;Scheduled&apos;
+        ///        ELSE &apos;Non-Scheduled&apos;
+        ///        END [ScheduleType]
+        ///    ,adphAuthorizedPerson.PrimaryFamilyKey [AuthorizedFamilyKey]
+        ///	,adpcAuthorized [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201710131721219_InteractionRelatedEntity_AnalyticsFactFinancialTransaction {
+            get {
+                return ResourceManager.GetString("_201710131721219_InteractionRelatedEntity_AnalyticsFactFinancialTransaction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to IF EXISTS (
+        ///        SELECT *
+        ///        FROM [sysobjects]
+        ///        WHERE [id] = OBJECT_ID(N&apos;[dbo].[spAnalytics_ETL_Family]&apos;)
+        ///            AND OBJECTPROPERTY([id], N&apos;IsProcedure&apos;) = 1
+        ///        )
+        ///    DROP PROCEDURE [dbo].spAnalytics_ETL_Family
+        ///GO
+        ///
+        ///-- EXECUTE [dbo].[spAnalytics_ETL_Family] 
+        ///CREATE PROCEDURE [dbo].spAnalytics_ETL_Family
+        ///AS
+        ///BEGIN
+        ///    DECLARE @EtlDate DATE = convert(DATE, SysDateTime())
+        ///        ,@MaxExpireDate DATE = DateFromParts(9999, 1, 1)
+        ///        ,@RecordStatusActiveId INT = (
+        ///      [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201710131721219_InteractionRelatedEntity_spAnalytics_ETL_Family {
+            get {
+                return ResourceManager.GetString("_201710131721219_InteractionRelatedEntity_spAnalytics_ETL_Family", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to UPDATE [CommunicationTemplate] set [Message] = &apos;&lt;!DOCTYPE html PUBLIC &quot;-//W3C//DTD XHTML 1.0 Strict//EN&quot; &quot;http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd&quot;&gt;
+        ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
+        ///
+        ///
+        ///&lt;head&gt;
+        ///
+        ///
+        ///  &lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=utf-8&quot;&gt;
+        ///  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width&quot;&gt;
+        ///  &lt;title&gt;My Basic Email Template Subject&lt;/title&gt;
+        ///  &lt;!-- &lt;style&gt; --&gt;
+        ///&lt;/head&gt;
+        ///
+        ///
+        ///&lt;body style=&quot;-moz-box-sizing: border-box; -ms-text-size-adjust: 100%; -webkit-box-s [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string _201711011841422_GatewayTransactionKey_UpdateDefaultCommunicationTemplate {
+            get {
+                return ResourceManager.GetString("_201711011841422_GatewayTransactionKey_UpdateDefaultCommunicationTemplate", resourceCulture);
             }
         }
     }

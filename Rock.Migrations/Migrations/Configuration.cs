@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -68,28 +68,11 @@ namespace Rock.Migrations
                 }
             }
 
-            // Previous to Rock v4.0 the PageViews didn't store Browser or OS info. This can probably be removed in a future update 
-            // after v4.0 -DT
-            var pageViewRockContext = new Rock.Data.RockContext();
-            var pageViewUserAgentService = new Rock.Model.PageViewUserAgentService( pageViewRockContext );
-            var qryPageViewUserAgent = pageViewUserAgentService.Queryable().Where(a => a.Browser == null || a.OperatingSystem == null || a.ClientType == null);
-            foreach ( var pageViewUserAgent in qryPageViewUserAgent.Where(a => a.UserAgent != null ))
-            {
-                try
-                {
-                    UAParser.Parser uaParser = UAParser.Parser.GetDefault();
-                    UAParser.ClientInfo client = uaParser.Parse( pageViewUserAgent.UserAgent );
-                    pageViewUserAgent.ClientType = Rock.Model.PageViewUserAgent.GetClientType( pageViewUserAgent.UserAgent );
-                    pageViewUserAgent.OperatingSystem = client.OS.ToString();
-                    pageViewUserAgent.Browser = client.UserAgent.ToString();
-                }
-                catch
-                {
-                    // shouldn't happen, but skip if unable to parse
-                }
-            }
-
-            pageViewRockContext.SaveChanges( true );
+            // In V7, the Communication and CommunicationTemplate models were updated to move data stored as JSON in a varchar(max) 
+            // column (MediumDataJson) to specific columns. This method will update all of the communication templates, and the most 
+            // recent 5000 communications. A job will runto convert the remaining communications. This can be removed after every 
+            // customer has migrated past v7
+            Jobs.MigrateCommunicationMediumData.UpdateCommunicationRecords( true, 5000 );
 
         }
     }

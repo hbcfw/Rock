@@ -9,7 +9,6 @@
 @import "_variable-overrides.less";
 @import "_print.less";
 
-
 /*
     Rock Theme Styles
 
@@ -53,6 +52,10 @@ a:hover i.fs {
 
 // 3. Theme Styling
 // -------------------------
+
+h1.pagetitle:empty { // hides the page title h1 tag if the page has the title hidden
+  display: none;
+}
 
 .page-icon {
     display: none;
@@ -139,7 +142,7 @@ footer {
     line-height: 210px;
 
     i {
-        color: #F03;
+        color: #f03;
         font-size: 210px;
         position: relative;
         top: -12px;
@@ -151,7 +154,8 @@ footer {
     border: 0;
     box-shadow: none;
 
-    & > .panel-heading {
+    & > .panel-heading,
+    & > .rock-panel-drawer {
         display: none;
     }
 
@@ -183,3 +187,6 @@ footer {
 // Large devices (large desktops, 1200px and up)
 @media (min-width: @screen-lg-min) {
 }
+
+
+@import "_css-overrides.less";

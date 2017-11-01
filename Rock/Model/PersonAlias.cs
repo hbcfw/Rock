@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,6 +31,7 @@ namespace Rock.Model
     /// 
     /// The PersonAlias entity is a log containing the merge history (previous Person identifiers) and a pointer to the Person's current Id.
     /// </summary>
+    [RockDomain( "CRM" )]
     [Table( "PersonAlias" )]
     [NotAudited]
     [DataContract]
@@ -66,10 +67,8 @@ namespace Rock.Model
         /// <value>
         /// A <see cref="System.Int32"/> representing the new/current Id of the <see cref="Rock.Model.Person"/>.
         /// </value>
-        [Required]
         [Index( IsUnique = true )]
-        [DataMember( IsRequired = true )]
-        public int AliasPersonId { get; set; }
+        public int? AliasPersonId { get; set; }
 
         /// <summary>
         /// Gets or sets the new <see cref="System.Guid"/> identifier of the <see cref="Rock.Model.Person"/>. This property is required.
@@ -77,9 +76,7 @@ namespace Rock.Model
         /// <value>
         /// A <see cref="System.Guid"/> representing the new/current Guid identifier of the <see cref="Rock.Model.Person"/>.
         /// </value>
-        [Required]
-        [DataMember( IsRequired = true )]
-        public Guid AliasPersonGuid { get; set; }
+        public Guid? AliasPersonGuid { get; set; }
 
         #endregion
 
@@ -114,8 +111,13 @@ namespace Rock.Model
         {
             get
             {
-                string identifier = this.AliasPersonId.ToString() + ">" + this.AliasPersonGuid.ToString();
-                return Rock.Security.Encryption.EncryptString( identifier );
+                if ( this.AliasPersonId.HasValue && this.AliasPersonGuid.HasValue )
+                {
+                    string identifier = this.AliasPersonId.ToString() + ">" + this.AliasPersonGuid.ToString();
+                    return Rock.Security.Encryption.EncryptString( identifier );
+                }
+
+                return null;
             }
         }
 
@@ -161,10 +163,10 @@ namespace Rock.Model
         public PersonAliasConfiguration()
         {
             HasRequired( a => a.Person ).WithMany( p => p.Aliases ).HasForeignKey( a => a.PersonId ).WillCascadeOnDelete( false );
-            
+
             // NOTE: The foreign key is a fake foreign key (not a physical foreign key in the database) 
             // since we want to keep the AliasPersonId even if the associated Person is deleted
-            HasRequired( a => a.AliasPerson ).WithMany().HasForeignKey( a => a.AliasPersonId ).WillCascadeOnDelete( false );
+            HasOptional( a => a.AliasPerson ).WithMany().HasForeignKey( a => a.AliasPersonId ).WillCascadeOnDelete( false );
         }
     }
 

@@ -5,13 +5,13 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 // <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -52,9 +52,9 @@ namespace Rock.Model
         {
             errorMessage = string.Empty;
  
-            if ( new Service<ConnectionOpportunity>( Context ).Queryable().Any( a => a.GroupTypeId == item.Id ) )
+            if ( new Service<ConnectionOpportunityGroupConfig>( Context ).Queryable().Any( a => a.GroupTypeId == item.Id ) )
             {
-                errorMessage = string.Format( "This {0} is assigned to a {1}.", GroupType.FriendlyTypeName, ConnectionOpportunity.FriendlyTypeName );
+                errorMessage = string.Format( "This {0} is assigned to a {1}.", GroupType.FriendlyTypeName, ConnectionOpportunityGroupConfig.FriendlyTypeName );
                 return false;
             }  
  
@@ -63,6 +63,8 @@ namespace Rock.Model
                 errorMessage = string.Format( "This {0} is assigned to a {1}.", GroupType.FriendlyTypeName, Group.FriendlyTypeName );
                 return false;
             }  
+            
+            // ignoring GroupRequirement,GroupTypeId 
  
             if ( new Service<GroupType>( Context ).Queryable().Any( a => a.InheritedGroupTypeId == item.Id ) )
             {
@@ -118,6 +120,7 @@ namespace Rock.Model
             target.Id = source.Id;
             target.AllowedScheduleTypes = source.AllowedScheduleTypes;
             target.AllowMultipleLocations = source.AllowMultipleLocations;
+            target.AttendanceCountsAsWeekendService = source.AttendanceCountsAsWeekendService;
             target.AttendancePrintTo = source.AttendancePrintTo;
             target.AttendanceRule = source.AttendanceRule;
             target.DefaultGroupRoleId = source.DefaultGroupRoleId;
@@ -125,12 +128,17 @@ namespace Rock.Model
             target.EnableLocationSchedules = source.EnableLocationSchedules;
             target.ForeignGuid = source.ForeignGuid;
             target.ForeignKey = source.ForeignKey;
+            target.GroupAttendanceRequiresLocation = source.GroupAttendanceRequiresLocation;
+            target.GroupAttendanceRequiresSchedule = source.GroupAttendanceRequiresSchedule;
+            target.GroupCapacityRule = source.GroupCapacityRule;
             target.GroupMemberTerm = source.GroupMemberTerm;
+            target.GroupsRequireCampus = source.GroupsRequireCampus;
             target.GroupTerm = source.GroupTerm;
             target.GroupTypePurposeValueId = source.GroupTypePurposeValueId;
             target.IconCssClass = source.IconCssClass;
             target.IgnorePersonInactivated = source.IgnorePersonInactivated;
             target.InheritedGroupTypeId = source.InheritedGroupTypeId;
+            target.IsIndexEnabled = source.IsIndexEnabled;
             target.IsSystem = source.IsSystem;
             target.LocationSelectionMode = source.LocationSelectionMode;
             target.Name = source.Name;
@@ -139,6 +147,7 @@ namespace Rock.Model
             target.ShowConnectionStatus = source.ShowConnectionStatus;
             target.ShowInGroupList = source.ShowInGroupList;
             target.ShowInNavigation = source.ShowInNavigation;
+            target.ShowMaritalStatus = source.ShowMaritalStatus;
             target.TakesAttendance = source.TakesAttendance;
             target.CreatedDateTime = source.CreatedDateTime;
             target.ModifiedDateTime = source.ModifiedDateTime;

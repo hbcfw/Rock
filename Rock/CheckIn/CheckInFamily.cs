@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,6 +15,7 @@
 // </copyright>
 //
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.Serialization;
 
 using Rock.Model;
@@ -55,6 +56,38 @@ namespace Rock.CheckIn
         public List<CheckInPerson> People { get; set; }
 
         /// <summary>
+        /// Gets the current person if using family check-in mode
+        /// </summary>
+        /// <value>
+        /// The current person.
+        /// </value>
+        public CheckInPerson CurrentPerson
+        {
+            get
+            {
+                return GetPeople( true ).FirstOrDefault( p => !p.Processed );
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the action.
+        /// </summary>
+        /// <value>
+        /// The action.
+        /// </value>
+        [DataMember]
+        public CheckinAction Action { get; set; }
+
+        /// <summary>
+        /// Gets or sets the check out people.
+        /// </summary>
+        /// <value>
+        /// The check out people.
+        /// </value>
+        [DataMember]
+        public List<CheckOutPerson> CheckOutPeople { get; set; }
+
+        /// <summary>
         /// An optional value that can be set to display family name.  If not set, the Group name will be used
         /// </summary>
         [DataMember]
@@ -76,6 +109,8 @@ namespace Rock.CheckIn
             : base()
         {
             People = new List<CheckInPerson>();
+            Action = CheckinAction.CheckIn;
+            CheckOutPeople = new List<CheckOutPerson>();
         }
 
         /// <summary>
@@ -87,6 +122,20 @@ namespace Rock.CheckIn
             {
                 person.ClearFilteredExclusions();
             }
+        }
+
+        /// <summary>
+        /// Gets the people.
+        /// </summary>
+        /// <param name="selectedOnly">if set to <c>true</c> [selected only].</param>
+        /// <returns></returns>
+        public List<CheckInPerson> GetPeople( bool selectedOnly )
+        {
+            if ( selectedOnly )
+            {
+                return People.Where( p => p.Selected ).ToList();
+            }
+            return People;
         }
 
         /// <summary>
@@ -107,5 +156,21 @@ namespace Rock.CheckIn
             }
         }
 
+    }
+
+    /// <summary>
+    /// The type of checkin
+    /// </summary>
+    public enum CheckinAction
+    {
+        /// <summary>
+        /// The individual
+        /// </summary>
+        CheckIn = 0,
+
+        /// <summary>
+        /// The family
+        /// </summary>
+        CheckOut = 1
     }
 }

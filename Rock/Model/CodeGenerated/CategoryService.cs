@@ -5,13 +5,13 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 // <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -55,6 +55,18 @@ namespace Rock.Model
             if ( new Service<Category>( Context ).Queryable().Any( a => a.ParentCategoryId == item.Id ) )
             {
                 errorMessage = string.Format( "This {0} contains one or more child {1}.", Category.FriendlyTypeName, Category.FriendlyTypeName.Pluralize().ToLower() );
+                return false;
+            }  
+ 
+            if ( new Service<CommunicationTemplate>( Context ).Queryable().Any( a => a.CategoryId == item.Id ) )
+            {
+                errorMessage = string.Format( "This {0} is assigned to a {1}.", Category.FriendlyTypeName, CommunicationTemplate.FriendlyTypeName );
+                return false;
+            }  
+ 
+            if ( new Service<ContentChannel>( Context ).Queryable().Any( a => a.ItemTagCategoryId == item.Id ) )
+            {
+                errorMessage = string.Format( "This {0} is assigned to a {1}.", Category.FriendlyTypeName, ContentChannel.FriendlyTypeName );
                 return false;
             }  
  
@@ -109,6 +121,12 @@ namespace Rock.Model
             if ( new Service<SystemEmail>( Context ).Queryable().Any( a => a.CategoryId == item.Id ) )
             {
                 errorMessage = string.Format( "This {0} is assigned to a {1}.", Category.FriendlyTypeName, SystemEmail.FriendlyTypeName );
+                return false;
+            }  
+ 
+            if ( new Service<Tag>( Context ).Queryable().Any( a => a.CategoryId == item.Id ) )
+            {
+                errorMessage = string.Format( "This {0} is assigned to a {1}.", Category.FriendlyTypeName, Tag.FriendlyTypeName );
                 return false;
             }  
  

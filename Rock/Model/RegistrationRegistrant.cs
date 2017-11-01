@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -33,6 +33,7 @@ namespace Rock.Model
     /// <summary>
     /// 
     /// </summary>
+    [RockDomain( "Event" )]
     [Table( "RegistrationRegistrant" )]
     [DataContract]
     public partial class RegistrationRegistrant : Model<RegistrationRegistrant>
@@ -69,6 +70,15 @@ namespace Rock.Model
         public int? GroupMemberId { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether registrant is on a wait list.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [on wait list]; otherwise, <c>false</c>.
+        /// </value>
+        [DataMember]
+        public bool OnWaitList { get; set; }
+
+        /// <summary>
         /// Gets or sets the cost.
         /// </summary>
         /// <value>
@@ -76,6 +86,20 @@ namespace Rock.Model
         /// </value>
         [DataMember]
         public decimal Cost { get; set; }
+
+        /// <summary>
+        /// Gets or sets a flag indicating if the registration's discount code applies to this registrant.
+        /// </summary>
+        /// <value>
+        /// The discount applies.
+        /// </value>
+        [DataMember]
+        public bool DiscountApplies 
+        {
+            get { return _discountApplies; }
+            set { _discountApplies = value; }
+        }
+        private bool _discountApplies = true;
 
         #endregion
 
@@ -87,6 +111,7 @@ namespace Rock.Model
         /// <value>
         /// The registration instance.
         /// </value>
+        [LavaInclude]
         public virtual Registration Registration { get; set; }
 
         /// <summary>
@@ -225,6 +250,11 @@ namespace Rock.Model
         {
             get
             {
+                if ( OnWaitList )
+                {
+                    return 0.0M;
+                }
+
                 var cost = Cost;
                 if ( Fees != null )
                 {
@@ -266,17 +296,20 @@ namespace Rock.Model
         /// <returns></returns>
         public virtual decimal DiscountedCost( decimal discountPercent, decimal discountAmount )
         {
-            var discountedCost = Cost - ( Cost * discountPercent );
+            if ( OnWaitList )
+            {
+                return 0.0M;
+            }
 
+            var discountedCost = Cost - ( DiscountApplies ? ( Cost * discountPercent ) : 0.0M );
             if ( Fees != null )
             {
                 foreach( var fee in Fees )
                 {
-                    discountedCost += fee.DiscountedCost( discountPercent );
+                    discountedCost += DiscountApplies ? fee.DiscountedCost( discountPercent ) : fee.TotalCost;
                 }
             }
-
-            discountedCost = discountedCost - discountAmount;
+            discountedCost = discountedCost - ( DiscountApplies ? discountAmount : 0.0M );
 
             return discountedCost > 0.0m ? discountedCost : 0.0m;
         }

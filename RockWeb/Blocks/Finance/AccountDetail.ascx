@@ -14,6 +14,8 @@
                     <Rock:HighlightLabel ID="hlInactive" runat="server" LabelType="Danger" Text="Inactive" />
                 </div>
             </div>
+            <Rock:PanelDrawer ID="pdAuditDetails" runat="server"></Rock:PanelDrawer>
+
             <div class="panel-body">
 
                 <Rock:NotificationBox ID="nbEditModeMessage" runat="server" NotificationBoxType="Info" />
@@ -24,11 +26,18 @@
                     </p>
 
                     <div class="row">
-                        <div class="col-md-12">
-                            <asp:Literal ID="lblMainDetails" runat="server" />
+                          <div class="col-md-6">
+                            <asp:Literal ID="lLeftDetails" runat="server" />
+                        </div>
+                        <div class="col-md-6">
+                            <asp:Literal ID="lRightDetails" runat="server" />
                         </div>
                     </div>
-
+                       <div class="actions">
+                        <asp:LinkButton ID="btnEdit" runat="server" AccessKey="m" ToolTip="Alt+m" Text="Edit" CssClass="btn btn-primary" OnClick="btnEdit_Click" />
+                        <Rock:ModalAlert ID="mdDeleteWarning" runat="server" />
+                        <asp:LinkButton ID="btnDelete" runat="server" Text="Delete" CssClass="btn btn-link" OnClick="btnDelete_Click" CausesValidation="false" />
+                    </div>
                 </div>
 
                 <div id="pnlEditDetails" runat="server">
@@ -81,10 +90,18 @@
                             <Rock:RockCheckBox ID="cbIsTaxDeductible" runat="server" Label="Tax Deductible" />           
                         </div>
                     </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="attributes">
+                                <Rock:DynamicPlaceHolder ID="phAttributes" runat="server" />
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="actions">
-                        <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" />
-                        <asp:LinkButton ID="btnCancel" runat="server" AccessKey="c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="btnCancel_Click" />
+                        <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" ToolTip="Alt+s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" />
+                        <asp:LinkButton ID="btnCancel" runat="server" AccessKey="c" ToolTip="Alt+c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="btnCancel_Click" />
                     </div>
 
             </div>

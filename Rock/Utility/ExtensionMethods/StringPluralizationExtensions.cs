@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -75,5 +75,32 @@ namespace Rock
             var pluralizationService = PluralizationService.CreateService( new CultureInfo( "en-US" ) );
             return pluralizationService.Singularize( str );
         }
+
+        /// <summary>
+        /// Convert string to possessive ('s)
+        /// </summary>
+        /// <param name="str">The string.</param>
+        /// <returns></returns>
+        public static string ToPossessive( this string str )
+        {
+            if ( str == null )
+            {
+                return str;
+            }
+
+            if ( str.ToLower().EndsWith( "s" ) )
+            {
+                return $"{str}'";
+            }
+
+            if ( str.Length > 0 )
+            {
+                string poss = char.IsUpper( str[str.Length - 1] ) ? "S" : "s";
+                return $"{str}'{poss}";
+            }
+
+            return str;
+        }
+
     }
 }

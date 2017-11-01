@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -40,12 +40,13 @@ namespace Rock.Field.Types
         public override System.Collections.Generic.List<System.Web.UI.Control> ConfigurationControls()
         {
             var controls = base.ConfigurationControls();
-            var textbox = controls[0] as RockTextBox;
-            textbox.Label = "Date Time Format";
-            textbox.Help = "The format string to use for date (default is system short date and time).";
+            _tbDateFormat.Label = "Date Time Format";
+            _tbDateFormat.Help = "The format string to use for date (default is system short date and time).";
 
-            var cbDisplayCurrent = controls[2] as RockCheckBox;
-            cbDisplayCurrent.Help = "Include option to specify value as the current time.";
+            _ddlDatePickerMode.Visible = false;
+            _nbFutureYearCount.Visible = false;
+
+            _cbDisplayCurrent.Help = "Include option to specify value as the current time.";
 
             return controls;
         }
@@ -212,14 +213,14 @@ namespace Rock.Field.Types
                     {
                         dtp.CurrentTimeOffsetMinutes = valueParts[1].AsInteger();
                     }
+                    else
+                    {
+                        dtp.CurrentTimeOffsetMinutes = 0;
+                    }
                 }
                 else
                 {
-                    var dt = value.AsDateTime();
-                    if ( dt.HasValue )
-                    {
-                        dtp.SelectedDateTime = dt;
-                    }
+                    dtp.SelectedDateTime = value.AsDateTime();
                 }
             }
         }

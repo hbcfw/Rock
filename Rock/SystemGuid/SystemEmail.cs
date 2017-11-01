@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,6 +30,11 @@ namespace Rock.SystemGuid
         /// Gets the template guid for the Exception Notification email
         /// </summary>
         public const string CONFIG_EXCEPTION_NOTIFICATION = "75CB0A4A-B1C5-4958-ADEB-8621BD231520";
+
+        /// <summary>
+        /// Gets the template guid for the Job Notification email
+        /// </summary>
+        public const string CONFIG_JOB_NOTIFICATION = "691FEA1B-E5C4-4BF8-A7CD-C588F5C63CA8";
 
         /// <summary>
         /// Gets the template guid for finance pledge confirmation email
@@ -70,6 +75,11 @@ namespace Rock.SystemGuid
         /// Gets the template guid for workflow form notifications
         /// </summary>
         public const string WORKFLOW_FORM_NOTIFICATION = "88C7D1CC-3478-4562-A301-AE7D4D7FFF6D";
+
+        /// <summary>
+        /// Gets the template guid for workflow form notifications
+        /// </summary>
+        public const string DIGITAL_SIGNATURE_INVITE  = "791F2DE4-5A59-60AE-4F2F-FDC3EBC4FFA9";
 
     }
 }

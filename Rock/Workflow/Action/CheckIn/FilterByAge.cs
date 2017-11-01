@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -34,7 +34,6 @@ namespace Rock.Workflow.Action.CheckIn
     [ExportMetadata( "ComponentName", "Filter By Age" )]
 
     [BooleanField( "Remove", "Select 'Yes' if group types should be be removed.  Select 'No' if they should just be marked as excluded.", true, "", 0 )]
-    [BooleanField( "Age Required", "Select 'Yes' if groups with an age filter should be removed/excluded when person does not have an age.", true, "", 1 )]
     public class FilterByAge : CheckInActionComponent
     {
         /// <summary>
@@ -51,23 +50,23 @@ namespace Rock.Workflow.Action.CheckIn
             var checkInState = GetCheckInState( entity, out errorMessages );
             if ( checkInState != null )
             {
-                var family = checkInState.CheckIn.Families.Where( f => f.Selected ).FirstOrDefault();
+                var family = checkInState.CheckIn.CurrentFamily;
                 if ( family != null )
                 {
                     var remove = GetAttributeValue( action, "Remove" ).AsBoolean();
+                    bool ageRequired = checkInState.CheckInType == null || checkInState.CheckInType.AgeRequired;
 
                     foreach ( var person in family.People )
                     {
-                        double? age = person.Person.AgePrecise;
-                        bool ageRequired = GetAttributeValue( action, "AgeRequired" ).AsBoolean( true );
-
-                        if ( age == null && !ageRequired )
-                        {
-                            continue;
-                        }
+                        var ageAsDouble = person.Person.AgePrecise;
+                        decimal? age = ageAsDouble.HasValue ? Convert.ToDecimal( ageAsDouble.Value ) : (decimal?)null;
+                        DateTime? birthdate = person.Person.BirthDate;
 
                         foreach ( var groupType in person.GroupTypes.ToList() )
                         {
+                            bool? ageMatch = null;
+                            bool? birthdayMatch = null;
+
                             string ageRange = groupType.GroupType.GetAttributeValue( "AgeRange" ) ?? string.Empty;
                             string[] ageRangePair = ageRange.Split( new char[] { ',' }, StringSplitOptions.None );
                             string minAgeValue = null;
@@ -77,44 +76,91 @@ namespace Rock.Workflow.Action.CheckIn
                                 minAgeValue = ageRangePair[0];
                                 maxAgeValue = ageRangePair[1];
                             }
-                            
-                            if ( minAgeValue != null )
+
+                            decimal? minAge = minAgeValue.AsDecimalOrNull();
+                            decimal? maxAge = maxAgeValue.AsDecimalOrNull();
+
+                            if ( minAge.HasValue || maxAge.HasValue )
                             {
-                                double minAge = 0;
-                                if ( double.TryParse( minAgeValue, out minAge ) )
+                                if ( age.HasValue )
                                 {
-                                    if ( !age.HasValue || age < minAge )
+                                    if ( minAge.HasValue && age.Value < minAge.Value )
                                     {
-                                        if ( remove )
-                                        {
-                                            person.GroupTypes.Remove( groupType );
-                                        }
-                                        else
-                                        {
-                                            groupType.ExcludedByFilter = true;
-                                        }
-                                        continue;
+                                        ageMatch = false;
+                                    }
+
+                                    if ( maxAge.HasValue && age.Value > maxAge.Value )
+                                    {
+                                        ageMatch = false;
+                                    }
+
+                                    if ( !ageMatch.HasValue )
+                                    {
+                                        ageMatch = true;
+                                    }
+                                }
+                                else
+                                {
+                                    if ( ageRequired )
+                                    {
+                                        ageMatch = false;
                                     }
                                 }
                             }
 
-                            if ( maxAgeValue != null )
+                            if ( !ageMatch.HasValue || !ageMatch.Value )
                             {
-                                double maxAge = 0;
-                                if ( double.TryParse( maxAgeValue, out maxAge ) )
+                                var birthdateRange = groupType.GroupType.GetAttributeValue( "BirthdateRange" ) ?? string.Empty;
+                                var birthdateRangePair = birthdateRange.Split( new char[] { ',' }, StringSplitOptions.None );
+                                string minBirthdateValue = null;
+                                string maxBirthdateValue = null;
+
+                                if ( birthdateRangePair.Length == 2 )
                                 {
-                                    if ( !age.HasValue || age > maxAge )
+                                    minBirthdateValue = birthdateRangePair[0];
+                                    maxBirthdateValue = birthdateRangePair[1];
+                                }
+
+                                DateTime? minBirthdate = minBirthdateValue.AsDateTime();
+                                DateTime? maxBirthdate = maxBirthdateValue.AsDateTime();
+                                if ( minBirthdate.HasValue || maxBirthdate.HasValue )
+                                {
+                                    if ( birthdate.HasValue )
                                     {
-                                        if ( remove )
+                                        if ( minBirthdate.HasValue && birthdate.Value < minBirthdate.Value )
                                         {
-                                            person.GroupTypes.Remove( groupType );
+                                            birthdayMatch = false;
                                         }
-                                        else
+
+                                        if ( maxBirthdate.HasValue && birthdate.Value > maxBirthdate.Value )
                                         {
-                                            groupType.ExcludedByFilter = true;
+                                            birthdayMatch = false;
                                         }
-                                        continue;
+
+                                        if ( !birthdayMatch.HasValue )
+                                        {
+                                            birthdayMatch = true;
+                                        }
                                     }
+                                    else
+                                    {
+                                        if ( ageRequired )
+                                        {
+                                            birthdayMatch = false;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if ( ( ageMatch.HasValue || birthdayMatch.HasValue ) && !( ( ageMatch ?? false ) || ( birthdayMatch ?? false ) ) )
+                            {
+                                if ( remove )
+                                {
+                                    person.GroupTypes.Remove( groupType );
+                                }
+                                else
+                                {
+                                    groupType.ExcludedByFilter = true;
                                 }
                             }
                         }
@@ -122,10 +168,10 @@ namespace Rock.Workflow.Action.CheckIn
                 }
 
                 return true;
-
             }
 
             return false;
         }
     }
 }
+

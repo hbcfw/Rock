@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,24 +18,27 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
-using System.Globalization;
 using System.Linq;
 
 using Rock.Attribute;
 using Rock.Data;
+using Rock.Web.Cache;
 
 namespace Rock.Workflow.Action.CheckIn
 {
     /// <summary>
-    /// Removes (or excludes) the groups for each selected family member that are not specific to their age.
+    /// Removes (or excludes) the groups for each selected family member that are not specific to their age or birthdate.
     /// </summary>
     [ActionCategory( "Check-In" )]
-    [Description( "Removes (or excludes) the groups for each selected family member that are not specific to their age." )]
+    [Description( "Removes (or excludes) the groups for each selected family member that are not specific to their age or birthdate." )]
     [Export( typeof( ActionComponent ) )]
     [ExportMetadata( "ComponentName", "Filter Groups By Age" )]
 
     [BooleanField( "Remove", "Select 'Yes' if groups should be be removed.  Select 'No' if they should just be marked as excluded.", true, "", 0 )]
-    [BooleanField( "Age Required", "Select 'Yes' if groups with an age filter should be removed/excluded when person does not have an age.", true, "", 1)]
+    [AttributeField( Rock.SystemGuid.EntityType.GROUP, "Group Age Range Attribute", "Select the attribute used to define the age range of the group", true, false,
+        Rock.SystemGuid.Attribute.GROUP_AGE_RANGE, order: 2 )]
+    [AttributeField( Rock.SystemGuid.EntityType.GROUP, "Group Birthdate Range Attribute", "Select the attribute used to define the birthdate range of the group", true, false,
+        Rock.SystemGuid.Attribute.GROUP_BIRTHDATE_RANGE, order: 3 )]
     public class FilterGroupsByAge : CheckInActionComponent
     {
         /// <summary>
@@ -55,101 +58,147 @@ namespace Rock.Workflow.Action.CheckIn
                 return false;
             }
 
-            var family = checkInState.CheckIn.Families.FirstOrDefault( f => f.Selected );
+            var family = checkInState.CheckIn.CurrentFamily;
             if ( family != null )
             {
                 var remove = GetAttributeValue( action, "Remove" ).AsBoolean();
-                bool ageRequired = GetAttributeValue( action, "AgeRequired" ).AsBoolean( true );
+                bool ageRequired = checkInState.CheckInType == null || checkInState.CheckInType.AgeRequired;
+
+                // get the Age Range
+                var ageRangeAttributeKey = string.Empty;
+                var ageRangeAttributeGuid = GetAttributeValue( action, "GroupAgeRangeAttribute" ).AsGuidOrNull();
+                if ( ageRangeAttributeGuid.HasValue )
+                {
+                    var attribute = AttributeCache.Read( ageRangeAttributeGuid.Value, rockContext );
+                    if ( attribute != null )
+                    {
+                        ageRangeAttributeKey = attribute.Key;
+                    }
+                }
+
+                // get the admin-selected attribute key instead of using a hardcoded key
+                var birthdateRangeAttributeKey = string.Empty;
+                var birthdateRangeAttributeGuid = GetAttributeValue( action, "GroupBirthdateRangeAttribute" ).AsGuidOrNull();
+                if ( birthdateRangeAttributeGuid.HasValue )
+                {
+                    var attribute = AttributeCache.Read( birthdateRangeAttributeGuid.Value, rockContext );
+                    if ( attribute != null )
+                    {
+                        birthdateRangeAttributeKey = attribute.Key;
+                    }
+                }
 
                 foreach ( var person in family.People )
                 {
-                    double? age = person.Person.AgePrecise;
-
-                    if ( age == null && !ageRequired )
-                    {
-                        continue;
-                    }
+                    var ageAsDouble = person.Person.AgePrecise;
+                    decimal? age = ageAsDouble.HasValue ? Convert.ToDecimal( ageAsDouble.Value ) : (decimal?)null;
+                    DateTime? birthdate = person.Person.BirthDate;
 
                     foreach ( var groupType in person.GroupTypes.ToList() )
                     {
                         foreach ( var group in groupType.Groups.ToList() )
                         {
-                            string ageRange = group.Group.GetAttributeValue( "AgeRange" ) ?? string.Empty;
+                            bool? ageMatch = null;
+                            bool? birthdayMatch = null;
 
-                            string[] ageRangePair = ageRange.Split( new char[] { ',' }, StringSplitOptions.None );
-                            string minAgeValue = null;
-                            string maxAgeValue = null;
-                            if ( ageRangePair.Length == 2 )
+                            // First check to see if age matches
+                            if ( !string.IsNullOrWhiteSpace( ageRangeAttributeKey ) )
                             {
-                                minAgeValue = ageRangePair[0];
-                                maxAgeValue = ageRangePair[1];
-                            }
-
-                            if ( minAgeValue != null )
-                            {
-                                decimal minAge = 0;
-
-                                if ( decimal.TryParse( minAgeValue, out minAge ) )
+                                var ageRange = group.Group.GetAttributeValue( ageRangeAttributeKey ).ToStringSafe();
+                                var ageRangePair = ageRange.Split( new char[] { ',' }, StringSplitOptions.None );
+                                string minAgeValue = null;
+                                string maxAgeValue = null;
+                                if ( ageRangePair.Length == 2 )
                                 {
-                                    decimal? personAgePrecise = null;
+                                    minAgeValue = ageRangePair[0];
+                                    maxAgeValue = ageRangePair[1];
+                                }
+
+                                decimal? minAge = minAgeValue.AsDecimalOrNull();
+                                decimal? maxAge = maxAgeValue.AsDecimalOrNull();
+
+                                if ( minAge.HasValue || maxAge.HasValue )
+                                {
                                     if ( age.HasValue )
                                     {
-                                        int groupMinAgePrecision = 0;
-                                        var decimalIndex = minAgeValue.IndexOf( NumberFormatInfo.CurrentInfo.NumberDecimalSeparator );
-                                        if ( decimalIndex > 0 )
+                                        if ( minAge.HasValue && age.Value < minAge.Value )
                                         {
-                                            groupMinAgePrecision = minAgeValue.Length - decimalIndex - 1;
+                                            ageMatch = false;
                                         }
 
-                                        personAgePrecise = Math.Round( Convert.ToDecimal( age ), groupMinAgePrecision, MidpointRounding.ToEven );
+                                        if ( maxAge.HasValue && age.Value > maxAge.Value )
+                                        {
+                                            ageMatch = false;
+                                        }
+
+                                        if ( !ageMatch.HasValue )
+                                        {
+                                            ageMatch = true;
+                                        }
                                     }
-
-                                    if ( !age.HasValue || personAgePrecise < minAge )
+                                    else
                                     {
-                                        if ( remove )
+                                        if ( ageRequired )
                                         {
-                                            groupType.Groups.Remove( group );
+                                            ageMatch = false;
                                         }
-                                        else
-                                        {
-                                            group.ExcludedByFilter = true;
-                                        }
-                                        continue;
                                     }
                                 }
                             }
 
-                            if ( maxAgeValue != null )
+                            if ( ( !ageMatch.HasValue || !ageMatch.Value ) && !string.IsNullOrWhiteSpace( birthdateRangeAttributeKey ) )
                             {
-                                decimal maxAge = 0;
+                                var birthdateRange = group.Group.GetAttributeValue( birthdateRangeAttributeKey ).ToStringSafe();
+                                var birthdateRangePair = birthdateRange.Split( new char[] { ',' }, StringSplitOptions.None );
+                                string minBirthdateValue = null;
+                                string maxBirthdateValue = null;
 
-                                if ( decimal.TryParse( maxAgeValue, out maxAge ) )
+                                if ( birthdateRangePair.Length == 2 )
                                 {
-                                    decimal? personAgePrecise = null;
-                                    if ( age.HasValue )
+                                    minBirthdateValue = birthdateRangePair[0];
+                                    maxBirthdateValue = birthdateRangePair[1];
+                                }
+
+                                DateTime? minBirthdate = minBirthdateValue.AsDateTime();
+                                DateTime? maxBirthdate = maxBirthdateValue.AsDateTime();
+                                if ( minBirthdate.HasValue || maxBirthdate.HasValue )
+                                {
+                                    if ( birthdate.HasValue )
                                     {
-                                        int groupMaxAgePrecision = 0;
-                                        var decimalIndex = maxAgeValue.IndexOf( NumberFormatInfo.CurrentInfo.NumberDecimalSeparator );
-                                        if ( decimalIndex > 0 )
+                                        if ( minBirthdate.HasValue && birthdate.Value < minBirthdate.Value )
                                         {
-                                            groupMaxAgePrecision = maxAgeValue.Length - decimalIndex - 1;
+                                            birthdayMatch = false;
                                         }
 
-                                        personAgePrecise = Math.Round( Convert.ToDecimal( age ), groupMaxAgePrecision, MidpointRounding.ToEven );
-                                    }
+                                        if ( maxBirthdate.HasValue && birthdate.Value > maxBirthdate.Value )
+                                        {
+                                            birthdayMatch = false;
+                                        }
 
-                                    if ( !age.HasValue || personAgePrecise > maxAge )
-                                    {
-                                        if ( remove )
+                                        if ( !birthdayMatch.HasValue )
                                         {
-                                            groupType.Groups.Remove( group );
+                                            birthdayMatch = true;
                                         }
-                                        else
-                                        {
-                                            group.ExcludedByFilter = true;
-                                        }
-                                        continue;
                                     }
+                                    else
+                                    {
+                                        if ( ageRequired )
+                                        {
+                                            birthdayMatch = false;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if ( ( ageMatch.HasValue || birthdayMatch.HasValue ) && !(( ageMatch ?? false ) || ( birthdayMatch ?? false )) )
+                            {
+                                if ( remove )
+                                {
+                                    groupType.Groups.Remove( group );
+                                }
+                                else
+                                {
+                                    group.ExcludedByFilter = true;
                                 }
                             }
                         }

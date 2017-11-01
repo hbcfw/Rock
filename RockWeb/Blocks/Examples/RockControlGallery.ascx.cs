@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -189,6 +189,7 @@ namespace RockWeb.Blocks.Examples
                 rblExample.Items.AddRange( bddlExample.Items.OfType<ListItem>().ToArray() );
                 rblExampleHorizontal.Items.AddRange( bddlExample.Items.OfType<ListItem>().ToArray() );
 
+                campExample.Campuses = Rock.Web.Cache.CampusCache.All();
                 campsExample.Campuses = Rock.Web.Cache.CampusCache.All();
                 
                 var rockContext = new RockContext();
@@ -406,5 +407,10 @@ namespace RockWeb.Blocks.Examples
             var val1 = rsSlider.SelectedValue;
             var val2 = rsSlider2.SelectedValue;
         }
-}
+
+        protected void dppExample_SelectedDatePartsChanged( object sender, EventArgs e )
+        {
+
+        }
+    }
 }

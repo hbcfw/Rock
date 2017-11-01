@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -282,6 +282,20 @@ namespace Rock.Web.UI.Controls
                     return string.Format( "{{{{ 'Global' | Attribute:'{0}' }}}}", idParts[1] );
                 }
 
+                if ( idParts.Count == 1 && idParts[0].StartsWith( "AdditionalMergeField" ) ) 
+                {
+                    string mFields = idParts[0].Replace( "AdditionalMergeField_", "" ).Replace( "AdditionalMergeFields_", "" );
+                    if ( mFields.IsNotNullOrWhitespace() )
+                    {
+                        string beginFor = "{% for field in AdditionalFields %}";
+                        string endFor = "{% endfor %}";
+                        var mergeFields = String.Join( "", mFields.Split( new char[] { '^' }, StringSplitOptions.RemoveEmptyEntries )
+                            .Select( f => "{{ field." + f + "}}" ) );
+
+                        return $"{beginFor}{mergeFields}{endFor}";
+                    }
+                }
+
                 if ( idParts.Count == 1 )
                 {
                     if ( idParts[0] == "Campuses" )
@@ -323,6 +337,7 @@ namespace Rock.Web.UI.Controls
                     {
                         return "{{ PageParameter.[Enter Page Parameter Name Here] }}";
                     }
+
                 }
 
                 var workingParts = new List<string>();
@@ -404,7 +419,17 @@ namespace Rock.Web.UI.Controls
                         else
                         {
                             string partPath = workingParts.Take( workingParts.Count - 1 ).ToList().AsDelimited( "." );
-                            itemString = string.Format( "{{{{ {0} | Attribute:'{1}' }}}}", partPath, workingParts.Last() );
+                            var partItem = workingParts.Last();
+                            if ( type == typeof( Rock.Model.Person ) && partItem == "Campus" )
+                            {
+                                itemString = string.Format( "{{{{ {0} | Campus | Property:'Name' }}}}", partPath );
+                            }
+                            else
+                            {
+                                
+                                itemString = string.Format( "{{{{ {0} | Attribute:'{1}' }}}}", partPath, partItem );
+                            }
+                            
                         }
 
                     }

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -200,6 +200,25 @@ namespace Rock.Reporting.DataFilter
         }
 
         /// <summary>
+        /// Gets the selected data view.
+        /// </summary>
+        /// <param name="selection">The selection.</param>
+        /// <returns></returns>
+        public DataView GetSelectedDataView( string selection )
+        {
+            int? dataviewId = selection.AsIntegerOrNull();
+            if ( dataviewId.HasValue )
+            {
+                var dataView = new DataViewService( new RockContext() ).Get( dataviewId.Value );
+                return dataView;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Gets the expression.
         /// </summary>
         /// <param name="entityType"></param>
@@ -210,26 +229,23 @@ namespace Rock.Reporting.DataFilter
         /// <exception cref="System.Exception">Filter issue(s):  + errorMessages.AsDelimited( ;  )</exception>
         public override Expression GetExpression( Type entityType, IService serviceInstance, ParameterExpression parameterExpression, string selection )
         {
-            int? dataviewId = selection.AsIntegerOrNull();
-            if ( dataviewId.HasValue )
-            {
-                var dataView = new DataViewService( (RockContext)serviceInstance.Context ).Get( dataviewId.Value );
-                if ( dataView != null && dataView.DataViewFilter != null )
-                {
-                    // Verify that there is not a child filter that uses this view (would result in stack-overflow error)
-                    if ( !IsViewInFilter( dataView.Id, dataView.DataViewFilter ) )
-                    {
-                        // TODO: Should probably verify security again on the selected dataview and its filters,
-                        // as that could be a moving target.
-                        var errorMessages = new List<string>();
-                        Expression expression = dataView.GetExpression( serviceInstance, parameterExpression, out errorMessages );
-                        if ( errorMessages.Any() )
-                        {
-                            throw new System.Exception( "Filter issue(s): " + errorMessages.AsDelimited( "; " ) );
-                        }
+            var dataView = this.GetSelectedDataView( selection );
 
-                        return expression;
+            if ( dataView != null && dataView.DataViewFilter != null )
+            {
+                // Verify that there is not a child filter that uses this view (would result in stack-overflow error)
+                if ( !IsViewInFilter( dataView.Id, dataView.DataViewFilter ) )
+                {
+                    // TODO: Should probably verify security again on the selected dataview and its filters,
+                    // as that could be a moving target.
+                    var errorMessages = new List<string>();
+                    Expression expression = dataView.GetExpression( serviceInstance, parameterExpression, out errorMessages );
+                    if ( errorMessages.Any() )
+                    {
+                        throw new System.Exception( "Filter issue(s): " + errorMessages.AsDelimited( "; " ) );
                     }
+
+                    return expression;
                 }
             }
 

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -41,7 +41,7 @@ namespace RockWeb.Blocks.Core
 
     [TextField( "Component Container", "The Rock Extension Managed Component Container to manage. For example: 'Rock.Search.SearchContainer, Rock'", true, "", "", 1 )]
     [BooleanField( "Support Ordering", "Should user be allowed to re-order list of components?", true, "", 2 )]
-    public partial class Components : RockBlock
+    public partial class Components : RockBlock, ICustomGridColumns
     {
         #region Private Variables
 
@@ -83,7 +83,12 @@ namespace RockWeb.Blocks.Core
                         }
 
                         rGrid.DataKeyNames = new string[] { "Id" };
-                        rGrid.Columns[0].Visible = _supportOrdering && _isAuthorizedToConfigure;
+
+                        var reorderField = rGrid.ColumnsOfType<ReorderField>().FirstOrDefault();
+                        if ( reorderField != null )
+                        {
+                            reorderField.Visible = _supportOrdering && _isAuthorizedToConfigure;
+                        }
                         rGrid.GridReorder += rGrid_GridReorder;
                         rGrid.GridRebind += rGrid_GridRebind;
                         rGrid.RowDataBound += rGrid_RowDataBound;
@@ -118,6 +123,8 @@ namespace RockWeb.Blocks.Core
         protected override void OnLoad( EventArgs e )
         {
             base.OnLoad( e );
+
+            nbValidationError.Visible = false;
 
             if ( !Page.IsPostBack )
             {
@@ -250,14 +257,22 @@ namespace RockWeb.Blocks.Core
         protected void mdEditComponent_SaveClick( object sender, EventArgs e )
         {
             int serviceId = (int)ViewState["serviceId"];
-            Rock.Attribute.IHasAttributes component = _container.Dictionary[serviceId].Value;
+            Component component = _container.Dictionary[serviceId].Value;
 
             Rock.Attribute.Helper.GetEditValues( phProperties, component );
             component.SaveAttributeValues();
 
-            HideDialog();
-
-            BindGrid();
+            string errorMessage = string.Empty;
+            if ( !component.ValidateAttributeValues( out errorMessage ) )
+            {
+                nbValidationError.Text = string.Format( "<ul><li>{0}</li></ul>", errorMessage );
+                nbValidationError.Visible = true;
+            }
+            else
+            {
+                HideDialog();
+                BindGrid();
+            }
         }
 
         #endregion
@@ -365,7 +380,10 @@ namespace RockWeb.Blocks.Core
         /// <param name="setValues">if set to <c>true</c> [set values].</param>
         private void LoadEditControls( int serviceId, bool setValues )
         {
-            Rock.Attribute.IHasAttributes component = _container.Dictionary[serviceId].Value;
+            Component component = _container.Dictionary[serviceId].Value;
+
+            component.InitializeAttributeValues( Request, ResolveRockUrl( "~/" ) );
+
             phProperties.Controls.Clear();
             Rock.Attribute.Helper.AddEditControls( component, phProperties, setValues, BlockValidationGroup, new List<string>() { "Order" } );
         }

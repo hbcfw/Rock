@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,6 +30,8 @@ using System.ComponentModel;
 using Rock.Data;
 using Rock.Web.Cache;
 using System.Text;
+using HtmlAgilityPack;
+using System.Web;
 
 namespace RockWeb.Blocks.Cms
 {
@@ -37,25 +39,28 @@ namespace RockWeb.Blocks.Cms
     /// Adds an editable HTML fragment to the page.
     /// </summary>
     [DisplayName( "HTML Content" )]
-    [Category( "CMS" )]
+    [Category( "CMS" )] 
     [Description( "Adds an editable HTML fragment to the page." )]
 
     [SecurityAction( Authorization.EDIT, "The roles and/or users that can edit the HTML content.")]
     [SecurityAction( Authorization.APPROVE, "The roles and/or users that have access to approve HTML content." )]
 
-    [BooleanField( "Use Code Editor", "Use the code editor instead of the WYSIWYG editor", true, "", 0 )]
-    [TextField("Document Root Folder", "The folder to use as the root when browsing or uploading documents.", false, "~/Content", "", 1 )]
-    [TextField( "Image Root Folder", "The folder to use as the root when browsing or uploading images.", false, "~/Content", "", 2 )]
-    [BooleanField( "User Specific Folders", "Should the root folders be specific to current user?", false, "", 3 )]
-    [IntegerField( "Cache Duration", "Number of seconds to cache the content.", false, 3600, "", 4 )]
-    [TextField( "Context Parameter", "Query string parameter to use for 'personalizing' content based on unique values.", false, "", "", 5 )]
-    [TextField( "Context Name", "Name to use to further 'personalize' content.  Blocks with the same name, and referenced with the same context parameter will share html values.", false, "", "", 6 )]
-    [BooleanField( "Enable Versioning", "If checked, previous versions of the content will be preserved. Versioning is required if you want to require approval.", false, "", 7, "SupportVersions" )]
-    [BooleanField( "Require Approval", "Require that content be approved?", false, "", 8 )]
-    [BooleanField( "Enable Debug", "Show lava merge fields.", false, "", 9 )]
+    [LavaCommandsField("Enabled Lava Commands", "The Lava commands that should be enabled for this HTML block.", false, order: 0)]
+    [BooleanField( "Use Code Editor", "Use the code editor instead of the WYSIWYG editor", true, "", 1 )]
+    [TextField("Document Root Folder", "The folder to use as the root when browsing or uploading documents.", false, "~/Content", "", 2 )]
+    [TextField( "Image Root Folder", "The folder to use as the root when browsing or uploading images.", false, "~/Content", "", 3 )]
+    [BooleanField( "User Specific Folders", "Should the root folders be specific to current user?", false, "", 4 )]
+    [IntegerField( "Cache Duration", "Number of seconds to cache the content.", false, 0, "", 5 )]
+    [TextField( "Context Parameter", "Query string parameter to use for 'personalizing' content based on unique values.", false, "", "", 6 )]
+    [TextField( "Context Name", "Name to use to further 'personalize' content.  Blocks with the same name, and referenced with the same context parameter will share html values.", false, "", "", 7 )]
+    [BooleanField( "Enable Versioning", "If checked, previous versions of the content will be preserved. Versioning is required if you want to require approval.", false, "", 8, "SupportVersions" )]
+    [BooleanField( "Require Approval", "Require that content be approved?", false, "", 9 )]
+    // Disable QuickEdit for v7
+    //[CustomDropdownListField( "Quick Edit", "Allow quick editing of HTML contents.", "AIREDIT^In Place Editing,DBLCLICK^Double-Click For Edit Dialog", false, "", "", 11, "QuickEdit")]
 
+    [BooleanField( "Is Secondary Block", "Flag indicating whether this block is considered secondary and should be hidden when other secondary blocks are hidden.", false, "", 12 )]
     [ContextAware]
-    public partial class HtmlContentDetail : RockBlockCustomSettings
+    public partial class HtmlContentDetail : RockBlockCustomSettings, ISecondaryBlock
     {
 
         #region Properties
@@ -89,6 +94,9 @@ namespace RockWeb.Blocks.Cms
             this.BlockUpdated += HtmlContentDetail_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlHtmlContent );
 
+            // Disable QuickEdit for v7
+            //RegisterScript();
+
             gVersions.GridRebind += gVersions_GridRebind;
         }
 
@@ -109,6 +117,21 @@ namespace RockWeb.Blocks.Cms
                 nbApprovalRequired.Visible = false;
             }
         }
+
+        /// <summary>
+        /// Raises the <see cref="E:System.Web.UI.Control.PreRender" /> event.
+        /// </summary>
+        /// <param name="e">An <see cref="T:System.EventArgs" /> object that contains the event data.</param>
+        // Disable QuickEdit for v7
+        //protected override void OnPreRender( EventArgs e )
+        //{
+        //    if ( GetAttributeValue( "QuickEdit" ) == "AIREDIT" )
+        //    {
+        //        hfEntityValue.Value = EntityValue();
+        //    }
+
+        //    base.OnPreRender( e );
+        //}
 
         #endregion
 
@@ -135,6 +158,17 @@ namespace RockWeb.Blocks.Cms
         }
 
         /// <summary>
+        /// Handles the Click event of the lbQuickEdit control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        // Disable QuickEdit for v7
+        //protected void lbQuickEdit_Click( object sender, EventArgs e )
+        //{
+        //    ShowSettings();
+        //}
+
+        /// <summary>
         /// Handles the Click event of the lbSave control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
@@ -154,8 +188,29 @@ namespace RockWeb.Blocks.Cms
             int version = hfVersion.ValueAsInt();
             HtmlContent htmlContent = htmlContentService.GetByBlockIdAndEntityValueAndVersion( this.BlockId, entityValue, version );
 
-            // get the content depending on which mode we are in (codeeditor or ckeditor)
-            string newContent = ceHtml.Visible ? ceHtml.Text : htmlEditor.Text;
+            string newContent = htmlEditor.Text;
+
+            // check if the new content is valid
+            // NOTE: This is a limited check that will only warn of invalid HTML the first 
+            // time a user clicks the save button. Any errors encountered on the second runthrough
+            // are assumed to be intentional.
+            HtmlDocument doc = new HtmlDocument();
+            doc.LoadHtml( newContent );
+
+            if ( doc.ParseErrors.Count() > 0 && !nbInvalidHtml.Visible )
+            {
+                var reasons = doc.ParseErrors.Select( r => r.Reason ).ToList();
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine( "Warning: The HTML has the following errors:<ul>" );
+                foreach ( var reason in reasons )
+                {
+                    sb.AppendLine( String.Format( "<li>{0}</li>", reason.EncodeHtml() ) );
+                }
+                sb.AppendLine( "</ul> <br/> If you wish to save anyway, click the save button again." );
+                nbInvalidHtml.Text = sb.ToString();
+                nbInvalidHtml.Visible = true;
+                return;
+            }
 
             //// create a new record only in the following situations:
             ////   - this is the first time this htmlcontent block got content (new block and edited for the first time)
@@ -322,6 +377,52 @@ namespace RockWeb.Blocks.Cms
 
         #region Methods
 
+// Disable QuickEdit for v7
+//        private void RegisterScript()
+//        {
+//            if ( UserCanEdit )
+//            {
+//                string script = "";
+//                if ( GetAttributeValue( "QuickEdit" ) == "DBLCLICK" )
+//                {
+//                    script = string.Format( @"
+//    Sys.Application.add_load( function () {{
+//        $('#{0} > div.html-content-view').dblclick(function (e) {{
+//            {1};
+//        }});
+//    }});
+//", upnlHtmlContent.ClientID, this.Page.ClientScript.GetPostBackEventReference( lbQuickEdit, "" ) );
+//                }
+
+//                if ( GetAttributeValue( "QuickEdit" ) == "AIREDIT" )
+//                {
+//                    RockPage.AddScriptLink( Page, ResolveUrl( "~/Scripts/summernote/summernote.min.js" ), true );
+
+//                    script = string.Format( @"
+//    Sys.Application.add_load( function () {{
+//        $('#{0} > div.html-content-view').summernote( {{
+//            airMode: true,
+//            callbacks: {{
+//                onChange: function( contents, $editable ) {{
+//                    var htmlContents = {{
+//                        EntityValue: $('#{2}').val(),
+//                        Content: contents
+//                    }};
+//                    $.post( Rock.settings.get('baseUrl') + 'api/HtmlContents/UpdateContents/{1}', htmlContents, null, 'application/json' );
+//                }}
+//            }}
+//        }});
+//    }});
+//", upnlHtmlContent.ClientID, this.BlockId, hfEntityValue.ClientID );
+//                }
+
+//                if ( !string.IsNullOrWhiteSpace( script ) )
+//                {
+//                    ScriptManager.RegisterStartupScript( lbQuickEdit, lbQuickEdit.GetType(), string.Format( "html-content-block-{0}", this.BlockId ), script, true );
+//                }
+//            }
+//        }
+
         /// <summary>
         /// Binds the grid.
         /// </summary>
@@ -367,8 +468,7 @@ namespace RockWeb.Blocks.Cms
 
             bool useCodeEditor = GetAttributeValue( "UseCodeEditor" ).AsBoolean();
 
-            ceHtml.Visible = useCodeEditor;
-            htmlEditor.Visible = !useCodeEditor;
+            htmlEditor.StartInCodeEditorMode = useCodeEditor;
 
             htmlEditor.Toolbar = HtmlEditor.ToolbarConfig.Full;
 
@@ -384,8 +484,7 @@ namespace RockWeb.Blocks.Cms
 
                 string onchangeScript = string.Format( onchangeScriptFormat, lblApprovalStatus.ClientID, hfApprovalStatus.ClientID, hfApprovalStatusPersonId.ClientID, lblApprovalStatusPerson.ClientID );
 
-                htmlEditor.OnChangeScript = onchangeScript;
-                ceHtml.OnChangeScript = onchangeScript;
+                htmlEditor.CallbackOnKeyupScript = onchangeScript;
             }
 
             htmlEditor.MergeFields.Clear();
@@ -398,16 +497,6 @@ namespace RockWeb.Blocks.Cms
             htmlEditor.MergeFields.Add( "Time" );
             htmlEditor.MergeFields.Add( "DayOfWeek" );
 
-            ceHtml.MergeFields.Clear();
-            ceHtml.MergeFields.Add( "GlobalAttribute" );
-            ceHtml.MergeFields.Add( "CurrentPerson^Rock.Model.Person|Current Person" );
-            ceHtml.MergeFields.Add( "Campuses" );
-            ceHtml.MergeFields.Add( "RockVersion" );
-            ceHtml.MergeFields.Add( "PageParameter" );
-            ceHtml.MergeFields.Add( "Date" );
-            ceHtml.MergeFields.Add( "Time" );
-            ceHtml.MergeFields.Add( "DayOfWeek" );
-
             var contextObjects = new Dictionary<string, object>();
             foreach ( var contextEntityType in RockPage.GetContextEntityTypes() )
             {
@@ -419,7 +508,6 @@ namespace RockWeb.Blocks.Cms
                     {
                         string mergeField = string.Format( "Context.{0}^{1}|Current {0} (Context)|Context", type.Name, type.FullName );
                         htmlEditor.MergeFields.Add( mergeField );
-                        ceHtml.MergeFields.Add( mergeField );
                     }
                 }
             }
@@ -449,17 +537,14 @@ namespace RockWeb.Blocks.Cms
             // set Height of editors
             if ( supportsVersioning && requireApproval )
             {
-                ceHtml.EditorHeight = "280";
                 htmlEditor.Height = 280;
             }
             else if ( supportsVersioning )
             {
-                ceHtml.EditorHeight = "350";
                 htmlEditor.Height = 350;
             }
             else
             {
-                ceHtml.EditorHeight = "380";
                 htmlEditor.Height = 380;
             }
 
@@ -494,7 +579,6 @@ namespace RockWeb.Blocks.Cms
             drpDateRange.LowerValue = htmlContent.StartDateTime;
             drpDateRange.UpperValue = htmlContent.ExpireDateTime;
             htmlEditor.Text = htmlContent.Content;
-            ceHtml.Text = htmlContent.Content;
         }
 
         /// <summary>
@@ -544,21 +628,6 @@ namespace RockWeb.Blocks.Cms
             return maxVersion;
         }
 
-        private Dictionary<string, object> GetPageProperties()
-        {
-            Dictionary<string, object> pageProperties = new Dictionary<string, object>();
-            pageProperties.Add( "Id", this.RockPage.PageId.ToString() );
-            pageProperties.Add( "BrowserTitle", this.RockPage.BrowserTitle );
-            pageProperties.Add( "PageTitle", this.RockPage.PageTitle );
-            pageProperties.Add( "Site", this.RockPage.Site.Name );
-            pageProperties.Add( "SiteId", this.RockPage.Site.Id.ToString() );
-            pageProperties.Add( "LayoutId", this.RockPage.Layout.Id.ToString() );
-            pageProperties.Add( "Layout", this.RockPage.Layout.Name );
-            pageProperties.Add( "SiteTheme", this.RockPage.Site.Theme );
-            pageProperties.Add( "PageIcon", this.RockPage.PageIcon );
-            pageProperties.Add( "Description", this.RockPage.MetaDescription );
-            return pageProperties;
-        }
 
         /// <summary>
         /// Shows the view.
@@ -577,7 +646,14 @@ namespace RockWeb.Blocks.Cms
             string entityValue = EntityValue();
             string html = string.Empty;
 
-            string cachedContent = HtmlContentService.GetCachedContent( this.BlockId, entityValue );
+            int cacheDuration = GetAttributeValue( "CacheDuration" ).AsInteger();
+            string cachedContent = null;
+
+            // only load from the cache if a cacheDuration was specified
+            if ( cacheDuration > 0 )
+            {
+                cachedContent = HtmlContentService.GetCachedContent( this.BlockId, entityValue );
+            }
 
             // if content not cached load it from DB
             if ( cachedContent == null )
@@ -589,56 +665,23 @@ namespace RockWeb.Blocks.Cms
 
                     if ( content != null )
                     {
-                        bool enableDebug = GetAttributeValue( "EnableDebug" ).AsBoolean();
-
-                        if ( content.Content.HasMergeFields() || enableDebug )
+                        if ( content.Content.HasMergeFields() )
                         {
-                            var mergeFields = Rock.Web.Cache.GlobalAttributesCache.GetMergeFields( CurrentPerson );
+                            var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
+                            mergeFields.Add( "CurrentPage", this.PageCache );
+
                             if ( CurrentPerson != null )
                             {
                                 // TODO: When support for "Person" is not supported anymore (should use "CurrentPerson" instead), remove this line
-                                mergeFields.Add( "Person", CurrentPerson );
-                                mergeFields.Add( "CurrentPerson", CurrentPerson );
+                                mergeFields.AddOrIgnore( "Person", CurrentPerson );
                             }
-
-                            mergeFields.Add( "Campuses", CampusCache.All() );
-                            mergeFields.Add( "PageParameter", PageParameters() );
-                            mergeFields.Add( "CurrentPage", GetPageProperties() );
-
-                            var contextObjects = new Dictionary<string, object>();
-                            foreach ( var contextEntityType in RockPage.GetContextEntityTypes() )
-                            {
-                                var contextEntity = RockPage.GetCurrentContext( contextEntityType );
-                                if ( contextEntity != null && contextEntity is DotLiquid.ILiquidizable )
-                                {
-                                    var type = Type.GetType( contextEntityType.AssemblyName ?? contextEntityType.Name );
-                                    if ( type != null )
-                                    {
-                                        contextObjects.Add( type.Name, contextEntity );
-                                    }
-                                }
-
-                            }
-
-                            if ( contextObjects.Any() )
-                            {
-                                mergeFields.Add( "Context", contextObjects );
-                            }
-
+                            
                             mergeFields.Add( "RockVersion", Rock.VersionInfo.VersionInfo.GetRockProductVersionNumber() );
                             mergeFields.Add( "CurrentPersonCanEdit", IsUserAuthorized( Authorization.EDIT ) );
                             mergeFields.Add( "CurrentPersonCanAdministrate", IsUserAuthorized( Authorization.ADMINISTRATE ) );
 
-                            html = content.Content.ResolveMergeFields( mergeFields );
-
-                            // show merge fields if enable debug true
-                            if ( enableDebug && IsUserAuthorized( Authorization.EDIT ) )
-                            {
-                                // TODO: When support for "Person" is not supported anymore (should use "CurrentPerson" instead), remove this line
-                                mergeFields.Remove( "Person" );
-                                html += mergeFields.lavaDebugInfo();
-                            }
-                        }
+                            html = content.Content.ResolveMergeFields( mergeFields, GetAttributeValue("EnabledLavaCommands") );
+                         }
                         else
                         {
                             html = content.Content;
@@ -656,7 +699,6 @@ namespace RockWeb.Blocks.Cms
                 html = html.Replace( "~~/", themeRoot ).Replace( "~/", appRoot );
 
                 // cache content
-                int cacheDuration = GetAttributeValue( "CacheDuration" ).AsInteger();
                 if ( cacheDuration > 0 )
                 {
                     HtmlContentService.AddCachedContent( this.BlockId, entityValue, html, cacheDuration );
@@ -692,6 +734,24 @@ namespace RockWeb.Blocks.Cms
             }
 
             return entityValue;
+        }
+
+        /// <summary>
+        /// Hook so that other blocks can set the visibility of all ISecondaryBlocks on its page
+        /// </summary>
+        /// <param name="visible">if set to <c>true</c> [visible].</param>
+        public void SetVisible( bool visible )
+        {
+            if ( this.GetAttributeValue("IsSecondaryBlock").AsBooleanOrNull() ?? false )
+            {
+                if ( lHtmlContent.Visible != visible )
+                {
+                    lHtmlContent.Visible = visible;
+
+                    // upnlHtmlContent has UpdateMode=Conditional so tell it to update if Visible changed 
+                    upnlHtmlContent.Update();
+                }
+            }
         }
 
         #endregion

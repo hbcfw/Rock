@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,7 +25,7 @@ namespace Rock.Model
     /// <summary>
     /// Data access/service class for <see cref="Rock.Model.Auth"/> entity type objects.
     /// </summary>
-    public partial class AuthService 
+    public partial class AuthService
     {
         /// <summary>
         /// Returns an enumerable collection of <see cref="Rock.Model.Auth"/> entities by <see cref="Rock.Model.EntityType"/> and entity Id.
@@ -38,11 +38,11 @@ namespace Rock.Model
         public IQueryable<Auth> Get( int entityTypeId, int? entityId )
         {
             return Queryable( "PersonAlias" )
-                .Where( t => 
-                    t.EntityTypeId == entityTypeId && 
-                    ( t.EntityId == entityId || ( entityId == null && t.EntityId == null ) ) 
+                .Where( t =>
+                    t.EntityTypeId == entityTypeId &&
+                    ( t.EntityId == entityId || ( entityId == null && t.EntityId == null ) )
                 )
-                .OrderBy( t => t.Order );
+                .OrderBy( t => t.Order ).ThenBy( t => t.Id );
         }
 
         /// <summary>
@@ -56,6 +56,20 @@ namespace Rock.Model
         {
             return Get( entityTypeId, entityId )
                 .Where( t => t.Action == action );
+        }
+
+        /// <summary>
+        /// Returns an enumerable collection of <see cref="Rock.Model.Auth"/> entities by <see cref="Rock.Model.EntityType"/> and entity Id.
+        /// </summary>
+        /// <param name="groupId">A <see cref="System.Int32"/> represent the groupId of the security Role.</param>
+        /// <returns>
+        /// An enumerable list of <see cref="Rock.Model.Auth" /> entities that secure a specific entity.
+        /// </returns>
+        public IQueryable<Auth> GetByGroup( int groupId )
+        {
+            return Queryable()
+                .Where( t => t.GroupId == groupId )
+                .OrderBy( t => t.Order );
         }
     }
 }

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -234,6 +234,17 @@ namespace Rock.Web.UI.Controls
             }
         }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether the Note Type should be displayed as a heading to each note.
+        /// </summary>
+        /// <value>
+        /// <c>true</c> if display note type heading; otherwise, <c>false</c>.
+        /// </value>
+        public bool DisplayNoteTypeHeading
+        {
+            get { return ViewState["DisplayNoteTypeHeading"] as bool? ?? false; }
+            set { ViewState["DisplayNoteTypeHeading"] = value; }
+        }
 
         /// <summary>
         /// Gets or sets the display type.  Full or Light
@@ -375,7 +386,7 @@ namespace Rock.Web.UI.Controls
 
         /// <summary>
         /// Gets or sets a value indicating whether the author's photo should 
-        /// be displayed wiht the note instead of an icon based on the source
+        /// be displayed with the note instead of an icon based on the source
         /// of the note.
         /// </summary>
         public bool UsePersonIcon
@@ -573,6 +584,7 @@ namespace Rock.Web.UI.Controls
                     if ( control is NoteControl && control.ID != "noteNew" )
                     {
                         var noteEditor = (NoteControl)control;
+                        noteEditor.DisplayNoteTypeHeading = this.DisplayNoteTypeHeading;
                         noteEditor.DisplayType = this.DisplayType;
                         noteEditor.ShowAlertCheckBox = this.ShowAlertCheckBox;
                         noteEditor.ShowPrivateCheckBox = this.ShowPrivateCheckBox;
@@ -720,12 +732,12 @@ namespace Rock.Web.UI.Controls
 
                     if ( SortDirection == ListSortDirection.Descending )
                     {
-                        qry = qry.OrderByDescending( n => n.IsAlert )
+                        qry = qry.OrderByDescending( n => n.IsAlert == true )
                             .ThenByDescending( n => n.CreatedDateTime );
                     }
                     else
                     {
-                        qry = qry.OrderByDescending( n => n.IsAlert )
+                        qry = qry.OrderByDescending( n => n.IsAlert == true )
                             .ThenBy( n => n.CreatedDateTime );
                     }
 

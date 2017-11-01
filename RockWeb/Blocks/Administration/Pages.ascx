@@ -8,7 +8,15 @@
 
         <asp:ValidationSummary ID="valSummaryTop" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger"/>
         <Rock:ModalAlert ID="mdDeleteWarning" runat="server" />
-        
+
+        <Rock:ModalDialog ID="mdConfirmCopy" runat="server" Title="Please Confirm" SaveButtonText="Yes" OnSaveClick="mdConfirmCopy_Click">
+            <Content>
+                <asp:ValidationSummary ID="valSummaryValue" runat="server" CssClass="alert alert-error" />
+                <asp:HiddenField ID="hfPageIdToCopy" runat="server" />
+                Do you wish to copy this page and all child pages?
+            </Content>
+         </Rock:ModalDialog>
+
         <div class="grid">
             <Rock:Grid ID="rGrid" runat="server" AllowPaging="false" RowItemText="page" OnRowSelected="rGrid_Edit">
                 <Columns>
@@ -16,6 +24,7 @@
                     <Rock:RockBoundField DataField="Id" HeaderText="Id" />
                     <asp:HyperLinkField DataNavigateUrlFormatString="~/page/{0}" DataNavigateUrlFields="Id" DataTextField="InternalName" HeaderText="Name" Target="_parent" />
                     <Rock:RockBoundField DataField="Layout.Name" HeaderText="Layout"  />
+                    <Rock:LinkButtonField HeaderText="Copy" CssClass="btn btn-default btn-sm fa fa-clone" OnClick="rGrid_Copy" HeaderStyle-HorizontalAlign="Center" />
                     <Rock:DeleteField OnClick="rGrid_Delete" />
                 </Columns>
             </Rock:Grid>

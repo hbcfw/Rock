@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,6 +23,16 @@ namespace Rock.SystemGuid
     /// </summary>
     public class NoteType
     {
+        /// <summary>
+        /// The fundraising opportunity comment
+        /// </summary>
+        public const string FUNDRAISING_OPPORTUNITY_COMMENT = "9BB1A7B6-0E51-4E0E-BFC0-1E42F4F2DA95";
+
+        /// <summary>
+        /// Group Member Note
+        /// </summary>
+        public const string GROUPMEMBER_NOTE = "FFFC3644-60CD-4D14-A714-E8DCC202A0E1";
+
         /// <summary>
         /// Person note
         /// </summary>
@@ -47,6 +57,5 @@ namespace Rock.SystemGuid
         /// Generic scheduled transaction note type
         /// </summary>
         public const string SCHEDULED_TRANSACTION_NOTE = "360CFFE2-7FE3-4B0B-85A7-BFDACC9AF588";
-
     }
 }

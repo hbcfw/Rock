@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -84,6 +84,11 @@ namespace Rock.SystemGuid
         public const string COMMUNICATION_TEMPLATE = "C3B37465-DCAF-4C8C-930C-9A9B5D066CA9";
 
         /// <summary>
+        /// Communication Preference field type
+        /// </summary>
+        public const string COMMUNICATION_PREFERENCE_TYPE = "507C28F2-8BC0-4909-A4FE-9C2B1149E2B2";
+
+        /// <summary>
         /// Comparison field type
         /// </summary>
         public const string COMPARISON = "3C742B81-3C55-48B8-A7CD-E7762EA5BB91";
@@ -117,6 +122,11 @@ namespace Rock.SystemGuid
         /// Date Time field type
         /// </summary>
         public const string DATE_TIME = "FE95430C-322D-4B67-9C77-DFD1D4408725";
+
+        /// <summary>
+        /// DataViews field type
+        /// </summary>
+        public const string DATAVIEWS = "F739BF5D-3FDC-45EC-A03C-1AE7C47E3883";
 
         /// <summary>
         /// Date Range field type
@@ -254,6 +264,11 @@ namespace Rock.SystemGuid
         public const string KEY_VALUE_LIST = "73B02051-0D38-4AD9-BF81-A2D477DE4F70";
 
         /// <summary>
+        /// The lava commands field type
+        /// </summary>
+        public const string LAVA_COMMANDS = "4BD9088F-5CC6-89B1-45FC-A2AAFFC7CC0D";
+
+        /// <summary>
         /// Location field type
         /// </summary>
         public const string LOCATION = "B0B9EFE3-F09F-4604-AD1B-76B298A85D83";
@@ -304,6 +319,11 @@ namespace Rock.SystemGuid
         public const string REMOTE_AUTHS = "ECA90666-E7A0-4406-8559-0153DCB908FD";
 
         /// <summary>
+        /// Schedule field type
+        /// </summary>
+        public const string SCHEDULE = "E9C12C59-98EA-4977-8318-647435BE9A9C";
+
+        /// <summary>
         /// Schedules field type
         /// </summary>
         public const string SCHEDULES = "EC6A5CAF-F6A2-47A4-9CBA-6E1C53D7E59B";
@@ -327,6 +347,11 @@ namespace Rock.SystemGuid
         /// Sliding Date Range field type
         /// </summary>
         public const string SLIDING_DATE_RANGE = "55810BC5-45EA-4044-B783-0CCE0A445C6F";
+
+        /// <summary>
+        /// Social Security Number
+        /// </summary>
+        public const string SSN = "4722C99A-C078-464A-968F-13AB5E8E318F";
 
         /// <summary>
         /// Text field type

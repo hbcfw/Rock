@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,15 +30,12 @@ using Rock.Web.Cache;
 
 namespace Rock.PersonProfile.Badge
 {
-    // TODO: Update to return actual data
-
     /// <summary>
-    /// FamilyAttendance Badge
+    /// In Group Of Type Badge
     /// </summary>
     [Description( "Shows badge if the individual is in a group of a specified type." )]
     [Export( typeof( BadgeComponent ) )]
     [ExportMetadata( "ComponentName", "In Group Of Type" )]
-    
     
     [GroupTypeField("Group Type", "The type of group to use.", true)]
     [TextField("Badge Color", "The color of the badge (#ffffff).", true, "#0ab4dd")]

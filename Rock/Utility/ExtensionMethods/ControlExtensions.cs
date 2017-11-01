@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -166,15 +166,26 @@ namespace Rock
         /// <param name="className">Name of the class.</param>
         public static WebControl AddCssClass( this WebControl webControl, string className )
         {
-            string match = @"(^|\s+)" + className + @"($|\s+)";
-            string css = webControl.CssClass;
-
-            if ( !Regex.IsMatch( css, match, RegexOptions.IgnoreCase ) )
+            // if the className is blank, don't do anything
+            if ( className.IsNotNullOrWhitespace() )
             {
-                css += " " + className;
-            }
+                // if the webControl doesn't have a CssClass yet, simply set it to the className
+                if ( webControl.CssClass.IsNullOrWhiteSpace() )
+                {
+                    webControl.CssClass = className;
+                }
+                else
+                {
+                    string css = webControl.CssClass;
+                    string match = @"(^|\s+)" + className + @"($|\s+)";
+                    if ( !Regex.IsMatch( css, match, RegexOptions.IgnoreCase ) )
+                    {
+                        css += " " + className;
+                    }
 
-            webControl.CssClass = css.Trim();
+                    webControl.CssClass = css.Trim();
+                }
+            }
 
             return webControl;
         }
@@ -186,6 +197,12 @@ namespace Rock
         /// <param name="className">Name of the class.</param>
         public static WebControl RemoveCssClass( this WebControl webControl, string className )
         {
+            if (className.IsNullOrWhiteSpace() || webControl.CssClass.IsNullOrWhiteSpace())
+            {
+                // either the className is blank, or the webControl doesn't have a CssClass, so there is nothing to remove
+                return webControl;
+            }
+
             string match = @"(^|\s+)" + className + @"($|\s+)";
             string css = webControl.CssClass;
 
@@ -233,6 +250,37 @@ namespace Rock
 
         #endregion HtmlControl Extensions
 
+        #region ListBox Extensions
+
+        /// <summary>
+        /// Sets the Selected property of each item to true for each given matching string values.
+        /// </summary>
+        /// <param name="listBox">The list box.</param>
+        /// <param name="values">The values.</param>
+        public static void SetValues( this ListBox listBox, IEnumerable<string> values )
+        {
+            foreach ( ListItem item in listBox.Items )
+            {
+                item.Selected = values.Contains( item.Value, StringComparer.OrdinalIgnoreCase );
+            }
+        }
+
+        /// <summary>
+        /// Sets the Selected property of each item to true for each given matching int values.
+        /// </summary>
+        /// <param name="listBox">The list box.</param>
+        /// <param name="values">The values.</param>
+        public static void SetValues( this ListBox listBox, IEnumerable<int> values )
+        {
+            foreach ( ListItem item in listBox.Items )
+            {
+                int numValue = int.MinValue;
+                item.Selected = int.TryParse( item.Value, out numValue ) && values.Contains( numValue );
+            }
+        }
+
+        #endregion ListBox Extensions
+
         #region CheckBoxList Extensions
 
         /// <summary>
@@ -242,9 +290,17 @@ namespace Rock
         /// <param name="values">The values.</param>
         public static void SetValues( this CheckBoxList checkBoxList, IEnumerable<string> values )
         {
-            foreach ( ListItem item in checkBoxList.Items )
+            if ( checkBoxList is Rock.Web.UI.Controls.CampusesPicker )
             {
-                item.Selected = values.Contains( item.Value, StringComparer.OrdinalIgnoreCase );
+                // Campus Picker will add the items if neccessary, so needs to be handled differently
+                ( (Rock.Web.UI.Controls.CampusesPicker)checkBoxList ).SelectedCampusIds = values.AsIntegerList();
+            }
+            else
+            {
+                foreach ( ListItem item in checkBoxList.Items )
+                {
+                    item.Selected = values.Contains( item.Value, StringComparer.OrdinalIgnoreCase );
+                }
             }
         }
 
@@ -255,10 +311,18 @@ namespace Rock
         /// <param name="values">The values.</param>
         public static void SetValues( this CheckBoxList checkBoxList, IEnumerable<int> values )
         {
-            foreach ( ListItem item in checkBoxList.Items )
+            if ( checkBoxList is Rock.Web.UI.Controls.CampusesPicker )
             {
-                int numValue = int.MinValue;
-                item.Selected = int.TryParse( item.Value, out numValue ) && values.Contains( numValue );
+                // Campus Picker will add the items if neccessary, so needs to be handled differently
+                ( (Rock.Web.UI.Controls.CampusesPicker)checkBoxList ).SelectedCampusIds = values.ToList();
+            }
+            else
+            {
+                foreach ( ListItem item in checkBoxList.Items )
+                {
+                    int numValue = int.MinValue;
+                    item.Selected = int.TryParse( item.Value, out numValue ) && values.Contains( numValue );
+                }
             }
         }
 
@@ -277,27 +341,36 @@ namespace Rock
         {
             try
             {
-                var valueItem = listControl.Items.FindByValue( value );
-                if ( valueItem == null && defaultValue != null )
+                int? intValue = value.AsIntegerOrNull();
+                if ( listControl is Rock.Web.UI.Controls.CampusPicker && intValue.HasValue )
                 {
-                    valueItem = listControl.Items.FindByValue( defaultValue );
-                }
-
-                if ( valueItem != null )
-                {
-                    listControl.SelectedValue = valueItem.Value;
+                    // Campus Picker will add the item if neccessary, so needs to be handled differently
+                    ( (Rock.Web.UI.Controls.CampusPicker)listControl ).SelectedCampusId = intValue.Value;
                 }
                 else
                 {
-                    if ( listControl.Items.Count > 0 )
+                    var valueItem = listControl.Items.FindByValue( value );
+                    if ( valueItem == null && defaultValue != null )
                     {
-                        listControl.SelectedIndex = 0;
+                        valueItem = listControl.Items.FindByValue( defaultValue );
+                    }
+
+                    if ( valueItem != null )
+                    {
+                        listControl.SelectedValue = valueItem.Value;
+                    }
+                    else
+                    {
+                        if ( !( listControl is RadioButtonList ) && listControl.Items.Count > 0 )
+                        {
+                            listControl.SelectedIndex = 0;
+                        }
                     }
                 }
             }
             catch
             {
-                if ( listControl.Items.Count > 0 )
+                if ( !( listControl is RadioButtonList ) && listControl.Items.Count > 0 )
                 {
                     listControl.SelectedIndex = 0;
                 }
@@ -417,13 +490,13 @@ namespace Rock
         {
             if ( NoneAsNull )
             {
-                if ( listControl.SelectedValue.Equals( Rock.Constants.None.Id.ToString() ) )
+                if ( listControl == null || listControl.SelectedValue.Equals( Rock.Constants.None.Id.ToString() ) )
                 {
                     return null;
                 }
             }
 
-            if ( string.IsNullOrWhiteSpace( listControl.SelectedValue ) )
+            if ( listControl == null || string.IsNullOrWhiteSpace( listControl.SelectedValue ) )
             {
                 return null;
             }
@@ -537,10 +610,9 @@ namespace Rock
         /// <returns></returns>
         public static int ValueAsInt( this HiddenField hiddenField )
         {
-            int intValue = 0;
-            if ( int.TryParse( hiddenField.Value, out intValue ) )
+            if ( hiddenField != null )
             {
-                return intValue;
+                return hiddenField.Value.AsInteger();
             }
 
             return 0;

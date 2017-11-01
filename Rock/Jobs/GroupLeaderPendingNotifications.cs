@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -115,7 +115,7 @@ namespace Rock.Jobs
                         qry = qry.Where( m => m.GroupRole.Guid == groupRoleFilterGuid.Value );
                     }
 
-                    if ( pendingAge.HasValue )
+                    if ( pendingAge.HasValue && pendingAge.Value > 0 )
                     {
                         var ageDate = RockDateTime.Now.AddDays( pendingAge.Value * -1 );
                         qry = qry.Where( m => m.ModifiedDateTime > ageDate );
@@ -148,10 +148,10 @@ namespace Rock.Jobs
                         // get list of leaders
                         var groupLeaders = group.Members.Where( m => m.GroupRole.IsLeader == true );
 
-                        var appRoot = Rock.Web.Cache.GlobalAttributesCache.Read( rockContext ).GetValue( "ExternalApplicationRoot" );
+                        var appRoot = Rock.Web.Cache.GlobalAttributesCache.Read( rockContext ).GetValue( "PublicApplicationRoot" );
 
                         var recipients = new List<RecipientData>();
-                        foreach ( var leader in groupLeaders )
+                        foreach ( var leader in groupLeaders.Where( l => l.Person != null && l.Person.Email != "" ) )
                         {
                             // create merge object
                             var mergeFields = new Dictionary<string, object>();
@@ -164,8 +164,9 @@ namespace Rock.Jobs
 
                         if ( pendingIndividuals.Count() > 0 )
                         {
-                            Email.Send( systemEmail.Guid, recipients, appRoot );
-                            pendingMembersCount += pendingIndividuals.Count();
+                            var emailMessage = new RockEmailMessage( systemEmail.Guid );
+                            emailMessage.SetRecipients( recipients );
+                            emailMessage.Send();
                             notificationsSent += recipients.Count();
                         }
 

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -37,12 +37,22 @@ namespace Rock.Field.Types
         /// <summary>
         /// Initializes a new instance of the <see cref="EnumFieldType{T}"/> class.
         /// </summary>
-        public EnumFieldType()
+        public EnumFieldType() : this( null )
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EnumFieldType{T}"/> class.
+        /// </summary>
+        public EnumFieldType( T[] includedEnums )
         {
             EnumValues = new Dictionary<int, string>();
-            foreach ( var value in Enum.GetValues( typeof(T) ) )
+            foreach ( var value in Enum.GetValues( typeof( T ) ) )
             {
-                EnumValues.Add( (int)value, value.ToString().SplitCase() );
+                if ( includedEnums == null || includedEnums.Contains( ( T ) value ) )
+                {
+                    EnumValues.Add( ( int ) value, value.ToString().SplitCase() );
+                }
             }
         }
 
@@ -177,22 +187,19 @@ namespace Rock.Field.Types
         /// <returns></returns>
         public override Control FilterValueControl( Dictionary<string, ConfigurationValue> configurationValues, string id, bool required, FilterMode filterMode )
         {
-            if ( configurationValues != null && configurationValues.ContainsKey( "values" ) )
+            var cbList = new RockCheckBoxList();
+            cbList.ID = string.Format( "{0}_cbList", id );
+            cbList.AddCssClass( "js-filter-control" );
+            cbList.RepeatDirection = RepeatDirection.Horizontal;
+
+            foreach ( var keyVal in EnumValues )
             {
-                var cbList = new RockCheckBoxList();
-                cbList.ID = string.Format( "{0}_cbList", id );
-                cbList.AddCssClass( "js-filter-control" );
-                cbList.RepeatDirection = RepeatDirection.Horizontal;
+                cbList.Items.Add( new ListItem( keyVal.Value, keyVal.Key.ToString() ) );
+            }
 
-                foreach ( var keyVal in EnumValues )
-                {
-                    cbList.Items.Add( new ListItem( keyVal.Value, keyVal.Key.ToString() ) );
-                }
-
-                if ( cbList.Items.Count > 0 )
-                {
-                    return cbList;
-                }
+            if ( cbList.Items.Count > 0 )
+            {
+                return cbList;
             }
 
             return null;
@@ -214,6 +221,15 @@ namespace Rock.Field.Types
         /// <param name="filterMode">The filter mode.</param>
         /// <returns></returns>
         public override string GetFilterCompareValue( Control control, FilterMode filterMode )
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Gets the equal to compare value (types that don't support an equalto comparison (i.e. singleselect) should return null
+        /// </summary>
+        /// <returns></returns>
+        public override string GetEqualToCompareValue()
         {
             return null;
         }
@@ -369,7 +385,7 @@ namespace Rock.Field.Types
                 }
             }
 
-            return null;
+            return base.AttributeFilterExpression( configurationValues, filterValues, parameterExpression );
         }
 
         #endregion

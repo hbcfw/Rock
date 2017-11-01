@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,7 +22,6 @@ using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
-using Rock;
 
 namespace Rock.Web.UI.Controls
 {
@@ -87,6 +86,7 @@ namespace Rock.Web.UI.Controls
             {
                 return HelpBlock != null ? HelpBlock.Text : string.Empty;
             }
+
             set
             {
                 if ( HelpBlock != null )
@@ -95,6 +95,35 @@ namespace Rock.Web.UI.Controls
                 }
             }
         }
+
+        /// <summary>
+        /// Gets or sets the warning text.
+        /// </summary>
+        /// <value>
+        /// The warning text.
+        /// </value>
+        [
+        Bindable( true ),
+        Category( "Appearance" ),
+        DefaultValue( "" ),
+        Description( "The warning block." )
+        ]
+        public string Warning
+        {
+            get
+            {
+                return WarningBlock != null ? WarningBlock.Text : string.Empty;
+            }
+
+            set
+            {
+                if ( WarningBlock != null )
+                {
+                    WarningBlock.Text = value;
+                }
+            }
+        }
+
         /// <summary>
         /// Gets or sets a value indicating whether this <see cref="RockTextBox"/> is required.
         /// </summary>
@@ -125,6 +154,7 @@ namespace Rock.Web.UI.Controls
             {
                 return RequiredFieldValidator != null ? RequiredFieldValidator.ErrorMessage : string.Empty;
             }
+
             set
             {
                 if ( RequiredFieldValidator != null )
@@ -157,6 +187,14 @@ namespace Rock.Web.UI.Controls
         public HelpBlock HelpBlock { get; set; }
 
         /// <summary>
+        /// Gets or sets the warning block.
+        /// </summary>
+        /// <value>
+        /// The warning block.
+        /// </value>
+        public WarningBlock WarningBlock { get; set; }
+
+        /// <summary>
         /// Gets or sets the required field validator.
         /// </summary>
         /// <value>
@@ -174,10 +212,11 @@ namespace Rock.Web.UI.Controls
             {
                 return base.ValidationGroup;
             }
+
             set
             {
                 base.ValidationGroup = value;
-                
+
                 EnsureChildControls();
 
                 if ( RequiredFieldValidator != null )
@@ -200,7 +239,7 @@ namespace Rock.Web.UI.Controls
         #region Properties
 
         /// <summary>
-        /// Gets or sets the height.
+        /// Gets or sets the height (default of 200, minimum of 50)
         /// </summary>
         /// <value>
         /// The height of the control.
@@ -213,8 +252,29 @@ namespace Rock.Web.UI.Controls
         ]
         public string EditorHeight
         {
-            get { return ViewState["EditorHeight"] as string ?? "200"; }
-            set { ViewState["EditorHeight"] = value; }
+            get
+            {
+                var height = ViewState["EditorHeight"] as string;
+                var heightPixels = ( height ?? string.Empty ).AsIntegerOrNull() ?? 0;
+                
+                if ( heightPixels <= 0)
+                {
+                    // if height is not specified or is zero or less, default it to 200
+                    height = "200";
+                }
+                else if ( heightPixels < 50 )
+                {
+                    // ensure a minimum height of 50 pixels
+                    height = "50";
+                }
+
+                return height;
+            }
+
+            set
+            {
+                ViewState["EditorHeight"] = value;
+            }
         }
 
         /// <summary>
@@ -315,6 +375,7 @@ namespace Rock.Web.UI.Controls
                 EnsureChildControls();
                 return _mfpMergeFields.MergeFields;
             }
+
             set
             {
                 EnsureChildControls();
@@ -342,6 +403,25 @@ namespace Rock.Web.UI.Controls
         }
 
         /// <summary>
+        /// Gets or sets the javascript that will get executed when the codeeditor 'on blur' event occurs
+        /// </summary>
+        /// <value>
+        /// The on change press script.
+        /// </value>
+        public string OnBlurScript
+        {
+            get
+            {
+                return ViewState["OnBlurScript"] as string;
+            }
+
+            set
+            {
+                ViewState["OnBlurScript"] = value;
+            }
+        }
+
+        /// <summary>
         /// Gets or sets the merge field help.
         /// </summary>
         /// <value>
@@ -363,6 +443,7 @@ namespace Rock.Web.UI.Controls
         {
             RequiredFieldValidator = new RequiredFieldValidator();
             HelpBlock = new HelpBlock();
+            WarningBlock = new WarningBlock();
         }
 
         /// <summary>
@@ -374,12 +455,11 @@ namespace Rock.Web.UI.Controls
             base.OnInit( e );
             this.TextMode = TextBoxMode.MultiLine;
 
-            if (this.Visible && !ScriptManager.GetCurrent(this.Page).IsInAsyncPostBack)
+            if ( this.Visible && !ScriptManager.GetCurrent( this.Page ).IsInAsyncPostBack )
             {
                 // if the codeeditor is .Visible and this isn't an Async, add ace.js to the page (If the codeeditor is made visible during an Async Post, RenderBaseControl will take care of adding ace.js)
                 RockPage.AddScriptLink( Page, ResolveUrl( "~/Scripts/ace/ace.js" ) );
             }
-
         }
 
         /// <summary>
@@ -395,7 +475,6 @@ namespace Rock.Web.UI.Controls
             _mfpMergeFields.ID = string.Format( "mfpMergeFields_{0}", this.ID );
             _mfpMergeFields.SelectItem += MergeFields_SelectItem;
             Controls.Add( _mfpMergeFields );
-
         }
 
         /// <summary>
@@ -417,7 +496,7 @@ namespace Rock.Web.UI.Controls
         public void RenderBaseControl( HtmlTextWriter writer )
         {
             int editorHeight = EditorHeight.AsIntegerOrNull() ?? 200;
-            
+
             // Add merge field help
             if ( MergeFields.Any() )
             {
@@ -429,13 +508,14 @@ namespace Rock.Web.UI.Controls
             }
 
             // add editor div
-            string customDiv = @"<div class='code-editor-container' style='position:relative; height: {0}px'><pre id='codeeditor-div-{1}'>{2}</pre></div>";
-            writer.Write( string.Format( customDiv, editorHeight, this.ClientID, HttpUtility.HtmlEncode( this.Text ) ) );
+            var encodedText = HttpUtility.HtmlEncode( this.Text );
+            string customDiv = $@"<div class='code-editor-container {this.CssClass}' style='position:relative; height: {editorHeight}px'><pre id='codeeditor-div-{this.ClientID}'>{encodedText}</pre></div>";
+            writer.Write( customDiv );
 
             // write custom css for the code editor
-            string customStyle = @"
+            string styleTag = $@"
                 <style type='text/css' media='screen'>
-                    #codeeditor-div-{0} {{ 
+                    #codeeditor-div-{this.ClientID} {{ 
                         position: absolute;
                         top: 0;
                         right: 0;
@@ -444,8 +524,7 @@ namespace Rock.Web.UI.Controls
                     }}      
                 </style>     
 ";
-            string cssCode = string.Format( customStyle, this.ClientID );
-            writer.Write( cssCode );
+            writer.Write( styleTag );
 
             // make textbox hidden
             ( (WebControl)this ).Style.Add( HtmlTextWriterStyle.Display, "none" );
@@ -461,19 +540,43 @@ namespace Rock.Web.UI.Controls
                 ce_{0}.setTheme('ace/theme/{1}');
                 ce_{0}.getSession().setMode('ace/mode/{2}');
                 ce_{0}.setShowPrintMargin(false);
+                $('#codeeditor-div-{0}').data('aceEditor', ce_{0});
 
                 document.getElementById('{0}').value = $('<div/>').text( ce_{0}.getValue() ).html().replace(/&#39/g,""&apos"");
                 ce_{0}.getSession().on('change', function(e) {{
-                    document.getElementById('{0}').value = $('<div/>').text( ce_{0}.getValue() ).html().replace(/&#39/g,""&apos"");
+
+                    // get the raw content from the codeEditor
+                    var contents = ce_{0}.getValue();
+
+                    // set the input element value to the escaped value of contents
+                    document.getElementById('{0}').value = $('<div/>').text( contents  ).html().replace(/&#39/g,""&apos"");
+                    
                     {3}
+                }});
+
+                // disable warning about block scrolling
+                ce_{0}.$blockScrolling = Infinity;
+
+                ce_{0}.setReadOnly({4});
+
+                ce_{0}.on('blur', function(e) {{
+                    {5}
                 }});
 ";
 
-            string script = string.Format( scriptFormat, this.ClientID, EditorThemeAsString( this.EditorTheme ), EditorModeAsString( this.EditorMode ), this.OnChangeScript );
+            string script = string.Format( 
+                scriptFormat, 
+                this.ClientID,  // {0}
+                EditorThemeAsString( this.EditorTheme ),  // {1}
+                EditorModeAsString( this.EditorMode ),  // {2} 
+                this.OnChangeScript,  // {3}
+                this.ReadOnly.ToTrueFalse().ToLower(),  // {4}
+                this.OnBlurScript // {5}
+            );
+
             ScriptManager.RegisterStartupScript( this, this.GetType(), "codeeditor_" + this.ClientID, script, true );
 
             base.RenderControl( writer );
-
         }
 
         /// <summary>
@@ -488,9 +591,10 @@ namespace Rock.Web.UI.Controls
         {
             if ( base.LoadPostData( postDataKey, postCollection ) )
             {
-                base.Text = HttpUtility.HtmlDecode( base.Text );
+                this.Text = HttpUtility.HtmlDecode( this.Text );
                 return true;
             }
+
             return false;
         }
 
@@ -521,7 +625,12 @@ namespace Rock.Web.UI.Controls
 
         #region Events
 
-        void MergeFields_SelectItem( object sender, EventArgs e )
+        /// <summary>
+        /// Handles the SelectItem event of the MergeFields control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        public void MergeFields_SelectItem( object sender, EventArgs e )
         {
             EnsureChildControls();
             this.Text += _mfpMergeFields.SelectedMergeField;
@@ -540,15 +649,17 @@ namespace Rock.Web.UI.Controls
         /// text
         /// </summary>
         Text = 0,
+
         /// <summary>
         /// CSS
         /// </summary>
         Css = 1,
+
         /// <summary>
         /// HTML
         /// </summary>
         Html = 2,
-        
+
         /// <summary>
         /// The lava
         /// </summary>
@@ -599,118 +710,147 @@ namespace Rock.Web.UI.Controls
         /// rock
         /// </summary>
         Rock = 0,
+
         /// <summary>
         /// chrome
         /// </summary>
         Chrome = 1,
+
         /// <summary>
         /// crimson editor
         /// </summary>
         CrimsonEditor = 2,
+
         /// <summary>
         /// dawn
         /// </summary>
         Dawn = 3,
+
         /// <summary>
         /// dreamweaver
         /// </summary>
         Dreamweaver = 4,
+
         /// <summary>
         /// eclipse
         /// </summary>
         Eclipse = 5,
+
         /// <summary>
         /// solarized light
         /// </summary>
         SolarizedLight = 6,
+
         /// <summary>
         /// textmate
         /// </summary>
         Textmate = 7,
+
         /// <summary>
         /// tomorrow
         /// </summary>
         Tomorrow = 8,
+
         /// <summary>
         /// xcode
         /// </summary>
         Xcode = 9,
+
         /// <summary>
         /// github
         /// </summary>
         Github = 10,
+
         /// <summary>
         /// ambiance dark
         /// </summary>
         AmbianceDark = 11,
+
         /// <summary>
         /// chaos dark
         /// </summary>
         ChaosDark = 12,
+
         /// <summary>
         /// clouds midnight dark
         /// </summary>
         CloudsMidnightDark = 13,
+
         /// <summary>
         /// cobalt dark
         /// </summary>
         CobaltDark = 14,
+
         /// <summary>
         /// idle fingers dark
         /// </summary>
         IdleFingersDark = 15,
+
         /// <summary>
         /// kr theme dark
         /// </summary>
         krThemeDark = 16,
+
         /// <summary>
         /// merbivore dark
         /// </summary>
         MerbivoreDark = 17,
+
         /// <summary>
         /// merbivore soft dark
         /// </summary>
         MerbivoreSoftDark = 18,
+
         /// <summary>
         /// mono industrial dark
         /// </summary>
         MonoIndustrialDark = 19,
+
         /// <summary>
         /// monokai dark
         /// </summary>
         MonokaiDark = 20,
+
         /// <summary>
         /// pastel on dark
         /// </summary>
         PastelOnDark = 21,
+
         /// <summary>
         /// solarized dark
         /// </summary>
         SolarizedDark = 22,
+
         /// <summary>
         /// terminal dark
         /// </summary>
         TerminalDark = 23,
+
         /// <summary>
         /// tomorrow night dark
         /// </summary>
         TomorrowNightDark = 24,
+
         /// <summary>
         /// tomorrow night blue dark
         /// </summary>
         TomorrowNightBlueDark = 25,
+
         /// <summary>
         /// tomorrow night bright dark
         /// </summary>
         TomorrowNightBrightDark = 26,
+
         /// <summary>
         /// tomorrow night eighties dark
         /// </summary>
         TomorrowNightEightiesDark = 27,
+
         /// <summary>
         /// twilight dark
         /// </summary>
         TwilightDark = 28,
+
         /// <summary>
         /// vibrant ink dark
         /// </summary>

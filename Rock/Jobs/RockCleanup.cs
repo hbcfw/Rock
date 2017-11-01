@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,22 +22,27 @@ using System.Linq;
 using Quartz;
 using Rock.Attribute;
 using Rock.Model;
+using Rock.Data;
+using System.Data.Entity;
+using Rock.Web.Cache;
+using Rock.Field.Types;
+using System.Reflection;
 
 namespace Rock.Jobs
 {
     /// <summary>
     /// Job that executes routine cleanup tasks on Rock
     /// </summary>
-    [IntegerField( "Hours to Keep Unconfirmed Accounts", "The number of hours to keep user accounts that have not been confirmed (default is 48 hours.)", false, 48, "General", 0, "HoursKeepUnconfirmedAccounts" )]
     [IntegerField( "Days to Keep Exceptions in Log", "The number of days to keep exceptions in the exception log (default is 14 days.)", false, 14, "General", 1, "DaysKeepExceptions" )]
     [IntegerField( "Audit Log Expiration Days", "The number of days to keep items in the audit log (default is 14 days.)", false, 14, "General", 2, "AuditLogExpirationDays" )]
     [IntegerField( "Days to Keep Cached Files", "The number of days to keep cached files in the cache folder (default is 14 days.)", false, 14, "General", 3, "DaysKeepCachedFiles" )]
     [TextField( "Base Cache Folder", "The base/starting Directory for the file cache (default is ~/Cache.)", false, "~/Cache", "General", 4, "BaseCacheDirectory" )]
     [IntegerField( "Max Metaphone Names", "The maximum number of person names to process metaphone values for each time job is run (only names that have not yet been processed are checked).", false, 500, "General", 5 )]
+    [IntegerField( "Batch Cleanup Amount", "The number of records to delete at a time dependent on infrastructure. Recommended range is 1000 to 10,000.", false, 1000, "General", 6 )]
     [DisallowConcurrentExecution]
     public class RockCleanup : IJob
     {
-        /// <summary> 
+        /// <summary>
         /// Empty constructor for job initilization
         /// <para>
         /// Jobs require a public empty constructor so that the
@@ -62,20 +67,11 @@ namespace Rock.Jobs
 
             List<Exception> rockCleanupExceptions = new List<Exception>();
 
-            int databaseRowsDeleted = 0;
+            Dictionary<string, int> databaseRowsDeleted = new Dictionary<string, int>();
 
             try
             {
-                databaseRowsDeleted += CleanupUnconfirmedUserLogins( dataMap );
-            }
-            catch ( Exception ex )
-            {
-                rockCleanupExceptions.Add( new Exception( "Exception in CleanupUnconfirmedUserLogins", ex ) );
-            }
-
-            try
-            {
-                databaseRowsDeleted += PurgeExceptionLog( dataMap );
+                databaseRowsDeleted.Add( "Exception Log", PurgeExceptionLog( dataMap ) );
             }
             catch ( Exception ex )
             {
@@ -84,7 +80,7 @@ namespace Rock.Jobs
 
             try
             {
-                databaseRowsDeleted += CleanupExpiredEntitySets( dataMap );
+                databaseRowsDeleted.Add( "Expired Entity Set", CleanupExpiredEntitySets( dataMap ) );
             }
             catch ( Exception ex )
             {
@@ -93,16 +89,16 @@ namespace Rock.Jobs
 
             try
             {
-                databaseRowsDeleted += CleanupPageViews( dataMap );
+                databaseRowsDeleted.Add( "Old Interaction", CleanupInteractions( dataMap ) );
             }
             catch ( Exception ex )
             {
-                rockCleanupExceptions.Add( new Exception( "Exception in CleanupPageViews", ex ) );
+                rockCleanupExceptions.Add( new Exception( "Exception in CleanupInteractions", ex ) );
             }
 
             try
             {
-                databaseRowsDeleted += PurgeAuditLog( dataMap );
+                databaseRowsDeleted.Add( "Audit Log", PurgeAuditLog( dataMap ) );
             }
             catch ( Exception ex )
             {
@@ -139,14 +135,57 @@ namespace Rock.Jobs
 
             try
             {
-                databaseRowsDeleted += CleanUpTemporaryRegistrations();
+                databaseRowsDeleted.Add( "Temporary Registration", CleanUpTemporaryRegistrations() );
             }
             catch ( Exception ex )
             {
                 rockCleanupExceptions.Add( new Exception( "Exception in CleanUpTemporaryRegistrations", ex ) );
             }
 
-            context.Result = string.Format( "Rock Cleanup cleaned up {0} database rows", databaseRowsDeleted );
+            try
+            {
+                databaseRowsDeleted.Add( "Workflow", CleanUpWorkflows( dataMap ) );
+            }
+            catch ( Exception ex )
+            {
+                rockCleanupExceptions.Add( new Exception( "Exception in CleanUpWorkflows", ex ) );
+            }
+
+            try
+            {
+                databaseRowsDeleted.Add( "Workflow Log", CleanUpWorkflowLogs( dataMap ) );
+            }
+            catch ( Exception ex )
+            {
+                rockCleanupExceptions.Add( new Exception( "Exception in CleanUpWorkflowLogs", ex ) );
+            }
+
+            try
+            {
+                databaseRowsDeleted.Add( "Orphaned Attribute Value", CleanupOrphanedAttributes( dataMap ) );
+            }
+            catch ( Exception ex )
+            {
+                rockCleanupExceptions.Add( new Exception( "Exception in CleanupOrphanedAttributes", ex ) );
+            }
+
+            try
+            {
+                databaseRowsDeleted.Add( "Person Token", CleanupPersonTokens( dataMap ) );
+            }
+            catch ( Exception ex )
+            {
+                rockCleanupExceptions.Add( new Exception( "Exception in CleanupPersonTokens", ex ) );
+            }
+
+            if ( databaseRowsDeleted.Any( a => a.Value > 0 ) )
+            {
+                context.Result = string.Format( "Rock Cleanup cleaned up {0}", databaseRowsDeleted.Where( a => a.Value > 0 ).Select( a => $"{a.Value} {a.Key.PluralizeIf( a.Value != 1 )}" ).ToList().AsDelimited( ", ", " and " ) );
+            }
+            else
+            {
+                context.Result = "Rock Cleanup completed";
+            }
 
             if ( rockCleanupExceptions.Count > 0 )
             {
@@ -175,7 +214,7 @@ namespace Rock.Jobs
             personRockContext.SaveChanges();
 
             // Add any missing metaphones
-            int namesToProcess = dataMap.GetString( "MaxMetaphoneNames" ).AsInteger();
+            int namesToProcess = dataMap.GetString( "MaxMetaphoneNames" ).AsIntegerOrNull() ?? 500;
             if ( namesToProcess > 0 )
             {
                 var firstNameQry = personService.Queryable().Select( p => p.FirstName ).Where( p => p != null );
@@ -207,6 +246,73 @@ namespace Rock.Jobs
                 }
 
                 personRockContext.SaveChanges();
+            }
+
+            //// Add any missing Implied/Known relationship groups
+            // Known Relationship Group
+            AddMissingRelationshipGroups( GroupTypeCache.Read( Rock.SystemGuid.GroupType.GROUPTYPE_KNOWN_RELATIONSHIPS ), Rock.SystemGuid.GroupRole.GROUPROLE_KNOWN_RELATIONSHIPS_OWNER.AsGuid() );
+
+            // Implied Relationship Group
+            AddMissingRelationshipGroups( GroupTypeCache.Read( Rock.SystemGuid.GroupType.GROUPTYPE_IMPLIED_RELATIONSHIPS ), Rock.SystemGuid.GroupRole.GROUPROLE_IMPLIED_RELATIONSHIPS_OWNER.AsGuid() );
+        }
+
+        /// <summary>
+        /// Adds the missing relationship groups.
+        /// </summary>
+        /// <param name="relationshipGroupType">Type of the relationship group.</param>
+        /// <param name="ownerRoleGuid">The owner role unique identifier.</param>
+        private static void AddMissingRelationshipGroups( GroupTypeCache relationshipGroupType, Guid ownerRoleGuid )
+        {
+            if ( relationshipGroupType != null )
+            {
+                var ownerRoleId = relationshipGroupType.Roles
+                    .Where( r => r.Guid.Equals( ownerRoleGuid ) ).Select( a => (int?)a.Id ).FirstOrDefault();
+                if ( ownerRoleId.HasValue )
+                {
+                    var rockContext = new RockContext();
+                    var personService = new PersonService( rockContext );
+                    var memberService = new GroupMemberService( rockContext );
+
+                    var qryGroupOwnerPersonIds = memberService.Queryable( true )
+                        .Where( m => m.GroupRoleId == ownerRoleId.Value ).Select( a => a.PersonId );
+
+                    var personIdsWithoutKnownRelationshipGroup = personService.Queryable().Where( p => !qryGroupOwnerPersonIds.Contains( p.Id ) ).Select( a => a.Id ).ToList();
+
+                    var groupsToInsert = new List<Group>();
+                    var groupGroupMembersToInsert = new Dictionary<Guid, GroupMember>();
+                    foreach ( var personId in personIdsWithoutKnownRelationshipGroup )
+                    {
+                        var groupMember = new GroupMember();
+                        groupMember.PersonId = personId;
+                        groupMember.GroupRoleId = ownerRoleId.Value;
+
+                        var group = new Group();
+                        group.Name = relationshipGroupType.Name;
+                        group.Guid = Guid.NewGuid();
+                        group.GroupTypeId = relationshipGroupType.Id;
+
+                        groupGroupMembersToInsert.Add( group.Guid, groupMember );
+
+                        groupsToInsert.Add( group );
+                    }
+
+                    if ( groupsToInsert.Any() )
+                    {
+                        // use BulkInsert just in case there are a large number of groups and group members to insert
+                        rockContext.BulkInsert( groupsToInsert );
+
+                        Dictionary<Guid, int> groupIdLookup = new GroupService( rockContext ).Queryable().Where( a => a.GroupTypeId == relationshipGroupType.Id ).Select( a => new { a.Id, a.Guid } ).ToDictionary( k => k.Guid, v => v.Id );
+                        var groupMembersToInsert = new List<GroupMember>();
+                        foreach ( var groupGroupMember in groupGroupMembersToInsert )
+                        {
+                            var groupMember = groupGroupMember.Value;
+                            groupMember.GroupId = groupIdLookup[groupGroupMember.Key];
+                            groupMembersToInsert.Add( groupMember );
+                        }
+
+                        rockContext.BulkInsert( groupMembersToInsert );
+                    }
+                }
             }
         }
 
@@ -259,6 +365,83 @@ namespace Rock.Jobs
         }
 
         /// <summary>
+        /// Cleans up completed workflows.
+        /// </summary>
+        private int CleanUpWorkflows( JobDataMap dataMap )
+        {
+            int totalRowsDeleted = 0;
+            var workflowContext = new RockContext();
+            var workflowService = new WorkflowService( workflowContext );
+
+            var completedWorkflows = workflowService.Queryable()
+                .Where( w => w.WorkflowType.CompletedWorkflowRetentionPeriod.HasValue && w.Status.Equals( "Completed" ) )
+                .ToList();
+
+            foreach ( var workflow in completedWorkflows )
+            {
+                var retentionPeriod = workflow.WorkflowType.CompletedWorkflowRetentionPeriod;
+                if ( retentionPeriod.HasValue && workflow.ModifiedDateTime < RockDateTime.Now.AddDays( -1 * (int)retentionPeriod ) )
+                {
+                    string errorMessage;
+                    if ( workflowService.CanDelete( workflow, out errorMessage ) )
+                    {
+                        workflowService.Delete( workflow );
+                        workflowContext.SaveChanges();
+                        totalRowsDeleted++;
+                    }
+                }
+            }
+
+            return totalRowsDeleted;
+        }
+
+        /// <summary>
+        /// Cleans up workflow logs by removing old logs in batches.
+        /// see http://dba.stackexchange.com/questions/1750/methods-of-speeding-up-a-huge-delete-from-table-with-no-clauses"
+        /// </summary>
+        private int CleanUpWorkflowLogs( JobDataMap dataMap )
+        {
+            int totalRowsDeleted = 0;
+            var workflowContext = new RockContext();
+            var workflowService = new WorkflowService( workflowContext );
+            int? batchAmount = dataMap.GetString( "BatchCleanupAmount" ).AsIntegerOrNull() ?? 1000;
+
+            var workflowsWithExpirationPeriod = workflowService.Queryable()
+                .Where( w => w.WorkflowType.LogRetentionPeriod.HasValue )
+                .ToList();
+
+            foreach ( var workflow in workflowsWithExpirationPeriod )
+            {
+                if ( workflow.ModifiedDateTime < RockDateTime.Now.AddDays( -1 * (int)workflow.WorkflowType.LogRetentionPeriod ) )
+                {
+                    // WorkflowLogService.CanDelete( log ) always returns true, so no need to check
+                    bool keepDeleting = true;
+                    while ( keepDeleting )
+                    {
+                        var dbTransaction = workflowContext.Database.BeginTransaction();
+                        try
+                        {
+                            string sqlCommand = @"DELETE TOP (@batchAmount) FROM [WorkflowLog] WHERE [WorkflowId] = @workflowId";
+
+                            int rowsDeleted = workflowContext.Database.ExecuteSqlCommand( sqlCommand,
+                                new SqlParameter( "batchAmount", batchAmount ),
+                                new SqlParameter( "workflowId", workflow.Id )
+                            );
+                            keepDeleting = rowsDeleted > 0;
+                            totalRowsDeleted += rowsDeleted;
+                        }
+                        finally
+                        {
+                            dbTransaction.Commit();
+                        }
+                    }
+                }
+            }
+
+            return totalRowsDeleted;
+        }
+
+        /// <summary>
         /// Cleans the cached file directory.
         /// </summary>
         /// <param name="context">The context.</param>
@@ -295,6 +478,7 @@ namespace Rock.Jobs
         {
             // purge audit log
             int totalRowsDeleted = 0;
+            int? batchAmount = dataMap.GetString( "BatchCleanupAmount" ).AsIntegerOrNull() ?? 1000;
             int? auditExpireDays = dataMap.GetString( "AuditLogExpirationDays" ).AsIntegerOrNull();
             if ( auditExpireDays.HasValue )
             {
@@ -308,7 +492,10 @@ namespace Rock.Jobs
                     var dbTransaction = auditLogRockContext.Database.BeginTransaction();
                     try
                     {
-                        int rowsDeleted = auditLogRockContext.Database.ExecuteSqlCommand( @"DELETE TOP (1000) FROM [Audit] WHERE [DateTime] < @auditExpireDate", new SqlParameter( "auditExpireDate", auditExpireDate ) );
+                        int rowsDeleted = auditLogRockContext.Database.ExecuteSqlCommand( @"DELETE TOP (@batchAmount) FROM [Audit] WHERE [DateTime] < @auditExpireDate",
+                            new SqlParameter( "batchAmount", batchAmount ),
+                            new SqlParameter( "auditExpireDate", auditExpireDate )
+                        );
                         keepDeleting = rowsDeleted > 0;
                         totalRowsDeleted += rowsDeleted;
                     }
@@ -331,6 +518,7 @@ namespace Rock.Jobs
         private int PurgeExceptionLog( JobDataMap dataMap )
         {
             int totalRowsDeleted = 0;
+            int? batchAmount = dataMap.GetString( "BatchCleanupAmount" ).AsIntegerOrNull() ?? 1000;
             int? exceptionExpireDays = dataMap.GetString( "DaysKeepExceptions" ).AsIntegerOrNull();
             if ( exceptionExpireDays.HasValue )
             {
@@ -344,41 +532,12 @@ namespace Rock.Jobs
                     var dbTransaction = exceptionLogRockContext.Database.BeginTransaction();
                     try
                     {
-                        int rowsDeleted = exceptionLogRockContext.Database.ExecuteSqlCommand( @"DELETE TOP (1000) FROM [ExceptionLog] WHERE [CreatedDateTime] < @createdDateTime", new SqlParameter( "createdDateTime", exceptionExpireDate ) );
-                        keepDeleting = rowsDeleted > 0;
-                        totalRowsDeleted += rowsDeleted;
-                    }
-                    finally
-                    {
-                        dbTransaction.Commit();
-                    }
-                }
-            }
+                        string sqlCommand = @"DELETE TOP (@batchAmount) FROM [ExceptionLog] WHERE [CreatedDateTime] < @createdDateTime";
 
-            return totalRowsDeleted;
-        }
-
-        /// <summary>
-        /// Cleanups the unconfirmed user logins that have not been confirmed in X hours
-        /// </summary>
-        /// <param name="dataMap">The data map.</param>
-        private int CleanupUnconfirmedUserLogins( JobDataMap dataMap )
-        {
-            int? userExpireHours = dataMap.GetString( "HoursKeepUnconfirmedAccounts" ).AsIntegerOrNull();
-            int totalRowsDeleted = 0;
-            if ( userExpireHours.HasValue )
-            {
-                var userLoginRockContext = new Rock.Data.RockContext();
-                DateTime userAccountExpireDate = RockDateTime.Now.Add( new TimeSpan( userExpireHours.Value * -1, 0, 0 ) );
-
-                // delete in chunks (see http://dba.stackexchange.com/questions/1750/methods-of-speeding-up-a-huge-delete-from-table-with-no-clauses)
-                bool keepDeleting = true;
-                while ( keepDeleting )
-                {
-                    var dbTransaction = userLoginRockContext.Database.BeginTransaction();
-                    try
-                    {
-                        int rowsDeleted = userLoginRockContext.Database.ExecuteSqlCommand( @"DELETE TOP (1000) FROM [UserLogin] WHERE [IsConfirmed] = 0 AND ([CreatedDateTime] is null OR [CreatedDateTime] < @createdDateTime )", new SqlParameter( "createdDateTime", userAccountExpireDate ) );
+                        int rowsDeleted = exceptionLogRockContext.Database.ExecuteSqlCommand( sqlCommand,
+                            new SqlParameter( "batchAmount", batchAmount ),
+                            new SqlParameter( "createdDateTime", exceptionExpireDate )
+                        );
                         keepDeleting = rowsDeleted > 0;
                         totalRowsDeleted += rowsDeleted;
                     }
@@ -398,9 +557,10 @@ namespace Rock.Jobs
         /// <param name="dataMap">The data map.</param>
         private int CleanupExpiredEntitySets( JobDataMap dataMap )
         {
-            var entitySetRockContext = new Rock.Data.RockContext();
+            var entitySetRockContext = new RockContext();
             var currentDateTime = RockDateTime.Now;
             var entitySetService = new EntitySetService( entitySetRockContext );
+            int? batchAmount = dataMap.GetString( "BatchCleanupAmount" ).AsIntegerOrNull() ?? 1000;
             var qry = entitySetService.Queryable().Where( a => a.ExpireDateTime.HasValue && a.ExpireDateTime < currentDateTime );
             int totalRowsDeleted = 0;
 
@@ -416,9 +576,12 @@ namespace Rock.Jobs
                         var dbTransaction = entitySetRockContext.Database.BeginTransaction();
                         try
                         {
-                            string sqlCommand = @"DELETE TOP (1000) FROM [EntitySetItem] WHERE [EntitySetId] = @entitySetId";
+                            string sqlCommand = @"DELETE TOP (@batchAmount) FROM [EntitySetItem] WHERE [EntitySetId] = @entitySetId";
 
-                            int rowsDeleted = entitySetRockContext.Database.ExecuteSqlCommand( sqlCommand, new SqlParameter( "entitySetId", entitySet.Id ) );
+                            int rowsDeleted = entitySetRockContext.Database.ExecuteSqlCommand( sqlCommand,
+                                new SqlParameter( "batchAmount", batchAmount ),
+                                new SqlParameter( "entitySetId", entitySet.Id )
+                            );
                             keepDeleting = rowsDeleted > 0;
                             totalRowsDeleted += rowsDeleted;
                         }
@@ -436,23 +599,22 @@ namespace Rock.Jobs
             return totalRowsDeleted;
         }
 
-
         /// <summary>
-        /// Cleans up PagesViews for sites that have a Page View retention period
+        /// Cleans up Interactions for Interaction Channels that have a retention period
         /// </summary>
         /// <param name="dataMap">The data map.</param>
-        private int CleanupPageViews( JobDataMap dataMap )
+        private int CleanupInteractions( JobDataMap dataMap )
         {
-            var pageViewRockContext = new Rock.Data.RockContext();
+            int? batchAmount = dataMap.GetString( "BatchCleanupAmount" ).AsIntegerOrNull() ?? 1000;
+            var interactionRockContext = new Rock.Data.RockContext();
             var currentDateTime = RockDateTime.Now;
-            var siteService = new SiteService( pageViewRockContext );
-            var siteQry = siteService.Queryable().Where( a => a.PageViewRetentionPeriodDays.HasValue );
+            var interactionChannelService = new InteractionChannelService( interactionRockContext );
+            var interactionChannelQry = interactionChannelService.Queryable().Where( a => a.RetentionDuration.HasValue );
             int totalRowsDeleted = 0;
-            //
 
-            foreach ( var site in siteQry.ToList() )
+            foreach ( var interactionChannel in interactionChannelQry.ToList() )
             {
-                var retentionCutoffDateTime = currentDateTime.AddDays( -site.PageViewRetentionPeriodDays.Value );
+                var retentionCutoffDateTime = currentDateTime.AddDays( -interactionChannel.RetentionDuration.Value );
                 if ( retentionCutoffDateTime < System.Data.SqlTypes.SqlDateTime.MinValue.Value )
                 {
                     retentionCutoffDateTime = System.Data.SqlTypes.SqlDateTime.MinValue.Value;
@@ -462,12 +624,158 @@ namespace Rock.Jobs
                 bool keepDeleting = true;
                 while ( keepDeleting )
                 {
-                    var dbTransaction = pageViewRockContext.Database.BeginTransaction();
+                    var dbTransaction = interactionRockContext.Database.BeginTransaction();
                     try
                     {
-                        string sqlCommand = @"DELETE TOP (1000) FROM [PageView] WHERE [SiteId] = @siteId AND DateTimeViewed < @retentionCutoffDateTime";
+                        string sqlCommand = @"
+DELETE TOP (@batchAmount)
+FROM ia
+FROM [Interaction] ia
+INNER JOIN [InteractionComponent] ic ON ia.InteractionComponentId = ic.Id
+WHERE ic.ChannelId = @channelId
+	AND ia.InteractionDateTime < @retentionCutoffDateTime
+";
+                        int rowsDeleted = interactionRockContext.Database.ExecuteSqlCommand( sqlCommand, new SqlParameter( "batchAmount", batchAmount ), new SqlParameter( "channelId", interactionChannel.Id ), new SqlParameter( "retentionCutoffDateTime", retentionCutoffDateTime ) );
+                        keepDeleting = rowsDeleted > 0;
+                        totalRowsDeleted += rowsDeleted;
+                    }
+                    finally
+                    {
+                        dbTransaction.Commit();
+                    }
+                }
+            }
 
-                        int rowsDeleted = pageViewRockContext.Database.ExecuteSqlCommand( sqlCommand, new SqlParameter( "siteId", site.Id ), new SqlParameter( "retentionCutoffDateTime", retentionCutoffDateTime ) );
+            return totalRowsDeleted;
+        }
+
+        /// <summary>
+        /// Cleanups the orphaned attributes.
+        /// </summary>
+        /// <param name="dataMap">The data map.</param>
+        /// <returns></returns>
+        private int CleanupOrphanedAttributes( JobDataMap dataMap )
+        {
+            int recordsDeleted = 0;
+
+            // Cleanup AttributeMatrix records that are no longer associated with an attribute value
+            using ( RockContext rockContext = new RockContext() )
+            {
+                AttributeMatrixService attributeMatrixService = new AttributeMatrixService( rockContext );
+                AttributeMatrixItemService attributeMatrixItemService = new AttributeMatrixItemService( rockContext );
+
+                var matrixFieldTypeId = FieldTypeCache.Read<MatrixFieldType>().Id;
+                // get a list of attribute Matrix Guids that are actually in use
+                var usedAttributeMatrices = new AttributeValueService( rockContext ).Queryable().Where( a => a.Attribute.FieldTypeId == matrixFieldTypeId ).Select( a => a.Value ).ToList().AsGuidList();
+
+                // clean up any orphaned attribute matrices
+                var dayAgo = RockDateTime.Now.AddDays( -1 );
+                var orphanedAttributeMatrices = attributeMatrixService.Queryable().Where( a => ( a.CreatedDateTime < dayAgo ) && !usedAttributeMatrices.Contains( a.Guid ) ).ToList();
+                if ( orphanedAttributeMatrices.Any() )
+                {
+                    recordsDeleted += orphanedAttributeMatrices.Count;
+                    attributeMatrixItemService.DeleteRange( orphanedAttributeMatrices.SelectMany( a => a.AttributeMatrixItems ) );
+                    attributeMatrixService.DeleteRange( orphanedAttributeMatrices );
+                    rockContext.SaveChanges();
+                }
+            }
+
+            // clean up other orphaned entity attributes
+            Type rockContextType = typeof( Rock.Data.RockContext );
+            foreach ( var cachedType in EntityTypeCache.All().Where( e => e.IsEntity ) )
+            {
+                Type entityType = cachedType.GetEntityType();
+                if ( entityType != null &&
+                    typeof( IEntity ).IsAssignableFrom( entityType ) &&
+                    typeof( IHasAttributes ).IsAssignableFrom( entityType ) &&
+                    !entityType.Namespace.Equals( "Rock.Rest.Controllers" ) )
+                {
+                    try
+                    {
+                        bool ignore = false;
+                        if ( entityType.Assembly != rockContextType.Assembly )
+                        {
+                            // If the model is from a custom project, verify that it is using RockContext, if not, ignore it since an 
+                            // exception will occur due to the AttributeValue query using RockContext.
+                            var entityContextType = Reflection.SearchAssembly( entityType.Assembly, typeof( System.Data.Entity.DbContext ) );
+                            ignore = ( entityContextType.Any() && !entityContextType.First().Value.Equals( rockContextType ) );
+                        }
+
+                        if ( !ignore )
+                        {
+                            var classMethod = this.GetType().GetMethods( BindingFlags.Instance | BindingFlags.NonPublic )
+                            .First( m => m.Name == "CleanupOrphanedAttributeValuesForEntityType" );
+                            var genericMethod = classMethod.MakeGenericMethod( entityType );
+                            var result = genericMethod.Invoke( this, null ) as int?;
+                            if ( result.HasValue )
+                            {
+                                recordsDeleted += (int)result;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            }
+
+            return recordsDeleted;
+        }
+
+        /// <summary>
+        /// Cleanups the orphaned attribute values for entity type
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        private int CleanupOrphanedAttributeValuesForEntityType<T>() where T : Rock.Data.Entity<T>, IHasAttributes, new()
+        {
+            int recordsDeleted = 0;
+
+            using ( RockContext rockContext = new RockContext() )
+            {
+                var attributeValueService = new AttributeValueService( rockContext );
+                int? entityTypeId = EntityTypeCache.GetId<T>();
+                var entityIdsQuery = new Service<T>( rockContext ).Queryable().Select( a => a.Id );
+                var orphanedAttributeValues = attributeValueService.Queryable().Where( a => a.EntityId.HasValue && a.Attribute.EntityTypeId == entityTypeId.Value && !entityIdsQuery.Contains( a.EntityId.Value ) ).ToList();
+                if ( orphanedAttributeValues.Any() )
+                {
+                    recordsDeleted += orphanedAttributeValues.Count;
+                    attributeValueService.DeleteRange( orphanedAttributeValues );
+                    rockContext.SaveChanges();
+                }
+            }
+
+            return recordsDeleted;
+        }
+
+        /// <summary>
+        /// Cleanups the person tokens.
+        /// </summary>
+        /// <param name="dataMap">The data map.</param>
+        /// <returns></returns>
+        private int CleanupPersonTokens( JobDataMap dataMap )
+        {
+            int totalRowsDeleted = 0;
+            int? batchAmount = dataMap.GetString( "BatchCleanupAmount" ).AsIntegerOrNull() ?? 1000;
+
+            // Cleanup PersonTokens records that are expired
+            using ( RockContext rockContext = new RockContext() )
+            {
+                PersonTokenService personTokenService = new PersonTokenService( rockContext );
+
+                // delete in chunks (see http://dba.stackexchange.com/questions/1750/methods-of-speeding-up-a-huge-delete-from-table-with-no-clauses)
+                bool keepDeleting = true;
+                while ( keepDeleting )
+                {
+                    var dbTransaction = rockContext.Database.BeginTransaction();
+                    try
+                    {
+                        string sqlCommand = @"
+DELETE TOP (@batchAmount)
+FROM [PersonToken]
+WHERE ExpireDateTime IS NOT NULL
+	AND ExpireDateTime < GetDate()
+
+";
+                        int rowsDeleted = rockContext.Database.ExecuteSqlCommand( sqlCommand, new SqlParameter( "batchAmount", batchAmount ) );
                         keepDeleting = rowsDeleted > 0;
                         totalRowsDeleted += rowsDeleted;
                     }

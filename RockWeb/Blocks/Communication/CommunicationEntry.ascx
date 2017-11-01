@@ -1,5 +1,15 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="CommunicationEntry.ascx.cs" Inherits="RockWeb.Blocks.Communication.CommunicationEntry" %>
-<%@ Register src="CommunicationDetail.ascx" TagName="communicationDetail" TagPrefix="cd" %>
+
+<script>
+    //Sys.WebForms.PageRequestManager.getInstance().add_endRequest(scrollToGrid);
+    function scrollToResults() {
+        
+            $('html, body').animate({
+                scrollTop: $('.js-pnl-result')
+            }, 'fast');
+        
+    }
+</script>
 
 <asp:UpdatePanel ID="upPanel" runat="server">
     <ContentTemplate>
@@ -20,6 +30,7 @@
                     <asp:HiddenField ID="hfMediumId" runat="server" />
 
                     <asp:ValidationSummary ID="ValidationSummary" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
+                    <asp:CustomValidator ID="cvDelayDateTime" runat="server" />
 
                     <div class="well well-pillwrap">
                         <div id="divMediums" runat="server">
@@ -92,11 +103,11 @@
                         <asp:LinkButton ID="btnCancel" runat="server" Text="Cancel" CssClass="btn btn-link" OnClick="btnCancel_Click" />
                     </div>
 
-                    <Rock:NotificationBox ID="nbTestResult" CssClass="margin-t-md" runat="server" NotificationBoxType="Success" Text="Test communication has been sent." Visible="false" />
+                    <Rock:NotificationBox ID="nbTestResult" CssClass="margin-t-md" runat="server" Visible="false" />
 
                 </asp:Panel>
 
-                <asp:Panel ID="pnlResult" runat="server" Visible="false">
+                <asp:Panel ID="pnlResult" runat="server" Visible="false" CssClass="js-pnl-result">
                     <Rock:NotificationBox ID="nbResult" runat="server" NotificationBoxType="Success" />
                     <br />
                     <asp:HyperLink ID="hlViewCommunication" runat="server" Text="View Communication" />

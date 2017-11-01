@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -99,6 +99,34 @@ namespace Rock.Web.UI.Controls
         }
 
         /// <summary>
+        /// Gets or sets the warning text.
+        /// </summary>
+        /// <value>
+        /// The warning text.
+        /// </value>
+        [
+        Bindable( true ),
+        Category( "Appearance" ),
+        DefaultValue( "" ),
+        Description( "The warning block." )
+        ]
+        public string Warning
+        {
+            get
+            {
+                return WarningBlock != null ? WarningBlock.Text : string.Empty;
+            }
+
+            set
+            {
+                if ( WarningBlock != null )
+                {
+                    WarningBlock.Text = value;
+                }
+            }
+        }
+
+        /// <summary>
         /// Gets or sets a value indicating whether this <see cref="RockTextBox"/> is required.
         /// </summary>
         /// <value>
@@ -179,6 +207,14 @@ namespace Rock.Web.UI.Controls
         public HelpBlock HelpBlock { get; set; }
 
         /// <summary>
+        /// Gets or sets the warning block.
+        /// </summary>
+        /// <value>
+        /// The warning block.
+        /// </value>
+        public WarningBlock WarningBlock { get; set; }
+
+        /// <summary>
         /// Gets or sets the required field validator.
         /// </summary>
         /// <value>
@@ -208,6 +244,7 @@ namespace Rock.Web.UI.Controls
         {
             RequiredFieldValidator = new HiddenFieldValidator();
             HelpBlock = new HelpBlock();
+            WarningBlock = new WarningBlock();
             _hfBinaryFileId = new HiddenField();
             _hfBinaryFileTypeGuid = new HiddenField();
         }
@@ -274,6 +311,31 @@ namespace Rock.Web.UI.Controls
         }
 
         /// <summary>
+        /// Determines if the file should be stored with the 'Temporary' flag (defaults to true)
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [upload as temporary]; otherwise, <c>false</c>.
+        /// </value>
+        [
+        Bindable( true ),
+        Category( "Behavior" ),
+        DefaultValue( "" ),
+        Description( "Determines if the file should be stored with the 'Temporary' flag." )
+        ]
+        public bool UploadAsTemporary
+        {
+            get
+            {
+                return ViewState["UploadAsTemporary"] as bool? ?? true;
+            }
+
+            set
+            {
+                ViewState["UploadAsTemporary"] = value;
+            }
+        }
+
+        /// <summary>
         /// Gets the uploaded content file path.
         /// </summary>
         /// <value>
@@ -289,7 +351,15 @@ namespace Rock.Web.UI.Controls
                 }
                 else
                 {
-                    return this.RootFolder.EnsureTrailingForwardslash() + _hfBinaryFileId.Value;
+                    // When IsBinaryFile=False, _hfBinaryFileId.Value will be the name of the uploaded file (see fileUploader.js)
+                    if ( _hfBinaryFileId.Value == "0" || string.IsNullOrEmpty( _hfBinaryFileId.Value ) )
+                    {
+                        return string.Empty;
+                    }
+                    else
+                    {
+                        return this.RootFolder.EnsureTrailingForwardslash() + _hfBinaryFileId.Value;
+                    }
                 }
             }
         }
@@ -393,6 +463,27 @@ namespace Rock.Web.UI.Controls
             set
             {
                 ViewState["ShowDeleteButton"] = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether [allow multiple uploads].
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [allow multiple uploads]; otherwise, <c>false</c>.
+        /// </value>
+        public bool AllowMultipleUploads
+        {
+            get
+            {
+                EnsureChildControls();
+                return _fileUpload.AllowMultiple;
+            }
+
+            set
+            {
+                EnsureChildControls();
+                _fileUpload.AllowMultiple = value;
             }
         }
 
@@ -595,7 +686,8 @@ namespace Rock.Web.UI.Controls
 
                 writer.Write( @"
                     <div class='js-upload-progress upload-progress' style='display:none;'>
-                        <i class='fa fa-refresh fa-3x fa-spin'></i>                    
+                        <i class='fa fa-refresh fa-3x fa-spin'></i>
+                        <div class='js-upload-progress-percent'></div>
                     </div>" );
 
                 if (this.DisplayMode == UploaderDisplayMode.Button)
@@ -651,6 +743,10 @@ namespace Rock.Web.UI.Controls
 
             var postBackScript = this.FileUploaded != null ? this.Page.ClientScript.GetPostBackEventReference( new PostBackOptions( this, "FileUploaded" ), true ) : "";
             postBackScript = postBackScript.Replace( '\'', '"' );
+
+            var postBackRemovedScript = this.FileRemoved != null ? this.Page.ClientScript.GetPostBackEventReference( new PostBackOptions( this, "FileRemoved" ), true ) : "";
+            postBackRemovedScript = postBackRemovedScript.Replace( '\'', '"' );
+
             var script = string.Format(
 @"
 Rock.controls.fileUploader.initialize({{
@@ -671,21 +767,25 @@ Rock.controls.fileUploader.initialize({{
     doneFunction: function (e, data) {{
         {11}
     }},
-    maxUploadBytes: {12}
+    postbackRemovedScript: '{12}',
+    maxUploadBytes: {13},
+    isTemporary: '{14}',
 }});",
-                _fileUpload.ClientID,
-                this.BinaryFileId,
-                this.BinaryFileTypeGuid,
-                _hfBinaryFileId.ClientID,
-                _aFileName.ClientID,
-                _aRemove.ClientID,
-                postBackScript,
-                this.IsBinaryFile ? "T" : "F",
-                Rock.Security.Encryption.EncryptString( this.RootFolder ),
-                this.UploadUrl,
-                this.SubmitFunctionClientScript,
-                this.DoneFunctionClientScript,
-                maxUploadBytes.HasValue ? maxUploadBytes.Value.ToString() : "null" );
+                _fileUpload.ClientID, // 0
+                this.BinaryFileId, // 1
+                this.BinaryFileTypeGuid, // 2
+                _hfBinaryFileId.ClientID, // 3
+                _aFileName.ClientID, // 4
+                _aRemove.ClientID, // 5
+                postBackScript, // 6
+                this.IsBinaryFile ? "T" : "F", // 7
+                Rock.Security.Encryption.EncryptString( this.RootFolder ), // 8
+                this.UploadUrl, // 9
+                this.SubmitFunctionClientScript, // 10
+                this.DoneFunctionClientScript, // 11
+                postBackRemovedScript, // 12
+                maxUploadBytes.HasValue ? maxUploadBytes.Value.ToString() : "null", // 13
+                this.UploadAsTemporary ? "T" : "F" ); // {14}
             ScriptManager.RegisterStartupScript( _fileUpload, _fileUpload.GetType(), "FileUploaderScript_" + this.ClientID, script, true );
         }
 
@@ -712,7 +812,12 @@ Rock.controls.fileUploader.initialize({{
         /// <summary>
         /// Occurs when a file is uploaded.
         /// </summary>
-        public event EventHandler FileUploaded;
+        public event EventHandler<FileUploaderEventArgs> FileUploaded;
+
+        /// <summary>
+        /// Occurs when a file is removed.
+        /// </summary>
+        public event EventHandler<FileUploaderEventArgs> FileRemoved;
 
         /// <summary>
         /// When implemented by a class, enables a server control to process an event raised when a form is posted to the server.
@@ -722,8 +827,70 @@ Rock.controls.fileUploader.initialize({{
         {
             if ( eventArgument == "FileUploaded" && FileUploaded != null )
             {
-                FileUploaded( this, new EventArgs() );
+                EnsureChildControls();
+                
+                // grab the _hfBinaryFileId value of the Request.Params
+                _hfBinaryFileId.Value = System.Web.HttpContext.Current?.Request?.Params[_hfBinaryFileId.UniqueID];
+
+                if (IsBinaryFile)
+                {
+                    FileUploaded( this, new FileUploaderEventArgs( this.UploadedContentFilePath ));
+                }
+                else
+                {
+                    FileUploaded( this, new FileUploaderEventArgs( this.BinaryFileId ));
+                }
             }
+
+            if ( eventArgument == "FileRemoved" )
+            {
+                this.BinaryFileId = 0;
+
+                if ( FileRemoved != null )
+                {
+                    FileRemoved( this, new FileUploaderEventArgs( this.BinaryFileId ) );
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public class FileUploaderEventArgs : EventArgs
+    {
+        /// <summary>
+        /// Gets BinaryFileId of the File (If IsBinaryFile=True)
+        /// </summary>
+        /// <value>
+        /// The field value.
+        /// </value>
+        public int? BinaryFileId { get; private set; }
+
+        /// <summary>
+        /// Gets the name of the file (If IsBinaryFile=False)
+        /// </summary>
+        /// <value>
+        /// The name of the file.
+        /// </value>
+        public string FileName { get; private set; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FileUploaderEventArgs"/> class.
+        /// </summary>
+        /// <param name="binaryFileId">The binary file identifier.</param>
+        public FileUploaderEventArgs( int? binaryFileId ) : base()
+        {
+            BinaryFileId = binaryFileId;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FileUploaderEventArgs" /> class.
+        /// </summary>
+        /// <param name="fileName">Name of the file.</param>
+        public FileUploaderEventArgs( string fileName ) : base()
+        {
+            FileName = fileName;
         }
     }
 }

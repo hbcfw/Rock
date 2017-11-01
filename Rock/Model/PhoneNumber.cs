@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,6 +29,7 @@ namespace Rock.Model
     /// <summary>
     /// Phone Number POCO Entity.
     /// </summary>
+    [RockDomain( "CRM" )]
     [Table( "PhoneNumber" )]
     [DataContract]
     public partial class PhoneNumber : Model<PhoneNumber>
@@ -85,6 +86,15 @@ namespace Rock.Model
         [MaxLength( 50 )]
         [DataMember]
         public string NumberFormatted { get; set; }
+
+        /// <summary>
+        /// Gets or sets the phone number reversed. This is the fastest way to search by phone number ending in xxxx.
+        /// </summary>
+        /// <value>
+        /// A <see cref="System.String"/> representing the phone number without string formatting.
+        /// </value>
+        [DatabaseGenerated( DatabaseGeneratedOption.Computed )]
+        public string NumberReversed { get; set; }
 
         /// <summary>
         /// Gets or sets the extension (if any) that would need to be dialed to contact the owner. 
@@ -153,6 +163,7 @@ namespace Rock.Model
         /// <value>
         /// The <see cref="Rock.Model.Person"/> that the phone number belongs to.
         /// </value>
+        [LavaInclude]
         public virtual Person Person { get; set; }
 
         /// <summary>
@@ -188,6 +199,7 @@ namespace Rock.Model
                 }
                 
                 NumberFormatted = PhoneNumber.FormattedNumber( CountryCode, Number );
+                Number = PhoneNumber.CleanNumber( NumberFormatted );
             }
 
             base.PreSaveChanges( dbContext, state );

@@ -1,8 +1,5 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="DynamicHeatMap.ascx.cs" Inherits="RockWeb.Blocks.Reporting.DynamicHeatMap" %>
 
-<script type="text/javascript" src="https://google-maps-utility-library-v3.googlecode.com/svn/trunk/maplabel/src/maplabel-compiled.js"></script>
-
-
 <asp:UpdatePanel ID="upnlContent" runat="server" UpdateMode="Conditional">
     <ContentTemplate>
 
@@ -40,7 +37,7 @@
                         <i class='fa fa-floppy-o' title="Save selected shape to a named location"></i>
                     </asp:Panel>
 
-                    <div class="btn btn-danger btn-xs js-deleteshape"><i class='fa fa-times' title="Delete selected shape"></i></div>
+                    <div class="btn btn-danger btn-xs js-deleteshape" style="display:none"><i class='fa fa-times' title="Delete selected shape"></i></div>
                 </div>
             </div>
             <div class="panel-body">
@@ -230,6 +227,10 @@
                         if (allShapesIndex > -1)
                         {
                             map.AllShapes.splice(allShapesIndex, 1);
+                            if (map.AllShapes.length == 0)
+                            {
+                                $('.js-deleteshape').hide();
+                            }
                         }
                                     
                         shape.setMap(null);
@@ -286,6 +287,7 @@
                             }
 
                             map.AllShapes.push(shape);
+                            $('.js-deleteshape').show();
                         }
                         
                         // NOTE: bounds is the rectangle bounds of the shape (not the actual shape)
@@ -434,6 +436,7 @@
                 });
 
                 $('.js-saveshape').click(function () {
+
                     if (map.SelectedShape) {
                         
                         var geoFencePath;
@@ -666,7 +669,7 @@
         </script>
 
         <%-- Save Shape to Location --%>
-        <Rock:ModalDialog ID="mdSaveLocation" runat="server" CssClass="js-savelocation-modal" ValidationGroup="vgSaveLocation" OnOkScript="saveLocationGeofence();">
+        <Rock:ModalDialog ID="mdSaveLocation" runat="server" CssClass="js-savelocation-modal" ValidationGroup="vgSaveLocation" OnOkScript="saveLocationGeofence();" Visible="true">
             <Content>
                 <Rock:LocationItemPicker ID="lpLocation" runat="server" AllowMultiSelect="false" />
             </Content>

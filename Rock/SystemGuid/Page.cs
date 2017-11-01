@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -277,16 +277,16 @@ namespace Rock.SystemGuid
         public const string CHILDPAGES = "D58F205E-E9CC-4BD9-BC79-F3DA86F6E346";
 
         /// <summary>
-        /// Gets the CKEditor RockFileBrowser Plugin Frame page guid
+        /// Gets the HtmlEditor RockFileBrowser Plugin Frame page guid
         /// ParentPage: System Dialogs
         /// </summary>
-        public const string CKEDITOR_ROCKFILEBROWSER_PLUGIN_FRAME = "4A4995CA-24F6-4D33-B861-A24274F53AA6";
+        public const string HTMLEDITOR_ROCKFILEBROWSER_PLUGIN_FRAME = "4A4995CA-24F6-4D33-B861-A24274F53AA6";
 
         /// <summary>
-        /// Gets the CKEditor RockMergeField Plugin Frame page guid
+        /// Gets the HtmlEditor RockMergeField Plugin Frame page guid
         /// ParentPage: System Dialogs
         /// </summary>
-        public const string CKEDITOR_ROCKMERGEFIELD_PLUGIN_FRAME = "1FC09F0D-72F2-44E6-9D16-2884F9AF33DD";
+        public const string HTMLEDITOR_ROCKMERGEFIELD_PLUGIN_FRAME = "1FC09F0D-72F2-44E6-9D16-2884F9AF33DD";
 
         /// <summary>
         /// Gets the CMS Configuration page guid
@@ -359,6 +359,11 @@ namespace Rock.SystemGuid
         /// ParentPage: Manage
         /// </summary>
         public const string CONNECTIONS = "530860ED-BC73-4A43-8E7C-69533EF2B6AD";
+
+        /// <summary>
+        /// The connection request detail page guid
+        /// </summary>
+        public const string CONNECTION_REQUEST_DETAIL = "50f04e77-8d3b-4268-80ab-bc15dd6cb262";
 
         /// <summary>
         /// Gets the Contact Us page guid
@@ -527,6 +532,11 @@ namespace Rock.SystemGuid
         /// ParentPage: Scheduled Transaction
         /// </summary>
         public const string EDIT_SCHEDULED_TRANSACTION_SCHEDULED_TRANSACTION = "F1C3BBD3-EE91-4DDD-8880-1542EBCD8041";
+
+        /// <summary>
+        /// Gets the Email Analytics page guid
+        /// </summary>
+        public const string EMAIL_ANALYTICS = "DF014200-72A3-48A0-A953-E594E5410E36";
 
         /// <summary>
         /// Gets the Email Preference page guid
@@ -1139,6 +1149,11 @@ namespace Rock.SystemGuid
         /// ParentPage: Functions
         /// </summary>
         public const string PLEDGE_LIST = "1570D2AF-4FE2-4FC7-BED9-F20EBCBE9867";
+
+        /// <summary>
+        /// The PowerBI Account Registration Page
+        /// </summary>
+        public const string POWERBI_ACCOUNT_REGISTRATION = "BB65848A-3EBD-D181-4150-956A39FFE57E";
 
         /// <summary>
         /// Gets the Power Tools page guid

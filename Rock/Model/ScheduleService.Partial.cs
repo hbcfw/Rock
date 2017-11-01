@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,8 +27,25 @@ namespace Rock.Model
     /// <summary>
     /// The data access/service class for the <see cref="Rock.Model.Schedule"/> entity. This inherits from the Service class
     /// </summary>
-    public partial class ScheduleService 
+    public partial class ScheduleService
     {
+
+        /// <summary>
+        /// Gets occurrence data for the selected group
+        /// </summary>
+        /// <param name="group">The group.</param>
+        /// <param name="fromDateTime">From date time.</param>
+        /// <param name="toDateTime">To date time.</param>
+        /// <param name="locationIds">The location ids.</param>
+        /// <param name="scheduleIds">The schedule ids.</param>
+        /// <param name="loadSummaryData">if set to <c>true</c> [load summary data].</param>
+        /// <returns></returns>
+        public List<ScheduleOccurrence> GetGroupOccurrences( Group group, DateTime? fromDateTime, DateTime? toDateTime,
+            List<int> locationIds, List<int> scheduleIds, bool loadSummaryData )
+        {
+            return GetGroupOccurrences( group, fromDateTime, toDateTime, locationIds, scheduleIds, loadSummaryData, null );
+        }
+
         /// <summary>
         /// Gets occurrence data for the selected group
         /// </summary>
@@ -41,7 +58,7 @@ namespace Rock.Model
         /// <param name="campusId">The campus identifier.</param>
         /// <returns></returns>
         public List<ScheduleOccurrence> GetGroupOccurrences( Group group, DateTime? fromDateTime, DateTime? toDateTime, 
-            List<int> locationIds, List<int> scheduleIds, bool loadSummaryData, int? campusId = null )
+            List<int> locationIds, List<int> scheduleIds, bool loadSummaryData, int? campusId )
         {
             var occurrences = new List<ScheduleOccurrence>();
 
@@ -75,17 +92,13 @@ namespace Rock.Model
                     // Location Filter
                     if ( locationIds.Any() )
                     {
-                        qry = qry.Where( a =>
-                            a.LocationId.HasValue &&
-                            locationIds.Contains( a.LocationId.Value ) );
+                        qry = qry.Where( a => locationIds.Contains( a.LocationId ?? 0 ) );
                     }
 
                     // Schedule Filter
                     if ( scheduleIds.Any() )
                     {
-                        qry = qry.Where( a =>
-                            a.ScheduleId.HasValue &&
-                            scheduleIds.Contains( a.ScheduleId.Value ) );
+                        qry = qry.Where( a => scheduleIds.Contains( a.ScheduleId ?? 0 ) );
                     }
 
                     // Get the unique combination of location/schedule/date for the selected group
@@ -163,15 +176,15 @@ namespace Rock.Model
                 {
                     var minDate = occurrences.Min( o => o.Date );
                     var maxDate = occurrences.Max( o => o.Date ).AddDays( 1 );
-                    var attendances = attendanceService
+                    var attendanceQry = attendanceService
                         .Queryable().AsNoTracking()
                         .Where( a =>
-                            a.PersonAlias != null &&
-                            a.PersonAliasId.HasValue &&
                             a.GroupId.HasValue &&
                             a.GroupId == group.Id &&
                             a.StartDateTime >= minDate &&
-                            a.StartDateTime < maxDate )
+                            a.StartDateTime < maxDate && 
+                            a.PersonAlias != null &&
+                            a.PersonAliasId.HasValue )
                         .Select( a => new
                         {
                             a.LocationId,
@@ -196,16 +209,18 @@ namespace Rock.Model
                             )
                             .Select( m => m.PersonId );
 
-                        attendances = attendances
+                        attendanceQry = attendanceQry
                             .Where( s => campusQry.Contains( s.PersonId ) );
                     }
 
-                    foreach( var summary in attendances
+                    var attendances = attendanceQry.ToList();
+
+                    foreach ( var summary in attendances
                         .GroupBy( a => new
                         {
                             a.LocationId,
                             a.ScheduleId,
-                            Date = DbFunctions.TruncateTime( a.StartDateTime )
+                            Date = a.StartDateTime.Date
                         } )
                         .Select( a => new
                         {
@@ -267,11 +282,10 @@ namespace Rock.Model
                     var startDate = fromDateTime.HasValue ? fromDateTime.Value : RockDateTime.Today.AddMonths( -2 );
                     var endDate = toDateTime.HasValue ? toDateTime.Value : RockDateTime.Today.AddDays( 1 );
 
-                    DDay.iCal.Event calEvent = groupSchedule.GetCalenderEvent();
-                    if ( calEvent != null )
+                    if ( !string.IsNullOrWhiteSpace( groupSchedule.iCalendarContent ) )
                     {
                         // If schedule has an iCal schedule, get all the past occurrences 
-                        foreach ( var occurrence in calEvent.GetOccurrences( startDate, endDate ) )
+                        foreach ( var occurrence in groupSchedule.GetOccurrences( startDate, endDate ) )
                         {
                             var scheduleOccurrence = new ScheduleOccurrence(
                                 occurrence.Period.StartTime.Date, occurrence.Period.StartTime.TimeOfDay, groupSchedule.Id, groupSchedule.Name );

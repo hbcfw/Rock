@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -36,6 +36,7 @@ namespace Rock.Model
     /// <summary>
     /// Represents a Report (based off of a <see cref="Rock.Model.DataView"/> in Rock.
     /// </summary>
+    [RockDomain( "Reporting" )]
     [Table( "Report" )]
     [DataContract]
     public partial class Report : Model<Report>, ICategorized
@@ -108,6 +109,15 @@ namespace Rock.Model
         /// </value>
         [DataMember]
         public int? FetchTop { get; set; }
+
+        /// <summary>
+        /// Gets or sets the query hint that is included in the SQL that is executed on the database server
+        /// </summary>
+        /// <value>
+        /// The query hint.
+        /// </value>
+        [DataMember]
+        public string QueryHint { get; set; }
 
         #endregion
 
@@ -210,6 +220,8 @@ namespace Rock.Model
             return reportResult;
         }
 
+
+
         /// <summary>
         /// Returns a IQueryable of the report
         /// </summary>
@@ -223,11 +235,50 @@ namespace Rock.Model
         /// <returns></returns>
         public IQueryable GetQueryable( Type entityType, Dictionary<int, EntityField> entityFields, Dictionary<int, AttributeCache> attributes, Dictionary<int, ReportField> selectComponents, Rock.Web.UI.Controls.SortProperty sortProperty, int? databaseTimeoutSeconds, out List<string> errorMessages )
         {
+            System.Data.Entity.DbContext reportDbContext;
+            return GetQueryable( entityType, entityFields, attributes, selectComponents, sortProperty, databaseTimeoutSeconds, false, out errorMessages, out reportDbContext );
+        }
+
+        /// <summary>
+        /// Gets the queryable.
+        /// </summary>
+        /// <param name="entityType">Type of the entity.</param>
+        /// <param name="entityFields">The entity fields.</param>
+        /// <param name="attributes">The attributes.</param>
+        /// <param name="selectComponents">The select components.</param>
+        /// <param name="sortProperty">The sort property.</param>
+        /// <param name="databaseTimeoutSeconds">The database timeout seconds.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <param name="reportDbContext">The report database context.</param>
+        /// <returns></returns>
+        public IQueryable GetQueryable( Type entityType, Dictionary<int, EntityField> entityFields, Dictionary<int, AttributeCache> attributes, Dictionary<int, ReportField> selectComponents, Rock.Web.UI.Controls.SortProperty sortProperty, int? databaseTimeoutSeconds, out List<string> errorMessages, out System.Data.Entity.DbContext reportDbContext )
+        {
+            return GetQueryable( entityType, entityFields, attributes, selectComponents, sortProperty, databaseTimeoutSeconds, false, out errorMessages, out reportDbContext );
+        }
+
+        /// <summary>
+        /// Returns a IQueryable of the report
+        /// </summary>
+        /// <param name="entityType">Type of the entity.</param>
+        /// <param name="entityFields">The entity fields.</param>
+        /// <param name="attributes">The attributes.</param>
+        /// <param name="selectComponents">The select components.</param>
+        /// <param name="sortProperty">The sort property.</param>
+        /// <param name="databaseTimeoutSeconds">The database timeout seconds.</param>
+        /// <param name="isCommunication">if set to <c>true</c> [is communication].</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <param name="reportDbContext">The report database context that was used.</param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        /// <exception cref="System.Exception"></exception>
+        public IQueryable GetQueryable( Type entityType, Dictionary<int, EntityField> entityFields, Dictionary<int, AttributeCache> attributes, Dictionary<int, ReportField> selectComponents, Rock.Web.UI.Controls.SortProperty sortProperty, int? databaseTimeoutSeconds, bool isCommunication, out List<string> errorMessages, out System.Data.Entity.DbContext reportDbContext )
+        {
             errorMessages = new List<string>();
+            reportDbContext = null;
 
             if ( entityType != null )
             {
-                System.Data.Entity.DbContext reportDbContext = Reflection.GetDbContextForEntityType( entityType );
+                reportDbContext = Reflection.GetDbContextForEntityType( entityType );
                 IService serviceInstance = Reflection.GetServiceForEntityType( entityType, reportDbContext );
 
                 if ( databaseTimeoutSeconds.HasValue )
@@ -275,6 +326,11 @@ namespace Rock.Model
                                     }
                                 }
                             }
+
+                            if ( isCommunication && selectComponent is IRecipientDataSelect )
+                            {
+                                dynamicFields.Add( $"Recipient_{selectComponent.ColumnPropertyName}_{reportField.Key}", ( (IRecipientDataSelect)selectComponent ).RecipientColumnFieldType );
+                            }
                         }
                     }
 
@@ -309,12 +365,21 @@ namespace Rock.Model
                             try
                             {
                                 var componentExpression = selectComponent.GetExpression( reportDbContext, idExpression, reportField.Value.Selection ?? string.Empty );
-                                if (componentExpression == null)
+                                if ( componentExpression == null )
                                 {
                                     componentExpression = Expression.Constant( null, typeof( string ) );
                                 }
 
                                 bindings.Add( Expression.Bind( dynamicType.GetField( string.Format( "data_{0}_{1}", selectComponent.ColumnPropertyName, reportField.Key ) ), componentExpression ) );
+
+                                if ( isCommunication && selectComponent is IRecipientDataSelect )
+                                {
+                                    var recipientPersonIdExpression = ( (IRecipientDataSelect)selectComponent ).GetRecipientPersonIdExpression( reportDbContext, idExpression, reportField.Value.Selection ?? string.Empty );
+                                    if ( recipientPersonIdExpression != null )
+                                    {
+                                        bindings.Add( Expression.Bind( dynamicType.GetField( string.Format( "recipient_{0}_{1}", selectComponent.ColumnPropertyName, reportField.Key ) ), recipientPersonIdExpression ) );
+                                    }
+                                }
 
                                 var customSortProperties = selectComponent.SortProperties( reportField.Value.Selection );
                                 if ( !string.IsNullOrEmpty( customSortProperties ) )
@@ -328,7 +393,7 @@ namespace Rock.Model
                                         {
                                             memberExpression = Expression.Property( memberExpression ?? paramExpression, customSortPropertyPart );
                                         }
-                                        
+
                                         bindings.Add( Expression.Bind( memberInfo, memberExpression ) );
                                     }
                                 }

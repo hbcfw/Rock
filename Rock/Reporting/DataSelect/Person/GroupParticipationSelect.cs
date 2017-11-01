@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,7 +14,6 @@
 // limitations under the License.
 // </copyright>
 //
-
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -125,6 +124,22 @@ namespace Rock.Reporting.DataSelect.Person
         public override string GetTitle( Type entityType )
         {
             return "Group Participation";
+        }
+
+        /// <summary>
+        /// Comma-delimited list of the Entity properties that should be used for Sorting. Normally, you should leave this as null which will make it sort on the returned field
+        /// To disable sorting for this field, return string.Empty;
+        /// </summary>
+        /// <param name="selection"></param>
+        /// <returns></returns>
+        /// <value>
+        /// The sort expression.
+        /// </value>
+        public override string SortProperties( string selection )
+        {
+            // since this returns an Enumerable, it doesn't really make sense to sort it
+            // return string.Empty to disable sorting
+            return string.Empty;
         }
 
         /// <summary>
@@ -264,7 +279,7 @@ namespace Rock.Reporting.DataSelect.Person
             // Define Control: Role Type DropDown List
             var ddlRoleType = new RockDropDownList();
             ddlRoleType.ID = parentControl.GetChildControlInstanceName( _CtlRoleType );
-            ddlRoleType.Label = "with Group Role Type";
+            ddlRoleType.Label = "with Group Member Type";
             ddlRoleType.Help = "Specifies the type of Group Role the Member must have to be included in the result. If no value is selected, Members in any Role will be included.";
             ddlRoleType.Items.Add( new ListItem( string.Empty, RoleTypeSpecifier.Any.ToString() ) );
             ddlRoleType.Items.Add( new ListItem( "Leader", RoleTypeSpecifier.Leader.ToString() ) );

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -74,11 +74,12 @@ namespace Rock.Jobs
                 int sendCount = 0;
                 int registrationInstanceCount = 0;
 
-                var appRoot = Rock.Web.Cache.GlobalAttributesCache.Read().GetValue( "ExternalApplicationRoot" );
+                var appRoot = Rock.Web.Cache.GlobalAttributesCache.Read().GetValue( "PublicApplicationRoot" );
 
                 RegistrationService registrationService = new RegistrationService( rockContext );
 
-                var cutoffDate = RockDateTime.Now.AddDays( dataMap.GetIntFromString( "CutoffDate" ) * -1 );
+                var currentDate = RockDateTime.Today;
+                var cutoffDays = dataMap.GetIntFromString( "CutoffDate" );
 
                 var registrations = registrationService.Queryable( "RegistrationInstance" )
                                                 .Where( r =>
@@ -89,33 +90,31 @@ namespace Rock.Jobs
                                                          && r.RegistrationInstance.RegistrationTemplate.PaymentReminderFromEmail != null && r.RegistrationInstance.RegistrationTemplate.PaymentReminderFromEmail.Length > 0
                                                          && r.RegistrationInstance.RegistrationTemplate.PaymentReminderSubject != null && r.RegistrationInstance.RegistrationTemplate.PaymentReminderSubject.Length > 0
                                                          && (r.RegistrationInstance.RegistrationTemplate.Cost != 0 || (r.RegistrationInstance.Cost != null && r.RegistrationInstance.Cost != 0))
-                                                         && (r.RegistrationInstance.EndDateTime == null || r.RegistrationInstance.EndDateTime <= cutoffDate) )
+                                                         && (r.RegistrationInstance.EndDateTime == null || currentDate <= System.Data.Entity.SqlServer.SqlFunctions.DateAdd("day", cutoffDays,  r.RegistrationInstance.EndDateTime) ) )
                                                  .ToList();
 
                 registrationInstanceCount = registrations.Select( r => r.RegistrationInstance.Id ).Distinct().Count();
 
                 foreach(var registration in registrations )
                 {
-                    if ( registration.TotalCost > registration.TotalPaid )
+                    if ( registration.DiscountedCost > registration.TotalPaid )
                     {
                         var reminderDate = RockDateTime.Now.AddDays( registration.RegistrationInstance.RegistrationTemplate.PaymentReminderTimeSpan.Value * -1 );
 
                         if ( registration.LastPaymentReminderDateTime < reminderDate )
                         {
-                            var recipients = new List<string>();
-
                             Dictionary<string, object> mergeObjects = new Dictionary<string, object>();
                             mergeObjects.Add( "Registration", registration );
                             mergeObjects.Add( "RegistrationInstance", registration.RegistrationInstance );
 
-                            recipients.Add( registration.ConfirmationEmail );
-
-                            string message = registration.RegistrationInstance.RegistrationTemplate.PaymentReminderEmailTemplate.ResolveMergeFields( mergeObjects );
-                            string fromEmail = registration.RegistrationInstance.RegistrationTemplate.PaymentReminderFromEmail.ResolveMergeFields( mergeObjects );
-                            string fromName = registration.RegistrationInstance.RegistrationTemplate.PaymentReminderFromName.ResolveMergeFields( mergeObjects );
-                            string subject = registration.RegistrationInstance.RegistrationTemplate.PaymentReminderSubject.ResolveMergeFields( mergeObjects );
-
-                            Email.Send( fromEmail, fromName, subject, recipients, message, appRoot );
+                            var emailMessage = new RockEmailMessage();
+                            emailMessage.AdditionalMergeFields = mergeObjects;
+                            emailMessage.AddRecipient( new RecipientData( registration.ConfirmationEmail, mergeObjects ) );
+                            emailMessage.FromEmail = registration.RegistrationInstance.RegistrationTemplate.PaymentReminderFromEmail;
+                            emailMessage.FromName = registration.RegistrationInstance.RegistrationTemplate.PaymentReminderSubject;
+                            emailMessage.Subject = registration.RegistrationInstance.RegistrationTemplate.PaymentReminderFromName;
+                            emailMessage.Message = registration.RegistrationInstance.RegistrationTemplate.PaymentReminderEmailTemplate;
+                            emailMessage.Send();
 
                             registration.LastPaymentReminderDateTime = RockDateTime.Now;
                             rockContext.SaveChanges();

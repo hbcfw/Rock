@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -46,7 +46,7 @@ namespace RockWeb.Blocks.Crm
     [IntegerField( "Maximum Phone Number Length", "Maximum length for phone number searches (defaults to 10).", false, 10, "", 7 )]
     [TextField( "Search Regex", "Regular Expression to run the search input through before searching. Useful for stripping off characters.", false, "", "", 8 )]
     [MemoField( "Update Message", "Message to show on the profile form. Leaving this blank will hide the message.", false, "Please provide only the information that needs to be updated.", "", 9 )]
-    [CodeEditorField("Complete Message Lava", "Message to display when complete.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, true, @"<div class='alert alert-success'>We have recuived your updated information. Thank you for helping us keep your information current.</div>", "", 10)]
+    [CodeEditorField("Complete Message Lava", "Message to display when complete.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, true, @"<div class='alert alert-success'>We have received your updated information. Thank you for helping us keep your information current.</div>", "", 10)]
     [SystemEmailField( "Update Email", "The system email to use to send the updated information.", false, "", "", 11 )]
     [WorkflowTypeField("Workflow Type", @"The workflow type to launch when an update is made. The following attribute keys should be available on the workflow:
                             <ul>
@@ -64,7 +64,6 @@ namespace RockWeb.Blocks.Crm
                                 <li>MobilePhone (Text)</li>
                                 <li>OtherUpdates (Memo)</li>
                             </ul>", false, false, "", "", 12)]
-    [BooleanField( "Enable Debug", "Shows the fields available to merge in lava.", false, "", 13 )]
     public partial class PersonUpdateKiosk : Rock.Web.UI.RockBlock
     {
         #region Fields
@@ -331,7 +330,7 @@ namespace RockWeb.Blocks.Crm
         protected void lbProfileNext_Click( object sender, EventArgs e )
         {
             // setup merge fields
-            var mergeFields = new Dictionary<string, object>();
+            var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
             mergeFields.Add( "PersonId", hfPersonId.Value );
             mergeFields.Add( "FirstName", tbFirstName.Text );
             mergeFields.Add( "LastName", tbLastName.Text );
@@ -346,34 +345,31 @@ namespace RockWeb.Blocks.Crm
             mergeFields.Add( "BirthDate", dpBirthdate.Text );
             mergeFields.Add( "OtherUpdates", tbOtherUpdates.Text );
 
-            var globalAttributeFields = Rock.Web.Cache.GlobalAttributesCache.GetMergeFields( CurrentPerson );
-            globalAttributeFields.ToList().ForEach( d => mergeFields.Add( d.Key, d.Value ) );
-
             // if an email was provided email results
             RockContext rockContext = new RockContext();
             if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "UpdateEmail" ) ) )
             {
                 var receiptEmail = new SystemEmailService( rockContext ).Get( new Guid( GetAttributeValue( "UpdateEmail" ) ) );
 
-                if ( receiptEmail != null )
+                if ( receiptEmail != null && receiptEmail.To.IsNotNullOrWhitespace() )
                 {
-                    var appRoot = Rock.Web.Cache.GlobalAttributesCache.Read( rockContext ).GetValue( "ExternalApplicationRoot" );
-
-                    var recipients = new List<RecipientData>();
-                    recipients.Add( new RecipientData( null, mergeFields ) );
-
-                    Email.Send( receiptEmail.Guid, recipients, appRoot );
+                    var errorMessages = new List<string>();
+                    var message = new RockEmailMessage( receiptEmail );
+                    foreach ( var recipient in message.GetRecipientData() )
+                    {
+                        recipient.MergeFields = mergeFields;
+                    }
+                    message.Send( out errorMessages );
                 }
             }
 
             // launch workflow if configured
             if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "WorkflowType" ) ) )
             {
-                var workflowTypeService = new WorkflowTypeService( rockContext );
                 var workflowService = new WorkflowService( rockContext );
-                var workflowType = workflowTypeService.Get( new Guid( GetAttributeValue( "WorkflowType" ) ) );
+                var workflowType = WorkflowTypeCache.Read( new Guid( GetAttributeValue( "WorkflowType" ) ) );
 
-                if ( workflowType != null )
+                if ( workflowType != null && ( workflowType.IsActive ?? true ) )
                 {
                     var workflow = Rock.Model.Workflow.Activate( workflowType, "Kiosk Update Info" );
 
@@ -403,12 +399,6 @@ namespace RockWeb.Blocks.Crm
 
             lCompleteMessage.Text = GetAttributeValue( "CompleteMessageLava" ).ResolveMergeFields( mergeFields );
 
-            bool enableDebug = GetAttributeValue( "EnableDebug" ).AsBoolean();
-            if ( enableDebug && IsUserAuthorized( Authorization.EDIT ) )
-            {
-                lDebug.Visible = true;
-                lDebug.Text = mergeFields.lavaDebugInfo();
-            }
         }
 
         #endregion

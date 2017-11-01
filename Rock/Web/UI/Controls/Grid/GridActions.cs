@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -75,10 +75,10 @@ namespace Rock.Web.UI.Controls
         public bool ShowCommunicate
         {
             get 
-            { 
+            {
                 // if the Grid has the PersonIdField set, default ShowCommunicate to True
-                bool hasPersonIdField = !string.IsNullOrWhiteSpace(_parentGrid.PersonIdField);
-                
+                bool hasPersonIdField = _parentGrid.CommunicationRecipientPersonIdFields.Any() || _parentGrid.PersonIdField.IsNotNullOrWhitespace();
+
                 return ViewState["ShowCommunicate"] as bool? ?? hasPersonIdField; 
             }
             
@@ -99,7 +99,7 @@ namespace Rock.Web.UI.Controls
             get
             {
                 // if the Grid has the PersonIdField set, default ShowMergePerson to True
-                bool hasPersonIdField = !string.IsNullOrWhiteSpace( _parentGrid.PersonIdField );
+                bool hasPersonIdField = _parentGrid.PersonIdField.IsNotNullOrWhitespace();
 
                 return ViewState["ShowMergePerson"] as bool? ?? hasPersonIdField;
             }
@@ -121,7 +121,7 @@ namespace Rock.Web.UI.Controls
             get
             {
                 // if the Grid has the PersonIdField set, default ShowBulkUpdate to True
-                bool hasPersonIdField = !string.IsNullOrWhiteSpace( _parentGrid.PersonIdField );
+                bool hasPersonIdField = _parentGrid.PersonIdField.IsNotNullOrWhitespace();
 
                 return ViewState["ShowBulkUpdate"] as bool? ?? hasPersonIdField;
             }
@@ -283,7 +283,7 @@ namespace Rock.Web.UI.Controls
             Controls.Add( _lbAdd );
             _lbAdd.ID = "lbAdd";
             _lbAdd.CssClass = "btn-add btn btn-default btn-sm";
-            _lbAdd.ToolTip = "Add";
+            _lbAdd.ToolTip = "Alt+N";
             _lbAdd.Click += lbAdd_Click;
             _lbAdd.CausesValidation = false;
             _lbAdd.PreRender += lb_PreRender;

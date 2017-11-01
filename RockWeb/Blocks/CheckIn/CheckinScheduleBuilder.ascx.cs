@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -59,6 +59,49 @@ namespace RockWeb.Blocks.CheckIn
             gGroupLocationSchedule.Actions.ShowAdd = false;
             gGroupLocationSchedule.IsDeleteEnabled = false;
             gGroupLocationSchedule.GridRebind += gGroupLocationSchedule_GridRebind;
+
+            //
+            // First section of the script sets the default state of the header checkbox based
+            // on if all item row checkboxes are checked. Second section handles toggling all
+            // check boxes when the user clicks the header checkbox.
+            //
+            string script = string.Format( @"
+    Sys.Application.add_load(function () {{
+        var $table = $('#{0}');
+        function updateHeaderCheckboxes()
+        {{
+            $table.find('thead > tr > th').each(function (columnIndex) {{
+                if ($(this).find('a.fa').length > 0) {{
+                    columnIndex += 1;
+                    var $cbs = $table.find('tbody > tr > td:nth-child(' + columnIndex + ') input');
+                    if ($cbs.length == $cbs.filter(':checked').length) {{
+                        $(this).find('a.fa').addClass('fa-check-square-o').removeClass('fa-square-o');
+                    }}
+                    else {{
+                        $(this).find('a.fa').addClass('fa-square-o').removeClass('fa-check-square-o');
+                    }}
+                }}
+            }});
+        }}
+        updateHeaderCheckboxes();
+        $table.find('tbody > tr > td input[type=""checkbox""]').click(function () {{ updateHeaderCheckboxes(); }});
+        $('.js-sched-select-all').click(function (e) {{
+            e.preventDefault();
+            var $th = $(this).closest('th');
+            var $table = $(this).closest('table');
+            var columnIndex = $th.parent().children().index($th) + 1;
+            var $cbs = $table.find('tbody > tr > td:nth-child(' + columnIndex + ') input');
+            if ($(this).hasClass('fa-square-o')) {{
+                $(this).addClass('fa-check-square-o').removeClass('fa-square-o');
+                $cbs.prop('checked', true);
+            }} else {{
+                $(this).addClass('fa-square-o').removeClass('fa-check-square-o');
+                $cbs.prop('checked', false);
+            }}
+        }});
+    }});
+", gGroupLocationSchedule.ClientID );
+            ScriptManager.RegisterStartupScript( gGroupLocationSchedule, gGroupLocationSchedule.GetType(), "grid-sched-select-all", script, true );
         }
 
         /// <summary>
@@ -82,11 +125,11 @@ namespace RockWeb.Blocks.CheckIn
         {
             ScheduleService scheduleService = new ScheduleService( new RockContext() );
 
-            // limit Schedules to ones that have a CheckInStartOffsetMinutes
-            var scheduleQry = scheduleService.Queryable().Where( a => a.CheckInStartOffsetMinutes != null );
+            // limit Schedules to ones that are Active and have a CheckInStartOffsetMinutes
+            var scheduleQry = scheduleService.Queryable().Where( a => a.IsActive && a.CheckInStartOffsetMinutes != null );
 
             // limit Schedules to the Category from the Filter
-            int scheduleCategoryId = rFilter.GetUserPreference( "Category" ).AsIntegerOrNull() ?? Rock.Constants.All.Id;
+            int scheduleCategoryId = pCategory.SelectedValueAsInt() ?? Rock.Constants.All.Id;
             if ( scheduleCategoryId != Rock.Constants.All.Id )
             {
                 scheduleQry = scheduleQry.Where( a => a.CategoryId == scheduleCategoryId );
@@ -110,7 +153,8 @@ namespace RockWeb.Blocks.CheckIn
             {
                 string dataFieldName = string.Format( "scheduleField_{0}", item.Id );
 
-                CheckBoxEditableField field = new CheckBoxEditableField { HeaderText = item.Name, DataField = dataFieldName };
+                CheckBoxEditableField field = new CheckBoxEditableField { HeaderText = item.Name + "<br /><a href='#' style='display: inline' class='fa fa-square-o js-sched-select-all'></a>", DataField = dataFieldName };
+                field.HeaderStyle.HorizontalAlign = HorizontalAlign.Center;
                 gGroupLocationSchedule.Columns.Add( field );
             }
 
@@ -161,8 +205,21 @@ namespace RockWeb.Blocks.CheckIn
                 ddlGroupType.Visible = false;
             }
 
-            var filterCategory = new CategoryService( rockContext ).Get( rFilter.GetUserPreference( "Category" ).AsInteger() );
-            pCategory.SetValue( filterCategory );
+            int? categoryId = rFilter.GetUserPreference( "Category" ).AsIntegerOrNull();
+            if ( !categoryId.HasValue )
+            {
+                var categoryCache = CategoryCache.Read( Rock.SystemGuid.Category.SCHEDULE_SERVICE_TIMES.AsGuid() );
+                categoryId = categoryCache != null ? categoryCache.Id : (int?)null;
+            }
+
+            if ( categoryId.HasValue )
+            {
+                pCategory.SetValue( new CategoryService( rockContext ).Get( categoryId.Value ) );
+            }
+            else
+            {
+                pCategory.SetValue( null );
+            }
 
             pkrParentLocation.SetValue( rFilter.GetUserPreference( "Parent Location" ).AsIntegerOrNull() );
         }
@@ -264,8 +321,8 @@ namespace RockWeb.Blocks.CheckIn
             var groupTypeService = new GroupTypeService( rockContext );
             var groupService = new GroupService( rockContext );
 
-            IEnumerable<GroupTypePath> groupPaths = new List<GroupTypePath>();
-            var groupLocationQry = groupLocationService.Queryable();
+            var groupPaths = new List<GroupTypePath>();
+            var groupLocationQry = groupLocationService.Queryable().Where(gl => gl.Group.IsActive);
             int groupTypeId;
 
             // if this page has a PageParam for groupTypeId use that to limit which groupTypeId to see. Otherwise, use the groupTypeId specified in the filter
@@ -286,7 +343,7 @@ namespace RockWeb.Blocks.CheckIn
                 // filter to groups that either are of the GroupType or are of a GroupType that has the selected GroupType as a parent (ancestor)
                 groupLocationQry = groupLocationQry.Where( a => a.Group.GroupType.Id == groupTypeId || descendantGroupTypeIds.Contains( a.Group.GroupTypeId ) );
 
-                groupPaths = groupTypeService.GetAllAssociatedDescendentsPath( groupTypeId );
+                groupPaths = groupTypeService.GetAllAssociatedDescendentsPath( groupTypeId ).ToList();
             }
             else
             {
@@ -295,6 +352,7 @@ namespace RockWeb.Blocks.CheckIn
                 List<int> descendantGroupTypeIds = new List<int>();
                 foreach ( var templateGroupType in groupTypeService.Queryable().Where( a => a.GroupTypePurposeValueId == groupTypePurposeCheckInTemplateId ) )
                 {
+                    groupPaths.AddRange( groupTypeService.GetAllAssociatedDescendentsPath( templateGroupType.Id ).ToList() );
                     foreach ( var childGroupType in groupTypeService.GetChildGroupTypes( templateGroupType.Id ) )
                     {
                         descendantGroupTypeIds.Add( childGroupType.Id );
@@ -413,7 +471,7 @@ namespace RockWeb.Blocks.CheckIn
         /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
         protected void btnCancel_Click( object sender, EventArgs e )
         {
-            NavigateToParentPage();
+            NavigateToParentPage( new Dictionary<string, string> { { "CheckinTypeId", this.PageParameter( "groupTypeId" ) } } );
         }
 
         /// <summary>
@@ -471,7 +529,7 @@ namespace RockWeb.Blocks.CheckIn
 
             Rock.CheckIn.KioskDevice.FlushAll();
 
-            NavigateToParentPage();
+            NavigateToParentPage( new Dictionary<string, string> { { "CheckinTypeId", this.PageParameter( "groupTypeId" ) } } );
 
         }
 

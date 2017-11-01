@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
+using System.Web;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
@@ -99,6 +100,8 @@ namespace Rock.Web.UI.Controls
             writer.WriteLine();
 
             _hfValue.RenderControl( writer );
+            _hfValueDisableVrm.RenderControl( writer );
+
             writer.WriteLine();
 
             StringBuilder html = new StringBuilder();
@@ -132,6 +135,7 @@ namespace Rock.Web.UI.Controls
             foreach ( string nameValue in nameValues )
             {
                 string[] nameAndValue = nameValue.Split( new char[] { '^' } );
+                nameAndValue = nameAndValue.Select( s => HttpUtility.UrlDecode( s ) ).ToArray(); // url decode array items
 
                 writer.AddAttribute( HtmlTextWriterAttribute.Class, "controls controls-row form-control-group" );
                 writer.RenderBeginTag( HtmlTextWriterTag.Div );
@@ -231,7 +235,7 @@ namespace Rock.Web.UI.Controls
         /// <param name="values">The values.</param>
         private void WriteValueControls( HtmlTextWriter writer, string[] nameAndValue, Dictionary<string, string> values )
         {
-            if ( values != null )
+            if ( values != null && values.Any() )
             {
                 DropDownList ddl = new DropDownList();
                 ddl.AddCssClass( "key-value-value form-control input-width-md js-key-value-input" );
@@ -241,7 +245,7 @@ namespace Rock.Web.UI.Controls
                 ddl.DataBind();
                 if ( nameAndValue.Length >= 2 )
                 {
-                    ddl.SelectedValue = nameAndValue[1];
+                    ddl.SelectedValue = HttpUtility.UrlDecode( nameAndValue[1] );
                 }
                 ddl.RenderControl( writer );
             }
@@ -287,7 +291,7 @@ namespace Rock.Web.UI.Controls
         /// <param name="values">The values.</param>
         private void WriteValueHtml( StringBuilder html, Dictionary<string,string> values )
         {
-            if ( values != null )
+            if ( values != null && values.Any() )
             {
                 html.Append( @"<select class=""key-value-value form-control input-width-md js-key-value-input"">" );
                 foreach ( var value in values )
@@ -305,11 +309,15 @@ namespace Rock.Web.UI.Controls
         private void RegisterClientScript()
         {
             string script = @"
+;(function () {
     function updateKeyValues( e ) {
         var $span = e.closest('span.key-value-list');
         var newValue = '';
         $span.children('span.key-value-rows:first').children('div.controls-row').each(function( index ) {
-            newValue += $(this).children('.key-value-key:first').val() + '^' + $(this).children('.key-value-value:first').val() + '|'
+            if ( newValue !== ''){
+                newValue += '|';
+            }
+            newValue += encodeURI($(this).children('.key-value-key:first').val()) + '^' + encodeURI($(this).children('.key-value-value:first').val())
         });
         $span.children('input:first').val(newValue);            
     }
@@ -330,9 +338,13 @@ namespace Rock.Web.UI.Controls
         Rock.controls.modal.updateSize($(this));
     });
 
+    $(document).on('keyup', '.js-key-value-input', function (e) {
+        updateKeyValues($(this));            
+    });
     $(document).on('focusout', '.js-key-value-input', function (e) {
         updateKeyValues($(this));            
     });
+})();
 ";
 
             ScriptManager.RegisterStartupScript( this, this.GetType(), "key-value-list", script, true );

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,7 +35,7 @@ using Rock.Communication;
 namespace RockWeb.Blocks.Event
 {
     /// <summary>
-    /// Template block for developers to use to start a new block.
+    /// Sends payment reminders for paid registrations that have a remaining balance.
     /// </summary>
     [DisplayName( "Registration Instance Send Payment Reminder" )]
     [Category( "Event" )]
@@ -129,37 +129,44 @@ namespace RockWeb.Blocks.Event
             gRegistrations.SelectedKeys.ToList().ForEach( r => registrationsSelected.Add( r.ToString().AsInteger() ) );
             if ( registrationsSelected.Any() )
             {
-                var appRoot = Rock.Web.Cache.GlobalAttributesCache.Read().GetValue( "ExternalApplicationRoot" );
-
-                using ( RockContext rockContext = new RockContext() )
+                var appRoot = Rock.Web.Cache.GlobalAttributesCache.Read().GetValue( "PublicApplicationRoot" );
+                
+                if ( _registrationInstance == null )
                 {
-                    if ( _registrationInstance == null )
-                    {
-                        int? registrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsIntegerOrNull();
+                    int? registrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsIntegerOrNull();
 
+                    using ( RockContext rockContext = new RockContext() )
+                    {
                         RegistrationInstanceService registrationInstanceService = new RegistrationInstanceService( rockContext );
                         _registrationInstance = registrationInstanceService.Queryable( "RegistrationTemplate" ).AsNoTracking()
-                                                    .Where( r => r.Id == registrationInstanceId ).FirstOrDefault();
+                                                .Where( r => r.Id == registrationInstanceId ).FirstOrDefault();
+                    }
 
-
-                        foreach(var registrationId in registrationsSelected )
+                    foreach( var registrationId in registrationsSelected )
+                    {
+                        // use a new rockContext for each registration so that ChangeTracker doesn't get bogged down
+                        using ( RockContext rockContext = new RockContext() )
                         {
                             var registrationService = new RegistrationService( rockContext );
 
                             var registration = registrationService.Get( registrationId );
-                            if (registration != null && !string.IsNullOrWhiteSpace(registration.ConfirmationEmail) )
+                            if ( registration != null && !string.IsNullOrWhiteSpace(registration.ConfirmationEmail) )
                             {
-                                var recipients = new List<string>();
-
                                 Dictionary<string, object> mergeObjects = new Dictionary<string, object>();
                                 mergeObjects.Add( "Registration", registration );
                                 mergeObjects.Add( "RegistrationInstance", _registrationInstance );
 
-                                recipients.Add( registration.ConfirmationEmail );
-
-                                string message = ceEmailMessage.Text.ResolveMergeFields( mergeObjects );
-
-                                Email.Send( txtFromEmail.Text, txtFromName.Text, txtFromSubject.Text, recipients, message, appRoot );
+                                var emailMessage = new RockEmailMessage( GetAttributeValue( "ConfirmAccountTemplate" ).AsGuid() );
+                                emailMessage.AdditionalMergeFields = mergeObjects;
+                                emailMessage.FromEmail = txtFromEmail.Text;
+                                emailMessage.FromName = txtFromName.Text;
+                                emailMessage.Subject = txtFromSubject.Text;
+                                emailMessage.AddRecipient( new RecipientData( registration.ConfirmationEmail, mergeObjects ) );
+                                emailMessage.Message = ceEmailMessage.Text;
+                                emailMessage.AppRoot = ResolveRockUrl( "~/" );
+                                emailMessage.ThemeRoot = ResolveRockUrl( "~~/" );
+                                emailMessage.CreateCommunicationRecord = false;
+                                emailMessage.Send();
 
                                 registration.LastPaymentReminderDateTime = RockDateTime.Now;
                                 rockContext.SaveChanges();
@@ -228,7 +235,9 @@ namespace RockWeb.Blocks.Event
                     using ( RockContext rockContext = new RockContext() )
                     {
                         RegistrationInstanceService registrationInstanceService = new RegistrationInstanceService( rockContext );
-                        _registrationInstance = registrationInstanceService.Queryable( "RegistrationTemplate" ).AsNoTracking()
+
+                        // NOTE: Do not use AsNoTracking because lava might need to lazy load some stuff
+                        _registrationInstance = registrationInstanceService.Queryable( "RegistrationTemplate" )
                                                     .Where( r => r.Id == registrationInstanceId ).FirstOrDefault();
 
 
@@ -241,6 +250,9 @@ namespace RockWeb.Blocks.Event
                             mergeObjects.Add( "RegistrationInstance", _registrationInstance );
 
                             ifEmailPreview.Attributes["srcdoc"] = ceEmailMessage.Text.ResolveMergeFields( mergeObjects );
+                            
+                            // needed to work in IE
+                            ifEmailPreview.Src = "javascript: window.frameElement.getAttribute('srcdoc');";
                         }
                     }
                 }
@@ -267,7 +279,9 @@ namespace RockWeb.Blocks.Event
                 using ( RockContext rockContext = new RockContext() )
                 {
                     RegistrationInstanceService registrationInstanceService = new RegistrationInstanceService( rockContext );
-                    _registrationInstance = registrationInstanceService.Queryable( "RegistrationTemplate" ).AsNoTracking()
+
+                    // NOTE: Do not use AsNoTracking because lava might need to lazy load some stuff
+                    _registrationInstance = registrationInstanceService.Queryable( "RegistrationTemplate" )
                                                 .Where( r => r.Id == registrationInstanceId ).FirstOrDefault();
 
 
@@ -282,6 +296,9 @@ namespace RockWeb.Blocks.Event
                         ceEmailMessage.Text = _registrationInstance.RegistrationTemplate.PaymentReminderEmailTemplate;
 
                         ifEmailPreview.Attributes["srcdoc"] = _registrationInstance.RegistrationTemplate.PaymentReminderEmailTemplate.ResolveMergeFields( mergeObjects );
+
+                        // needed to work in IE
+                        ifEmailPreview.Src = "javascript: window.frameElement.getAttribute('srcdoc');";
 
                         txtFromEmail.Text = _registrationInstance.RegistrationTemplate.PaymentReminderFromEmail.ResolveMergeFields( mergeObjects );
                         txtFromName.Text = _registrationInstance.RegistrationTemplate.PaymentReminderFromName.ResolveMergeFields( mergeObjects );

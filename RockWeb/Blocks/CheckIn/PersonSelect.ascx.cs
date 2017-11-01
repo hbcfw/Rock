@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,13 +15,14 @@
 // </copyright>
 //
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Web.UI;
+using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
 
 using Rock;
+using Rock.Attribute;
 using Rock.CheckIn;
 using Rock.Model;
 
@@ -29,7 +30,11 @@ namespace RockWeb.Blocks.CheckIn
 {
     [DisplayName("Person Select")]
     [Category("Check-in")]
-    [Description("Lists people who match the selected family to pick to checkin.")]
+    [Description("Lists people who match the selected family to pick to check-in or check-out.")]
+
+    [TextField( "Title", "Title to display. Use {0} for family name.", false, "{0}", "Text", 8 )]
+    [TextField( "Caption", "", false, "Select Person", "Text", 9 )]
+    [TextField( "No Option Message", "The option to display when there are not any people that match. Use {0} for the current action ('into' or 'out of').", false, "Sorry, there are currently not any available areas that the selected person can check {0}.", "Text", 10 )]
     public partial class PersonSelect : CheckInBlock
     {
         protected override void OnLoad( EventArgs e )
@@ -38,6 +43,13 @@ namespace RockWeb.Blocks.CheckIn
 
             RockPage.AddScriptLink( "~/Scripts/iscroll.js" );
             RockPage.AddScriptLink( "~/Scripts/CheckinClient/checkin-core.js" );
+
+
+            var bodyTag = this.Page.Master.FindControl( "bodyTag" ) as HtmlGenericControl;
+            if ( bodyTag != null )
+            {
+                bodyTag.AddCssClass( "checkin-personselect-bg" );
+            }
 
             if ( CurrentWorkflow == null || CurrentCheckInState == null )
             {
@@ -49,15 +61,14 @@ namespace RockWeb.Blocks.CheckIn
                 {
                     ClearSelection();
 
-                    var family = CurrentCheckInState.CheckIn.Families.Where( f => f.Selected )
-                        .FirstOrDefault();
-
+                    var family = CurrentCheckInState.CheckIn.CurrentFamily;
                     if ( family == null )
                     {
                         GoBack();
                     }
 
-                    lFamilyName.Text = family.ToString();
+                    lTitle.Text = string.Format( GetAttributeValue( "Title" ), family.ToString() );
+                    lCaption.Text = GetAttributeValue( "Caption" );
 
                     if ( family.People.Count == 1 )
                     {
@@ -82,7 +93,6 @@ namespace RockWeb.Blocks.CheckIn
 
                         rSelection.DataBind();
                     }
-
                 }
             }
         }
@@ -142,11 +152,13 @@ namespace RockWeb.Blocks.CheckIn
 
         protected void ProcessSelection()
         {
-            ProcessSelection( maWarning, () => CurrentCheckInState.CheckIn.Families.Where( f => f.Selected )
-                .SelectMany( f => f.People.Where( p => p.Selected )
-                    .SelectMany( p => p.GroupTypes.Where( t => !t.ExcludedByFilter ) ) )
-                .Count() <= 0,
-                "<p>Sorry, based on your selection, there are currently not any available locations that can be checked into.</p>" );
+            string noOption = string.Format( GetAttributeValue( "NoOptionMessage" ), CurrentCheckInState.CheckIn.CurrentFamily.Action == CheckinAction.CheckIn ? "into" : "out of" );
+            string msg = string.Format( "<p>{0}</p>", noOption );
+            ProcessSelection( 
+                maWarning, 
+                () => CurrentCheckInState.CheckIn.CurrentFamily.GetPeople( true )
+                    .SelectMany( p => p.GroupTypes.Where( t => !t.ExcludedByFilter ) )
+                    .Count() <= 0, msg );
         }
 
     }

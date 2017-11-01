@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,6 +28,7 @@ namespace Rock.Model
     /// Represents a user or group's security authorization to perform a specified action on a securable entity in Rock. Authorization can either be allowed or denied and local (to the entity) security will override
     /// the parent (inherited) authority. Order of Auth's does matter. The first Auth for a specific action on an entity that the user qualifies for determines if they are allowed or denied.
     /// </summary>
+    [RockDomain( "Core" )]
     [Table( "Auth" )]
     [DataContract]
     public partial class Auth : Model<Auth>, IOrdered
@@ -130,14 +131,16 @@ namespace Rock.Model
         /// <value>
         /// The <see cref="Rock.Model.Group"/> that this Auth entity allows or denies access to. If group based authorization is not used, this value will be null.
         /// </value>
+        [LavaInclude]
         public virtual Model.Group Group { get; set; }
-        
+
         /// <summary>
         /// Gets or sets the <see cref="Rock.Model.PersonAlias"/> that this Auth entity allows or denies access to. This is used for Person based authorization.
         /// </summary>
         /// <value>
         /// The <see cref="Rock.Model.PersonAlias"/> that this Auth entity allows or denies access to. If person based authorization is not used, this value will be null.
         /// </value>
+        [LavaInclude]
         public virtual Model.PersonAlias PersonAlias { get; set; }
 
         /// <summary>
@@ -146,6 +149,7 @@ namespace Rock.Model
         /// <value>
         /// The <see cref="Rock.Model.EntityType"/> of of the entity that is being secured.
         /// </value>
+        [LavaInclude]
         public virtual Model.EntityType EntityType { get; set; }
 
         #endregion

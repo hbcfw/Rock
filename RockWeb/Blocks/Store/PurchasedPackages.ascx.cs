@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -117,15 +117,15 @@ namespace RockWeb.Blocks.Store
             if ( installedPackage != null )
             {
                 // check that latest version is installed
-                if ( package.Versions.Count > 0 )
+                if ( package.Versions != null && package.Versions.Count > 0 )
                 {
                     RockSemanticVersion rockVersion = RockSemanticVersion.Parse( Rock.VersionInfo.VersionInfo.GetRockSemanticVersionNumber() );
                     latestVersion = package.Versions.Where( v => v.RequiredRockSemanticVersion <= rockVersion ).OrderByDescending( v => v.Id ).FirstOrDefault();
                 }
 
-                if ( installedPackage.VersionId != latestVersion.Id ) {
+                if ( latestVersion != null && installedPackage.VersionId != latestVersion.Id )
+                {
                     lbInstall.Text = "Update";
-
                     lVersionNotes.Text = String.Format( "<p><strong>Installed Version</strong><br/>{0}</p><p><strong>Latest Version</strong><br/>{1}</p>", installedPackage.VersionLabel, latestVersion.VersionLabel );
                 }
                 else 

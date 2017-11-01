@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,6 +22,7 @@ using System.Runtime.Serialization;
 
 using Rock.Data;
 using Rock.Model;
+using Rock.Security;
 
 namespace Rock.Web.Cache
 {
@@ -193,6 +194,55 @@ namespace Rock.Web.Cache
             }
         }
         private List<int> categoryIds = null;
+
+        /// <summary>
+        /// Gets the schedule exclusions.
+        /// </summary>
+        /// <value>
+        /// The schedule exclusions.
+        /// </value>
+        [DataMember]
+        public List<DateRange> ScheduleExclusions
+        {
+            get
+            {
+                lock ( _obj )
+                {
+                    if ( scheduleExclusions == null )
+                    {
+                        scheduleExclusions = new List<DateRange>();
+
+                        using ( var rockContext = new RockContext() )
+                        {
+                            foreach( var exclusion in new Model.ScheduleCategoryExclusionService( rockContext )
+                                .Queryable().AsNoTracking()
+                                .Where( e => e.CategoryId == this.Id )
+                                .ToList() )
+                            {
+                                scheduleExclusions.Add( new DateRange( exclusion.StartDate, exclusion.EndDate ) );
+                            }
+                        }
+                    }
+                }
+
+                return scheduleExclusions;
+            }
+        }
+        private List<DateRange> scheduleExclusions = null;
+
+        /// <summary>
+        /// Gets the parent authority.
+        /// </summary>
+        /// <value>
+        /// The parent authority.
+        /// </value>
+        public override ISecured ParentAuthority
+        {
+            get
+            {
+                return this.ParentCategory != null ? this.ParentCategory : base.ParentAuthority;
+            }
+        }
 
         #endregion
 

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -43,6 +43,20 @@ namespace Rock.Reporting
         /// <param name="databaseTimeoutSeconds">The database timeout seconds.</param>
         /// <param name="errorMessage">The error message.</param>
         public static void BindGrid( Report report, Grid gReport, Person currentPerson, int? databaseTimeoutSeconds, out string errorMessage )
+        {
+            BindGrid( report, gReport, currentPerson, databaseTimeoutSeconds, false, out errorMessage );
+        }
+        
+        /// <summary>
+        /// Shows the preview.
+        /// </summary>
+        /// <param name="report">The report.</param>
+        /// <param name="gReport">The g report.</param>
+        /// <param name="currentPerson">The current person.</param>
+        /// <param name="databaseTimeoutSeconds">The database timeout seconds.</param>
+        /// <param name="isCommunication">if set to <c>true</c> [is communication].</param>
+        /// <param name="errorMessage">The error message.</param>
+        public static void BindGrid( Report report, Grid gReport, Person currentPerson, int? databaseTimeoutSeconds, bool isCommunication, out string errorMessage )
         {
             errorMessage = null;
             if ( report != null )
@@ -109,8 +123,14 @@ namespace Rock.Reporting
 
                 var reportFieldSortExpressions = new Dictionary<Guid, string>();
 
+                gReport.CommunicateMergeFields = new List<string>();
+                gReport.CommunicationRecipientPersonIdFields = new List<string>();
+
                 foreach ( var reportField in report.ReportFields.OrderBy( a => a.ColumnOrder ) )
                 {
+                    bool mergeField = reportField.IsCommunicationMergeField.HasValue && reportField.IsCommunicationMergeField.Value;
+                    bool recipientField = reportField.IsCommunicationRecipientField.HasValue && reportField.IsCommunicationRecipientField.Value;
+
                     columnIndex++;
                     if ( reportField.ReportFieldType == ReportFieldType.Property )
                     {
@@ -126,6 +146,15 @@ namespace Rock.Reporting
                             reportFieldSortExpressions.AddOrReplace( reportField.Guid, boundField.SortExpression );
                             boundField.Visible = reportField.ShowInGrid;
                             gReport.Columns.Add( boundField );
+
+                            if ( mergeField )
+                            {
+                                gReport.CommunicateMergeFields.Add( $"{boundField.DataField}|{boundField.HeaderText.RemoveSpecialCharacters()}" );
+                            }
+                            if ( recipientField )
+                            {
+                                gReport.CommunicationRecipientPersonIdFields.Add( boundField.DataField );
+                            }
                         }
                     }
                     else if ( reportField.ReportFieldType == ReportFieldType.Attribute )
@@ -180,8 +209,16 @@ namespace Rock.Reporting
 
                                 boundField.Visible = reportField.ShowInGrid;
 
-                                // NOTE:  Additional formatting for attributes is done in the gReport_RowDataBound event
                                 gReport.Columns.Add( boundField );
+
+                                if ( mergeField )
+                                {
+                                    gReport.CommunicateMergeFields.Add( $"{boundField.DataField}|{boundField.HeaderText.RemoveSpecialCharacters()}" );
+                                }
+                                if ( recipientField )
+                                {
+                                    gReport.CommunicationRecipientPersonIdFields.Add( boundField.DataField );
+                                }
                             }
                         }
                     }
@@ -195,10 +232,11 @@ namespace Rock.Reporting
                             try
                             {
                                 DataControlField columnField = selectComponent.GetGridField( entityType, reportField.Selection ?? string.Empty );
+                                string fieldId = $"{selectComponent.ColumnPropertyName}_{columnIndex}";
 
                                 if ( columnField is BoundField )
                                 {
-                                    ( columnField as BoundField ).DataField = string.Format( "Data_{0}_{1}", selectComponent.ColumnPropertyName, columnIndex );
+                                    ( columnField as BoundField ).DataField = $"Data_{fieldId}";
                                     var customSortProperties = selectComponent.SortProperties( reportField.Selection ?? string.Empty );
                                     bool sortReversed = selectComponent.SortReversed( reportField.Selection ?? string.Empty );
                                     if ( customSortProperties != null )
@@ -233,6 +271,16 @@ namespace Rock.Reporting
 
                                 columnField.Visible = reportField.ShowInGrid;
                                 gReport.Columns.Add( columnField );
+
+                                if ( mergeField )
+                                {
+                                    gReport.CommunicateMergeFields.Add( $"Data_{fieldId}|{columnField.HeaderText.RemoveSpecialCharacters()}" );
+                                }
+                                if ( recipientField )
+                                {
+                                    string fieldName = ( selectComponent is IRecipientDataSelect ) ? $"Recipient_{fieldId}" : $"Data_{fieldId}";
+                                    gReport.CommunicationRecipientPersonIdFields.Add( fieldName );
+                                }
                             }
                             catch ( Exception ex )
                             {
@@ -293,9 +341,22 @@ namespace Rock.Reporting
                     }
 
                     var qryErrors = new List<string>();
-                    dynamic qry = report.GetQueryable( entityType, selectedEntityFields, selectedAttributes, selectedComponents, sortProperty, databaseTimeoutSeconds ?? 180, out qryErrors );
+                    System.Data.Entity.DbContext reportDbContext;
+                    dynamic qry = report.GetQueryable( entityType, selectedEntityFields, selectedAttributes, selectedComponents, sortProperty, databaseTimeoutSeconds ?? 180, isCommunication, out qryErrors, out reportDbContext );
                     errors.AddRange( qryErrors );
-                    gReport.SetLinqDataSource( qry );
+
+                    if ( !string.IsNullOrEmpty( report.QueryHint ) && reportDbContext is RockContext)
+                    {
+                        using ( new QueryHintScope( reportDbContext as RockContext, report.QueryHint ) )
+                        {
+                            gReport.SetLinqDataSource( qry );
+                        }
+                    }
+                    else
+                    {
+                        gReport.SetLinqDataSource( qry );
+                    }
+
                     gReport.DataBind();
                 }
                 catch ( Exception ex )

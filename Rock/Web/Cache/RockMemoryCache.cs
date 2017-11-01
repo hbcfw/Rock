@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,6 +15,7 @@
 // </copyright>
 //
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration;
 using System.Linq.Expressions;
@@ -498,7 +499,7 @@ namespace Rock.Web.Cache
         }
 
         /// <summary>
-        /// Clears all items from cache.
+        /// Clears all items from MemoryCache.
         /// </summary>
         public static void Clear()
         {
@@ -511,6 +512,37 @@ namespace Rock.Web.Cache
             {
                 FlushMemoryCache();
             }
+        }
+
+        /// <summary>
+        /// Clears all cached items (MemoryCache, Authorizations, EntityAttributes, SiteCache, TriggerCache).
+        /// </summary>
+        /// <returns></returns>
+        public static List<string> ClearAllCachedItems()
+        {
+            var msgs = new List<string>();
+
+            // Clear the static object that contains all auth rules (so that it will be refreshed)
+            Rock.Security.Authorization.Flush();
+            msgs.Add( "Authorizations have been cleared" );
+
+            // Flush the static entity attributes cache
+            Rock.Web.Cache.AttributeCache.FlushEntityAttributes();
+            msgs.Add( "EntityAttributes have been cleared" );
+
+            // Clear all cached items
+            Clear();
+            msgs.Add( "RockMemoryCache has been cleared" );
+
+            // Flush Site Domains
+            Rock.Web.Cache.SiteCache.Flush();
+            msgs.Add( "SiteCache has been cleared" );
+
+            // Clear workflow trigger cache
+            Rock.Workflow.TriggerCache.Refresh();
+            msgs.Add( "TriggerCache has been cleared" );
+
+            return msgs;
         }
 
         /// <summary>

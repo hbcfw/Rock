@@ -10,6 +10,7 @@
                     <h1 class="panel-title"><i class="fa fa-file-o"></i>
                         <asp:Literal ID="lActionTitle" runat="server" /></h1>
                 </div>
+                <Rock:PanelDrawer ID="pdAuditDetails" runat="server"></Rock:PanelDrawer>
                 <div class="panel-body">
                     <asp:ValidationSummary ID="ValidationSummary1" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
 
@@ -26,7 +27,7 @@
                                 <Rock:RockCheckBox ID="cbRequiresViewSecurity" runat="server" Label="Requires View Security" Text="Yes" Help="Enable this to always do a security check before displaying images of this type. Leave disabled for files that can be viewed by any user." />
                                 <Rock:ComponentPicker ID="cpStorageType" runat="server" ContainerType="Rock.Storage.ProviderContainer, Rock" Label="Storage Type" Required="true" AutoPostBack="true" />
                                 <div class="attributes">
-                                    <asp:PlaceHolder ID="phAttributes" runat="server" EnableViewState="false"></asp:PlaceHolder>
+                                    <Rock:DynamicPlaceHolder ID="phAttributes" runat="server" />
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -67,8 +68,8 @@
                     </fieldset>
 
                     <div class="actions">
-                        <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" />
-                        <asp:LinkButton ID="btnCancel" runat="server" AccessKey="c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="btnCancel_Click" />
+                        <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" ToolTip="Alt+s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" />
+                        <asp:LinkButton ID="btnCancel" runat="server" AccessKey="c" ToolTip="Alt+c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="btnCancel_Click" />
                     </div>
                 </div>
             </div>

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -98,7 +98,10 @@ namespace Rock.Financial
         public CreditCardPaymentInfo( string number, string code, DateTime expirationDate )
             : this()
         {
-            Number = number;
+            Regex rgx = new Regex( @"[^\d]" );
+            string ccNum = rgx.Replace( number, "" );
+
+            Number = ccNum;
             Code = code;
             ExpirationDate = expirationDate;
         }
@@ -108,7 +111,7 @@ namespace Rock.Financial
         /// </summary>
         public override string MaskedNumber
         {
-            get { return Number.Masked(); }
+            get { return Number.Masked( true ); }
         }
 
         /// <summary>
@@ -126,22 +129,31 @@ namespace Rock.Financial
         {
             get
             {
-                string cc = Number.AsNumeric();
-                foreach ( var dv in DefinedTypeCache.Read( new Guid( Rock.SystemGuid.DefinedType.FINANCIAL_CREDIT_CARD_TYPE ) ).DefinedValues )
+                return GetCreditCardType( Number.AsNumeric() );
+            }
+        }
+
+        /// <summary>
+        /// Gets the type of the credit card based on evaluating the RegExPattern of each credit card type defined value and returning the first match
+        /// </summary>
+        /// <param name="ccNumber">The cc number.</param>
+        /// <returns></returns>
+        public static DefinedValueCache GetCreditCardType( string ccNumber )
+        {
+            foreach ( var dv in DefinedTypeCache.Read( new Guid( Rock.SystemGuid.DefinedType.FINANCIAL_CREDIT_CARD_TYPE ) ).DefinedValues )
+            {
+                string pattern = dv.GetAttributeValue( "RegExPattern" );
+                if ( !string.IsNullOrWhiteSpace( pattern ) )
                 {
-                    string pattern = dv.GetAttributeValue( "RegExPattern" );
-                    if ( !string.IsNullOrWhiteSpace( pattern ) )
+                    var re = new Regex( pattern );
+                    if ( re.IsMatch( ccNumber ) )
                     {
-                        var re = new Regex( pattern );
-                        if ( re.IsMatch( cc ) )
-                        {
-                            return dv;
-                        }
+                        return dv;
                     }
                 }
-
-                return null;
             }
+
+            return null;
         }
 
     }

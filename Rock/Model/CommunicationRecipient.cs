@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,6 +32,7 @@ namespace Rock.Model
     /// <summary>
     /// Communication Recipient POCO Entity.
     /// </summary>
+    [RockDomain( "Communication" )]
     [Table( "CommunicationRecipient" )]
     [DataContract]
     public partial class CommunicationRecipient : Model<CommunicationRecipient>
@@ -57,6 +58,16 @@ namespace Rock.Model
         [DataMember]
         public int CommunicationId { get; set; }
 
+
+        /// <summary>
+        /// Gets or sets the medium entity type identifier.
+        /// </summary>
+        /// <value>
+        /// The medium entity type identifier.
+        /// </value>
+        [DataMember]
+        public int? MediumEntityTypeId { get; set; }
+
         /// <summary>
         /// Gets or sets the status of the Communication submission to the recipient.
         /// </summary>
@@ -65,7 +76,7 @@ namespace Rock.Model
         /// This property will be  <c>CommunicationRecipientStatus.Pending</c> when Rock is waiting to send the <see cref="Rock.Model.Communication"/> to the recipient;
         /// <c>CommunicationRecipientStatus.Success</c> when Rock has successfully sent the <see cref="Rock.Model.Communication"/> to the recipient;
         /// <c>CommunicationRecipientStatus.Failed</c> when the attempt to send the <see cref="Rock.Model.Communication"/> failed.
-        /// <c>CommunicaitonRecipientStatus.Cancelled</c> when the attempt to send the <see cref="Rock.Model.Communication"/> was canceled.
+        /// <c>CommunicationRecipientStatus.Cancelled</c> when the attempt to send the <see cref="Rock.Model.Communication"/> was canceled.
         /// </value>
         [DataMember]
         public CommunicationRecipientStatus Status { get; set; }
@@ -150,6 +161,12 @@ namespace Rock.Model
                     .Where( m => m.Value != null && m.Value.GetType() == typeof( JObject ) )
                     .Select( m => m.Key ).ToList();
                 objectKeys.ForEach( k => AdditionalMergeValues[k] = ( (JObject)AdditionalMergeValues[k] ).ToDictionary() );
+
+                // Convert any arrays to a list, and also check to see if it contains objects that need to be converted to a dictionary for Lava
+                var arrayKeys = AdditionalMergeValues
+                    .Where( m => m.Value != null && m.Value.GetType() == typeof( JArray ) )
+                    .Select( m => m.Key ).ToList();
+                arrayKeys.ForEach( k => AdditionalMergeValues[k] = ( (JArray)AdditionalMergeValues[k] ).ToObjectArray() );
             }
         }
 
@@ -172,21 +189,17 @@ namespace Rock.Model
         /// <value>
         /// The <see cref="Rock.Model.Communication"/>
         /// </value>
+        [LavaInclude]
         public virtual Communication Communication { get; set; }
 
         /// <summary>
-        /// Gets or sets a collection containing the <see cref="Rock.Model.CommunicationRecipient">CommunicationRecipients</see> for the Communication.
+        /// Gets or sets the type of the medium entity.
         /// </summary>
         /// <value>
-        /// The <see cref="Rock.Model.CommunicationRecipient">CommunicationRecipients</see> of the Communication.
+        /// The type of the medium entity.
         /// </value>
         [DataMember]
-        public virtual ICollection<CommunicationRecipientActivity> Activities
-        {
-            get { return _activities ?? ( _activities = new Collection<CommunicationRecipientActivity>() ); }
-            set { _activities = value; }
-        }
-        private ICollection<CommunicationRecipientActivity> _activities;
+        public virtual EntityType MediumEntityType { get; set; }
 
         /// <summary>
         /// Gets or sets a dictionary containing the Additional Merge values for this communication
@@ -213,17 +226,23 @@ namespace Rock.Model
         {
             get
             {
-                StringBuilder sb = new StringBuilder();
-                foreach ( var activity in Activities )
+                using ( var rockContext = new RockContext() )
                 {
-                    sb.AppendFormat( "{0} ({1} {2}): {3}<br/>",
-                        activity.ActivityType,
-                        activity.ActivityDateTime.ToShortDateString(),
-                        activity.ActivityDateTime.ToShortTimeString(),
-                        activity.ActivityDetail );
-                }
+                    var interactions = this.GetInteractions( rockContext )
+                       .OrderBy( a => a.InteractionDateTime )
+                       .ToList();
+                    StringBuilder sb = new StringBuilder();
+                    foreach ( var interaction in interactions )
+                    {
+                        sb.AppendFormat( "{0} ({1} {2}): {3}<br/>",
+                            interaction.Operation,
+                            interaction.InteractionDateTime.ToShortDateString(),
+                            interaction.InteractionDateTime.ToShortTimeString(),
+                            GetInteractionDetails( interaction ) );
+                    }
 
-                return sb.ToString();
+                    return sb.ToString();
+                }
             }
         }
 
@@ -238,25 +257,47 @@ namespace Rock.Model
         {
             get
             {
-                StringBuilder sb = new StringBuilder();
-                sb.Append( "<ul>" );
-                foreach ( var activity in Activities )
+                using ( var rockContext = new RockContext() )
                 {
-                    sb.AppendFormat( "<li>{0} <small>({1} {2})</small>: {3}</li>",
-                        activity.ActivityType,
-                        activity.ActivityDateTime.ToShortDateString(),
-                        activity.ActivityDateTime.ToShortTimeString(),
-                        activity.ActivityDetail );
-                }
-                sb.Append( "</ul>" );
+                    var interactions = this.GetInteractions( rockContext )
+                        .OrderBy( a => a.InteractionDateTime )
+                        .ToList();
 
-                return sb.ToString();
+                    StringBuilder sb = new StringBuilder();
+                    sb.Append( "<ul>" );
+                    foreach ( var interaction in interactions )
+                    {
+                        sb.AppendFormat( "<li>{0} <small>({1} {2})</small>: {3}</li>",
+                            interaction.Operation,
+                            interaction.InteractionDateTime.ToShortDateString(),
+                            interaction.InteractionDateTime.ToShortTimeString(),
+                            GetInteractionDetails( interaction ) );
+                    }
+
+                    sb.Append( "</ul>" );
+
+                    return sb.ToString();
+                }
             }
         }
 
         #endregion
 
         #region Public Methods
+
+        /// <summary>
+        /// Gets the interactions (Opened and Click activity)
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <returns></returns>
+        public virtual IQueryable<Interaction> GetInteractions( RockContext rockContext )
+        {
+            var interactionService = new InteractionService( rockContext );
+            var interactionChannelGuid = Rock.SystemGuid.InteractionChannel.COMMUNICATION.AsGuid();
+            var result = interactionService.Queryable()
+                .Where( a => a.InteractionComponent.Channel.Guid == interactionChannelGuid && a.InteractionComponentId == this.CommunicationId );
+            return result;
+        }
 
         /// <summary>
         /// Helper method to get recipient merge values for sending communication.
@@ -311,11 +352,31 @@ namespace Rock.Model
 
         #endregion
 
-        #region Private Methods
-
-        #endregion
-
         #region Static Methods
+
+        /// <summary>
+        /// Gets the interaction details.
+        /// </summary>
+        /// <returns></returns>
+        public static string GetInteractionDetails( Interaction interaction )
+        {
+            string interactionDetails = string.Empty;
+            string deviceTypeDetails = $"{interaction.InteractionSession.DeviceType.OperatingSystem} {interaction.InteractionSession.DeviceType.DeviceTypeData} {interaction.InteractionSession.DeviceType.Application} {interaction.InteractionSession.DeviceType.ClientType}";
+            if ( interaction.Operation == "Opened" )
+            {
+                interactionDetails = $"Opened from {interaction.InteractionSession.IpAddress} using {deviceTypeDetails}";
+            }
+            else if ( interaction.Operation == "Click" )
+            {
+                interactionDetails = $"Clicked the address {interaction.InteractionData} from {interaction.InteractionSession.IpAddress} using {deviceTypeDetails}";
+            }
+            else
+            {
+                interactionDetails = $"{interaction.Operation} using {deviceTypeDetails}";
+            }
+
+            return interactionDetails;
+        }
 
         #endregion
 
@@ -335,6 +396,7 @@ namespace Rock.Model
         {
             this.HasRequired( r => r.PersonAlias).WithMany().HasForeignKey( r => r.PersonAliasId ).WillCascadeOnDelete( false );
             this.HasRequired( r => r.Communication ).WithMany( c => c.Recipients ).HasForeignKey( r => r.CommunicationId ).WillCascadeOnDelete( true );
+            this.HasOptional( c => c.MediumEntityType ).WithMany().HasForeignKey( c => c.MediumEntityTypeId ).WillCascadeOnDelete( false );
         }
     }
 

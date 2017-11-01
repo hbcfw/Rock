@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -170,6 +170,20 @@ namespace Rock.SystemGuid
         /// Gets the Staff group member role for an Organizational Unit
         /// </summary>
         public const string GROUPROLE_ORGANIZATION_UNIT_STAFF = "17E516FC-76A4-4BF4-9B6F-0F859B13F563";
+
+        #endregion
+
+        #region GROUPTYPE_FUNDRAISINGOPPORTUNITY
+
+        /// <summary>
+        /// The Leader group member roles for Fundraising Opportunity
+        /// </summary>
+        public const string GROUPROLE_FUNDRAISINGOPPORTUNITY_LEADER = "253973A5-18F2-49B6-B2F1-F8F84294AAB2";
+
+        /// <summary>
+        /// The Participant group member roles for Fundraising Opportunity
+        /// </summary>
+        public const string GROUPROLE_FUNDRAISINGOPPORTUNITY_PARTICIPANT = "F82DF077-9664-4DA8-A3D9-7379B690124D";
 
         #endregion
     }

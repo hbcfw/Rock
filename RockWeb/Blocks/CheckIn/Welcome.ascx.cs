@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Text;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
@@ -34,11 +35,19 @@ namespace RockWeb.Blocks.CheckIn
     [DisplayName( "Welcome" )]
     [Category( "Check-in" )]
     [Description( "Welcome screen for check-in." )]
-    [LinkedPage( "Family Select Page" )]
-    [LinkedPage( "Scheduled Locations Page" )]
-    [IntegerField( "Refresh Interval", "How often (seconds) should page automatically query server for new Check-in data", false, 10 )]
-    [BooleanField( "Enable Override", "Allows the override link to be used on the configuration page.", true )]
-    [BooleanField( "Enable Manager", "Allows the manager link to be placed on the page.", true )]
+
+    [LinkedPage( "Family Select Page", "", false, "", "", 5 )]
+    [LinkedPage( "Scheduled Locations Page", "", false, "", "", 6 )]
+
+    [TextField( "Not Active Title", "Title displayed when there are not any active options today.", false, "Check-in Is Not Active", "Text", 7 )]
+    [TextField( "Not Active Caption", "Caption displayed when there are not any active options today.", false, "There are no current or future schedules for this kiosk today!", "Text", 8 )]
+    [TextField( "Not Active Yet Title", "Title displayed when there are active options today, but none are active now.", false, "Check-in Is Not Active Yet", "Text", 9 )]
+    [TextField( "Not Active Yet Caption", "Caption displayed when there are active options today, but none are active now. Use {0} for a countdown timer.", false, "This kiosk is not active yet.  Countdown until active: {0}.", "Text", 10 )]
+    [TextField( "Closed Title", "", false, "Closed", "Text", 11 )]
+    [TextField( "Closed Caption", "", false, "This location is currently closed.", "Text", 12 )]
+    [TextField( "Check-in Button Text", "The text to display on the check-in button. If left blank, 'Check-in' (or 'Start' when check-out is enabled) will be used.", false, "", "Text", 13, "CheckinButtonText" )]
+    [TextField( "No Option Caption", "The text to display when there are not any families found matching a scanned identifier (barcode, etc).", false, "Sorry, there were not any families found with the selected identifier.", "Text", 14 )]
+
     public partial class Welcome : CheckInBlock
     {
         protected override void OnInit( EventArgs e )
@@ -58,33 +67,72 @@ namespace RockWeb.Blocks.CheckIn
             RockPage.AddScriptLink( "~/scripts/jquery.countdown.min.js" );
 
             RegisterScript();
+
+            var bodyTag = this.Page.Master.FindControl( "bodyTag" ) as HtmlGenericControl;
+            if ( bodyTag != null )
+            {
+                bodyTag.AddCssClass( "checkin-welcome-bg" );
+            }
         }
 
         protected override void OnLoad( EventArgs e )
         {
             base.OnLoad( e );
 
-            if ( !Page.IsPostBack && CurrentCheckInState != null )
+            if ( !Page.IsPostBack )
             {
-                string script = string.Format( @"
+                if ( CurrentCheckInState != null )
+                {
+                    string script = string.Format( @"
     <script>
         $(document).ready(function (e) {{
             if (localStorage) {{
                 localStorage.theme = '{0}'
                 localStorage.checkInKiosk = '{1}';
-                localStorage.checkInGroupTypes = '{2}';
+                localStorage.checkInType = '{2}';
+                localStorage.checkInGroupTypes = '{3}';
             }}
         }});
     </script>
-", CurrentTheme, CurrentKioskId, CurrentGroupTypeIds.AsDelimited( "," ) );
-                phScript.Controls.Add( new LiteralControl( script ) );
+", CurrentTheme, CurrentKioskId, CurrentCheckinTypeId, CurrentGroupTypeIds.AsDelimited( "," ) );
+                    phScript.Controls.Add( new LiteralControl( script ) );
 
-                CurrentWorkflow = null;
-                CurrentCheckInState.CheckIn = new CheckInStatus();
-                SaveState();
-                RefreshView();
+                    CurrentWorkflow = null;
+                    CurrentCheckInState.CheckIn = new CheckInStatus();
+                    SaveState();
+                    RefreshView();
 
-                
+                    lNotActiveTitle.Text = GetAttributeValue( "NotActiveTitle" );
+                    lNotActiveCaption.Text = GetAttributeValue( "NotActiveCaption" );
+                    lNotActiveYetTitle.Text = GetAttributeValue( "NotActiveTitle" );
+                    lNotActiveYetCaption.Text = string.Format( GetAttributeValue( "NotActiveCaption" ), "<span class='countdown-timer'></span>" );
+                    lClosedTitle.Text = GetAttributeValue( "ClosedTitle" );
+                    lClosedCaption.Text = GetAttributeValue( "ClosedCaption" );
+
+                    string btnText = GetAttributeValue( "CheckinButtonText" );
+                    if ( string.IsNullOrWhiteSpace( btnText ) )
+                    {
+                        btnText = CurrentCheckInState.CheckInType.AllowCheckout ? "Start" : "Check In";
+                    }
+                    lbSearch.Text = string.Format( "<span>{0}</span>", btnText );
+                }
+            }
+            else
+            {
+                if ( Request.Form["__EVENTARGUMENT"] != null )
+                {
+                    if ( Request.Form["__EVENTARGUMENT"] == "Wedge_Entry" )
+                    {
+                        var dv = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.CHECKIN_SEARCH_TYPE_SCANNED_ID );
+                        DoFamilySearch( dv, hfSearchEntry.Value );
+                    }
+                    else if ( Request.Form["__EVENTARGUMENT"] == "Family_Id_Search" )
+                    {
+                        var dv = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.CHECKIN_SEARCH_TYPE_FAMILY_ID );
+                        DoFamilySearch( dv, hfSearchEntry.Value );
+                    }
+                }
+
             }
         }
 
@@ -125,45 +173,20 @@ namespace RockWeb.Blocks.CheckIn
         /// </summary>
         private void RegisterScript()
         {
-            // Note: the OnExpiry property of the countdown jquery plugin seems to add a new callback
-            // everytime the setting is set which is why the clearCountdown method is used to prevent 
-            // a plethora of partial postbacks occurring when the countdown expires.
-            string script = string.Format( @"
+            var script = new StringBuilder();
+            script.AppendFormat( @"
 
-var timeoutSeconds = $('.js-refresh-timer-seconds').val();
-if (timeout) {{
-    window.clearTimeout(timeout);
-}}
-var timeout = window.setTimeout(refreshKiosk, timeoutSeconds * 1000);
-
-var $ActiveWhen = $('.active-when');
-var $CountdownTimer = $('.countdown-timer');
-
-function refreshKiosk() {{
-    window.clearTimeout(timeout);
-    {0};
-}}
-
-function clearCountdown() {{
-    if ($ActiveWhen.text() != '')
-    {{
-        $ActiveWhen.text('');
-        refreshKiosk();
-    }}
-}}
-
-if ($ActiveWhen.text() != '')
-{{
-    var timeActive = new Date($ActiveWhen.text());
-    $CountdownTimer.countdown({{
-        until: timeActive, 
-        compact:true, 
-        onExpiry: clearCountdown
-    }});
-}}
+        function PostRefresh() {{
+            {0};
+        }}
 
 ", this.Page.ClientScript.GetPostBackEventReference( lbRefresh, "" ) );
-            ScriptManager.RegisterStartupScript( Page, Page.GetType(), "RefreshScript", script, true );
+            ScriptManager.RegisterStartupScript( lbRefresh, lbRefresh.GetType(), "refresh-postback", script.ToString(), true );
+        }
+
+        private void ClearSelection()
+        {
+            CurrentCheckInState.CheckIn.Families = new List<CheckInFamily>();
         }
 
         // TODO: Add support for scanner
@@ -172,7 +195,7 @@ if ($ActiveWhen.text() != '')
         /// </summary>
         /// <param name="searchType">Type of the search.</param>
         /// <param name="searchValue">The search value.</param>
-        private void SomeScannerSearch( DefinedValueCache searchType, string searchValue )
+        private void DoFamilySearch( DefinedValueCache searchType, string searchValue )
         {
             CurrentCheckInState.CheckIn.UserEnteredSearch = false;
             CurrentCheckInState.CheckIn.ConfirmSingleFamily = false;
@@ -182,11 +205,19 @@ if ($ActiveWhen.text() != '')
             var errors = new List<string>();
             if ( ProcessActivity( "Family Search", out errors ) )
             {
-                SaveState();
-                NavigateToLinkedPage( "FamilySelectPage" );
+                if ( !CurrentCheckInState.CheckIn.Families.Any() )
+                {
+                    maWarning.Show( string.Format( "<p>{0}</p>", GetAttributeValue( "NoMatchText" ) ), Rock.Web.UI.Controls.ModalAlertType.Warning );
+                }
+                else
+                {
+                    SaveState();
+                    NavigateToLinkedPage( "FamilySelectPage" );
+                }
             }
             else
             {
+                ClearSelection();
                 string errorMsg = "<p>" + errors.AsDelimited( "<br/>" ) + "</p>";
                 maWarning.Show( errorMsg, Rock.Web.UI.Controls.ModalAlertType.Warning );
             }
@@ -197,7 +228,9 @@ if ($ActiveWhen.text() != '')
         /// </summary>
         private void RefreshView()
         {
-            hfRefreshTimerSeconds.Value = GetAttributeValue( "RefreshInterval" );
+            bool isActive = false;
+
+            hfRefreshTimerSeconds.Value = ( CurrentCheckInType != null ? CurrentCheckInType.RefreshInterval.ToString() : "10" );
             pnlNotActive.Visible = false;
             pnlNotActiveYet.Visible = false;
             pnlClosed.Visible = false;
@@ -205,8 +238,8 @@ if ($ActiveWhen.text() != '')
             ManagerLoggedIn = false;
             pnlManagerLogin.Visible = false;
             pnlManager.Visible = false;
-            btnManager.Visible = GetAttributeValue( "EnableManager" ).AsBoolean();
-            btnOverride.Visible = GetAttributeValue( "EnableOverride" ).AsBoolean();
+            btnManager.Visible = ( CurrentCheckInType != null ? CurrentCheckInType.EnableManagerOption : true );
+            btnOverride.Visible = ( CurrentCheckInType != null ? CurrentCheckInType.EnableOverride : true );
 
             lblActiveWhen.Text = string.Empty;
 
@@ -215,6 +248,9 @@ if ($ActiveWhen.text() != '')
                 NavigateToPreviousPage();
                 return;
             }
+
+            // Set to null so that object will be recreated with a potentially updated group type cache.
+            CurrentCheckInState.CheckInType = null;
 
             if ( CurrentCheckInState.Kiosk.FilteredGroupTypes( CurrentCheckInState.ConfiguredGroupTypes ).Count == 0 )
             {
@@ -232,8 +268,19 @@ if ($ActiveWhen.text() != '')
             }
             else
             {
+                isActive = true;
                 pnlActive.Visible = true;
             }
+
+            bool? wasActive = PageParameter( "IsActive" ).AsBooleanOrNull();
+            if ( !wasActive.HasValue || wasActive.Value != isActive )
+            {
+                //redirect to current page with correct IsActive querystring value
+                var qryParams = Request.QueryString.AllKeys.ToDictionary( k => k, k => this.Request.QueryString[k] );
+                qryParams.AddOrReplace( "IsActive", isActive.ToString() );
+                NavigateToCurrentPage( qryParams );
+            }
+
         }
 
         /// <summary>
@@ -271,23 +318,23 @@ if ($ActiveWhen.text() != '')
             tbPIN.Text = string.Empty;
 
             // Get room counts
-            List<int> locations = new List<int>();		
-            foreach ( var groupType in CurrentCheckInState.Kiosk.FilteredGroupTypes( CurrentCheckInState.ConfiguredGroupTypes ) )		
-            {		
-                var lUl = new HtmlGenericControl( "ul" );		
-                lUl.AddCssClass( "kioskmanager-count-locations" );		
-                phCounts.Controls.Add( lUl );		
-		
-                foreach ( var location in groupType.KioskGroups.SelectMany( g => g.KioskLocations ).OrderBy( l => l.Location.Name).Distinct() )		
-                {		
-                    if ( !locations.Contains( location.Location.Id ) )		
-                    {		
-                        locations.Add( location.Location.Id );		
-                        var locationAttendance = KioskLocationAttendance.Read( location.Location.Id );		
-		
-                        if ( locationAttendance != null )		
-                        {		
-                            var lLi = new HtmlGenericControl( "li" );		
+            List<int> locations = new List<int>();
+            foreach ( var groupType in CurrentCheckInState.Kiosk.FilteredGroupTypes( CurrentCheckInState.ConfiguredGroupTypes ) )
+            {
+                var lUl = new HtmlGenericControl( "ul" );
+                lUl.AddCssClass( "kioskmanager-count-locations" );
+                phCounts.Controls.Add( lUl );
+
+                foreach ( var location in groupType.KioskGroups.SelectMany( g => g.KioskLocations ).OrderBy( l => l.Location.Name ).Distinct() )
+                {
+                    if ( !locations.Contains( location.Location.Id ) )
+                    {
+                        locations.Add( location.Location.Id );
+                        var locationAttendance = KioskLocationAttendance.Read( location.Location.Id );
+
+                        if ( locationAttendance != null )
+                        {
+                            var lLi = new HtmlGenericControl( "li" );
                             lUl.Controls.Add( lLi );
                             lLi.InnerHtml = string.Format( "<strong>{0}</strong>: {1}", locationAttendance.LocationName, locationAttendance.CurrentCount );
 
@@ -295,9 +342,9 @@ if ($ActiveWhen.text() != '')
                             gUl.AddCssClass( "kioskmanager-count-groups" );
                             lLi.Controls.Add( gUl );
 
-                            foreach ( var groupAttendance in locationAttendance.Groups )		
-                            {		
-                                var gLi = new HtmlGenericControl( "li" );		
+                            foreach ( var groupAttendance in locationAttendance.Groups )
+                            {
+                                var gLi = new HtmlGenericControl( "li" );
                                 gUl.Controls.Add( gLi );
                                 gLi.InnerHtml = string.Format( "<strong>{0}</strong>: {1}", groupAttendance.GroupName, groupAttendance.CurrentCount );
 
@@ -305,16 +352,16 @@ if ($ActiveWhen.text() != '')
                                 sUl.AddCssClass( "kioskmanager-count-schedules" );
                                 gLi.Controls.Add( sUl );
 
-                                foreach ( var scheduleAttendance in groupAttendance.Schedules.Where( s => s.IsActive ) )		
-                                {		
-                                    var sLi = new HtmlGenericControl( "li" );		
+                                foreach ( var scheduleAttendance in groupAttendance.Schedules.Where( s => s.IsActive ) )
+                                {
+                                    var sLi = new HtmlGenericControl( "li" );
                                     sUl.Controls.Add( sLi );
-                                    sLi.InnerHtml = string.Format( "<strong>{0}</strong>: {1}", scheduleAttendance.ScheduleName, scheduleAttendance.CurrentCount );		
-                                }		
-                            }		
-                        }		
-                    }		
-                }		
+                                    sLi.InnerHtml = string.Format( "<strong>{0}</strong>: {1}", scheduleAttendance.ScheduleName, scheduleAttendance.CurrentCount );
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             pnlManagerLogin.Visible = true;
@@ -386,7 +433,7 @@ if ($ActiveWhen.text() != '')
                     }
                 }
             }
-            
+
             maWarning.Show( "Sorry, we couldn't find an account matching that PIN.", Rock.Web.UI.Controls.ModalAlertType.Warning );
         }
 
@@ -412,11 +459,11 @@ if ($ActiveWhen.text() != '')
                 var groupTypesLocations = this.GetGroupTypesLocations( rockContext );
                 var selectQry = groupTypesLocations
                     .Select( a => new
-                        {
-                            LocationId = a.Id,
-                            Name = a.Name,
-                            a.IsActive
-                        } )
+                    {
+                        LocationId = a.Id,
+                        Name = a.Name,
+                        a.IsActive
+                    } )
                     .OrderBy( a => a.Name );
 
                 rLocations.DataSource = selectQry.ToList();
@@ -503,5 +550,6 @@ if ($ActiveWhen.text() != '')
         {
             btnBack_Click( sender, e );
         }
+
     }
 }

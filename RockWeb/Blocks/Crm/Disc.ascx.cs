@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -94,29 +94,14 @@ namespace Rockweb.Blocks.Crm
         {
             base.OnInit( e );
 
-            string personKey = PageParameter( "rckipid" );
-            if ( !string.IsNullOrEmpty( personKey ) )
+            // otherwise use the currently logged in person
+            if ( CurrentPerson != null )
             {
-                try
-                {
-                    _targetPerson = new PersonService( new RockContext() ).GetByUrlEncodedKey( personKey );
-                }
-                catch
-                {
-                    nbError.Visible = true;
-                }
+                _targetPerson = CurrentPerson;
             }
             else
             {
-                // otherwise use the currently logged in person
-                if ( CurrentPerson != null )
-                {
-                    _targetPerson = CurrentPerson;
-                }
-                else
-                {
-                    nbError.Visible = true;
-                }
+                nbError.Visible = true;
             }
 
             if ( _targetPerson != null )
@@ -398,7 +383,7 @@ namespace Rockweb.Blocks.Crm
             pnlResults.Visible = false;
 
             // Resolve the text field merge fields
-            var mergeFields = Rock.Web.Cache.GlobalAttributesCache.GetMergeFields( _targetPerson );
+            var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, _targetPerson );
             if ( _targetPerson != null )
             {
                 mergeFields.Add( "Person", _targetPerson );

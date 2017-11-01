@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -83,6 +83,25 @@ namespace Rock.Model
         }
 
         /// <summary>
+        /// Logs the exception.
+        /// </summary>
+        /// <param name="ex">The ex.</param>
+        public static void LogException( Exception ex )
+        {
+            // create a new exception model
+            var exceptionLog = new ExceptionLog();
+            exceptionLog.HasInnerException = ex.InnerException != null;
+            exceptionLog.ExceptionType = ex.GetType().ToString();
+            exceptionLog.Description = ex.Message;
+            exceptionLog.Source = ex.Source;
+            exceptionLog.StackTrace = ex.StackTrace;
+
+            // Spin off a new thread to handle the real logging work so the UI is not blocked whilst
+            // recursively writing to the database.
+            Task.Run( () => LogExceptions( ex, exceptionLog, true ) );
+        }
+
+        /// <summary>
         /// Recursively logs exception and any children.
         /// </summary>
         /// <param name="ex">The <see cref="System.Exception"/> to log.</param>
@@ -132,10 +151,14 @@ namespace Rock.Model
                 }
 
                 // Write ExceptionLog record to database.
-                var rockContext = new Rock.Data.RockContext();
-                var exceptionLogService = new ExceptionLogService( rockContext );
-                exceptionLogService.Add( exceptionLog );
-                rockContext.SaveChanges();
+                using ( var rockContext = new Rock.Data.RockContext() )
+                {
+                    var exceptionLogService = new ExceptionLogService( rockContext );
+                    exceptionLogService.Add( exceptionLog );
+
+                    // call SaveChanges with 'disablePrePostProcessing=true' just in case the pre/post processing would also cause exceptions
+                    rockContext.SaveChanges( true );
+                }
 
                 // Recurse if inner exception is found
                 if ( exceptionLog.HasInnerException.GetValueOrDefault( false ) )
@@ -143,7 +166,7 @@ namespace Rock.Model
                     LogExceptions( ex.InnerException, exceptionLog, false );
                 }
 
-                if (ex is AggregateException)
+                if ( ex is AggregateException )
                 {
                     // if an AggregateException occurs, log the exceptions individually
                     var aggregateException = ( ex as AggregateException );
@@ -152,6 +175,7 @@ namespace Rock.Model
                         LogExceptions( innerException, exceptionLog, false );
                     }
                 }
+
             }
             catch ( Exception )
             {
@@ -170,7 +194,7 @@ namespace Rock.Model
                     string when = RockDateTime.Now.ToString();
                     while ( ex != null )
                     {
-                        File.AppendAllText( filePath, string.Format( "{0},{1},\"{2}\"\r\n", when, ex.GetType(), ex.Message ) );
+                        File.AppendAllText( filePath, string.Format( "{0},{1},\"{2}\",\"{3}\"\r\n", when, ex.GetType(), ex.Message, ex.StackTrace ) );
                         ex = ex.InnerException;
                     }
                 }
@@ -285,10 +309,25 @@ namespace Rock.Model
                 if ( formList.Count > 0 )
                 {
                     formItems.Append( "<table class=\"form-items exception-table\">" );
-
                     foreach ( string formItem in formList )
-                        formItems.Append( "<tr><td><b>" + formItem + "</b></td><td>" + formList[formItem].EncodeHtml() + "</td></tr>" );
-
+                    {
+                        if ( formItem.IsNotNullOrWhitespace() )
+                        {
+                            string formValue = formList[formItem].EncodeHtml();
+                            string lc = formItem.ToLower();
+                            if ( lc.Contains( "nolog" ) ||
+                                lc.Contains( "creditcard" ) ||
+                                lc.Contains( "cc-number" ) ||
+                                lc.Contains( "cvv" ) ||
+                                lc.Contains( "ssn" ) ||
+                                lc.Contains( "accountnumber" ) ||
+                                lc.Contains( "account-number" ) )
+                            {
+                                formValue = "***obfuscated***";
+                            }
+                            formItems.Append( "<tr><td><b>" + formItem + "</b></td><td>" + formValue + "</td></tr>" );
+                        }
+                    }
                     formItems.Append( "</table>" );
                 }
 

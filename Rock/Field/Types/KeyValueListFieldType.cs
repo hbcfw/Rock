@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,6 +16,8 @@
 //
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Web;
 using System.Web.UI;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
@@ -59,7 +61,7 @@ namespace Rock.Field.Types
             tbKeyPrompt.Help = "The text to display as a prompt in the key textbox.";
 
             var cbDisplayValueFirst = new RockCheckBox();
-            controls.Insert( 4, cbDisplayValueFirst );
+            controls.Insert( 5, cbDisplayValueFirst );
             cbDisplayValueFirst.Label = "Display Value First";
             cbDisplayValueFirst.Help = "Reverses the display order of the key and the value.";
 
@@ -78,6 +80,7 @@ namespace Rock.Field.Types
             configurationValues.Add( "valueprompt", new ConfigurationValue( "Label Prompt", "The text to display as a prompt in the label textbox.", "" ) );
             configurationValues.Add( "definedtype", new ConfigurationValue( "Defined Type", "Optional Defined Type to select values from, otherwise values will be free-form text fields", "" ) );
             configurationValues.Add( "customvalues", new ConfigurationValue( "Custom Values", "Optional list of options to use for the values.  Format is either 'value1,value2,value3,...', or 'value1:text1,value2:text2,value3:text3,...'.", "" ) );
+            configurationValues.Add( "allowhtml", new ConfigurationValue( "Allow Html", "Allow Html content in values", "" ) );
             configurationValues.Add( "displayvaluefirst", new ConfigurationValue( "Display Value First", "Reverses the display order of the key and the value.", "" ) );
 
             if ( controls != null )
@@ -100,7 +103,11 @@ namespace Rock.Field.Types
                 }
                 if ( controls.Count > 4 && controls[4] != null && controls[4] is RockCheckBox )
                 {
-                    configurationValues["displayvaluefirst"].Value = ( (RockCheckBox)controls[4] ).Checked.ToString();
+                    configurationValues["allowhtml"].Value = ( ( RockCheckBox ) controls[4] ).Checked.ToString();
+                }
+                if ( controls.Count > 5 && controls[5] != null && controls[5] is RockCheckBox )
+                {
+                    configurationValues["displayvaluefirst"].Value = ( (RockCheckBox)controls[5] ).Checked.ToString();
                 }
             }
 
@@ -133,9 +140,13 @@ namespace Rock.Field.Types
                 {
                    ( (RockTextBox)controls[3] ).Text = configurationValues["customvalues"].Value;
                 }
-                if ( controls.Count > 4 && controls[4] != null && controls[4] is RockCheckBox && configurationValues.ContainsKey( "displayvaluefirst" ) )
+                if ( controls.Count > 4 && controls[4] != null && controls[4] is RockCheckBox && configurationValues.ContainsKey( "allowhtml" ) )
                 {
-                    ( (RockCheckBox)controls[4] ).Checked = configurationValues["displayvaluefirst"].Value.AsBoolean();
+                    ( ( RockCheckBox ) controls[4] ).Checked = configurationValues["allowhtml"].Value.AsBoolean();
+                }
+                if ( controls.Count > 5 && controls[5] != null && controls[5] is RockCheckBox && configurationValues.ContainsKey( "displayvaluefirst" ) )
+                {
+                    ( (RockCheckBox)controls[5] ).Checked = configurationValues["displayvaluefirst"].Value.AsBoolean();
                 }
             }
         }
@@ -154,22 +165,30 @@ namespace Rock.Field.Types
         /// <returns></returns>
         public override string FormatValue( Control parentControl, string value, Dictionary<string, ConfigurationValue> configurationValues, bool condensed )
         {
-            bool isDefinedType = configurationValues != null && configurationValues.ContainsKey( "definedtype" );
+            bool isDefinedType = configurationValues != null && configurationValues.ContainsKey( "definedtype" ) && configurationValues["definedtype"].Value.AsIntegerOrNull().HasValue;
 
             var values = new List<string>();
             string[] nameValues = value.Split( new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries );
+            nameValues = nameValues.Select( s => HttpUtility.UrlDecode( s ) ).ToArray(); // url decode array items
+
             foreach ( string nameValue in nameValues )
             {
                 string[] nameAndValue = nameValue.Split( new char[] { '^' } );
-                if ( nameAndValue.Length == 2 && isDefinedType )
+                if ( nameAndValue.Length == 2 )
                 {
-                    var definedValue = DefinedValueCache.Read( nameAndValue[1].AsInteger() );
-                    if ( definedValue != null )
+                    if ( isDefinedType )
                     {
-                        nameAndValue[1] = definedValue.Value;
+                        var definedValue = DefinedValueCache.Read( nameAndValue[1].AsInteger() );
+                        if ( definedValue != null )
+                        {
+                            nameAndValue[1] = definedValue.Value;
+                        }
                     }
-
                     values.Add( string.Format( "{0}: {1}", nameAndValue[0], nameAndValue[1] ) );
+                }
+                else
+                {
+                    values.Add( nameValue );
                 }
             }
 
@@ -288,24 +307,37 @@ namespace Rock.Field.Types
         {
             List<KeyValuePair<string, object>> values = new List<KeyValuePair<string, object>>();
 
-            bool isDefinedType = configurationValues != null && configurationValues.ContainsKey( "definedtype" );
+            bool isDefinedType = configurationValues != null && configurationValues.ContainsKey( "definedtype" ) && configurationValues["definedtype"].Value.AsIntegerOrNull().HasValue;
 
             string[] nameValues = value.Split( new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries );
+            nameValues = nameValues.Select( s => HttpUtility.UrlDecode( s ) ).ToArray(); // url decode array items
+
             foreach ( string nameValue in nameValues )
             {
                 string[] nameAndValue = nameValue.Split( new char[] { '^' } );
-                if ( nameAndValue.Length == 2 && isDefinedType )
+                if ( nameAndValue.Length == 2 )
                 {
-                    var definedValue = DefinedValueCache.Read( nameAndValue[1].AsInteger() );
-                    if ( definedValue != null )
+                    if ( isDefinedType )
                     {
-                        values.Add( new KeyValuePair<string, object>(nameAndValue[0], definedValue));
+                        var definedValue = DefinedValueCache.Read( nameAndValue[1].AsInteger() );
+                        if ( definedValue != null )
+                        {
+                            values.Add( new KeyValuePair<string, object>( nameAndValue[0], definedValue ) );
+                        }
+                        else
+                        {
+                            values.Add( new KeyValuePair<string, object>( nameAndValue[0], nameAndValue[1] ) );
+                        }
                     }
                     else
                     {
-                        values.Add(  new KeyValuePair<string, object>(nameAndValue[0], nameAndValue[1]) );
+                        values.Add( new KeyValuePair<string, object>( nameAndValue[0], nameAndValue[1] ) );
                     }
                 }
+                else
+                {
+                    values.Add( new KeyValuePair<string, object>( nameAndValue[0], null ) );
+                } 
             }
 
             return values;

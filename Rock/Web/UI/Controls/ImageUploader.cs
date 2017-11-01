@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -96,6 +96,34 @@ namespace Rock.Web.UI.Controls
         }
 
         /// <summary>
+        /// Gets or sets the warning text.
+        /// </summary>
+        /// <value>
+        /// The warning text.
+        /// </value>
+        [
+        Bindable( true ),
+        Category( "Appearance" ),
+        DefaultValue( "" ),
+        Description( "The warning block." )
+        ]
+        public string Warning
+        {
+            get
+            {
+                return WarningBlock != null ? WarningBlock.Text : string.Empty;
+            }
+
+            set
+            {
+                if ( WarningBlock != null )
+                {
+                    WarningBlock.Text = value;
+                }
+            }
+        }
+
+        /// <summary>
         /// Gets or sets a value indicating whether this <see cref="RockTextBox"/> is required.
         /// </summary>
         /// <value>
@@ -143,8 +171,14 @@ namespace Rock.Web.UI.Controls
         /// </value>
         public string ValidationGroup
         {
-            get { return ViewState["ValidationGroup"] as string; }
-            set { ViewState["ValidationGroup"] = value; }
+            get
+            {
+                return RequiredFieldValidator.ValidationGroup;
+            }
+            set
+            {
+                RequiredFieldValidator.ValidationGroup = value;
+            }
         }
 
         /// <summary>
@@ -168,6 +202,14 @@ namespace Rock.Web.UI.Controls
         /// The help block.
         /// </value>
         public HelpBlock HelpBlock { get; set; }
+
+        /// <summary>
+        /// Gets or sets the warning block.
+        /// </summary>
+        /// <value>
+        /// The warning block.
+        /// </value>
+        public WarningBlock WarningBlock { get; set; }
 
         /// <summary>
         /// Gets or sets the required field validator.
@@ -196,7 +238,9 @@ namespace Rock.Web.UI.Controls
         public ImageUploader()
             : base()
         {
+            RequiredFieldValidator = new HiddenFieldValidator();
             HelpBlock = new HelpBlock();
+            WarningBlock = new WarningBlock();
             _hfBinaryFileId = new HiddenField();
             _hfBinaryFileTypeGuid = new HiddenField();
         }
@@ -350,7 +394,7 @@ namespace Rock.Web.UI.Controls
         }
 
         /// <summary>
-        /// Gets or sets the done function client script.
+        /// The optional javascript to run in the image uploader's doneFunction
         /// </summary>
         /// <value>
         /// The done function client script.
@@ -371,6 +415,31 @@ namespace Rock.Web.UI.Controls
             set
             {
                 ViewState["DoneFunctionClientScript"] = value;
+            }
+        }
+
+        /// <summary>
+        /// The optional javascript to run when the image is removed
+        /// </summary>
+        /// <value>
+        /// The delete function client script.
+        /// </value>
+        [
+        Bindable( true ),
+        Category( "Behavior" ),
+        DefaultValue( "" ),
+        Description( "The optional javascript to run when the image is removed" )
+        ]
+        public string DeleteFunctionClientScript
+        {
+            get
+            {
+                return ViewState["DeleteFunctionClientScript"] as string;
+            }
+
+            set
+            {
+                ViewState["DeleteFunctionClientScript"] = value;
             }
         }
 
@@ -396,6 +465,31 @@ namespace Rock.Web.UI.Controls
             set
             {
                 ViewState["ThumbnailWidth"] = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the thumbnail width.
+        /// </summary>
+        /// <value>
+        /// The width of the thumbnail.
+        /// </value>
+        [
+        Bindable( true ),
+        Category( "Behavior" ),
+        DefaultValue( "" ),
+        Description( "Determines if the image should be stored with the 'Temporary' flag." )
+        ]
+        public bool UploadAsTemporary
+        {
+            get
+            {
+                return ViewState["UploadAsTemporary"] as bool? ?? true;
+            }
+
+            set
+            {
+                ViewState["UploadAsTemporary"] = value;
             }
         }
 
@@ -458,7 +552,12 @@ namespace Rock.Web.UI.Controls
         /// </summary>
         protected override void CreateChildControls()
         {
+            base.CreateChildControls();
+            Controls.Clear();
+            RockControlHelper.CreateChildControls( this, Controls );
+
             _hfBinaryFileId.ID = this.ID + "_hfBinaryFileId";
+            _hfBinaryFileId.Value = "0";
             Controls.Add( _hfBinaryFileId );
 
             _hfBinaryFileTypeGuid.ID = this.ID + "_hfBinaryFileTypeGuid";
@@ -472,6 +571,10 @@ namespace Rock.Web.UI.Controls
             _fileUpload = new FileUpload();
             _fileUpload.ID = this.ID + "_fu";
             Controls.Add( _fileUpload );
+
+            RequiredFieldValidator.InitialValue = "0";
+            RequiredFieldValidator.ControlToValidate = _hfBinaryFileId.ID;
+            RequiredFieldValidator.Display = ValidatorDisplay.Dynamic;
         }
 
         /// <summary>
@@ -611,7 +714,11 @@ Rock.controls.imageUploader.initialize({{
         {10}
     }},
     postbackRemovedScript: '{12}',
-    maxUploadBytes: {13}
+    maxUploadBytes: {13},
+    isTemporary: '{14}',
+    deleteFunction: function(e, data) {{
+        {15}
+    }}
 }});",
                 _fileUpload.ClientID, // {0}
                 this.BinaryFileId, // {1}
@@ -626,7 +733,9 @@ Rock.controls.imageUploader.initialize({{
                 this.DoneFunctionClientScript, // {10}
                 this.NoPictureUrl, // {11}
                 postBackRemovedScript, // {12}
-                maxUploadBytes.HasValue ? maxUploadBytes.Value.ToString() : "null" // {13} 
+                maxUploadBytes.HasValue ? maxUploadBytes.Value.ToString() : "null", // {13} 
+                this.UploadAsTemporary ? "T" : "F", // {14}
+                this.DeleteFunctionClientScript // {15}
                 ); 
             ScriptManager.RegisterStartupScript( _fileUpload, _fileUpload.GetType(), "ImageUploaderScript_" + this.ClientID, script, true );
         }
@@ -669,16 +778,16 @@ Rock.controls.imageUploader.initialize({{
         {
             if ( eventArgument == "ImageUploaded" && ImageUploaded != null )
             {
-                ImageUploaded( this, new ImageUploaderEventArgs( this.BinaryFileId ) );
+                ImageUploaded( this, new ImageUploaderEventArgs( this.BinaryFileId, ImageUploaderEventArgs.ArgumentType.ImageUploaded ) );
             }
 
             if ( eventArgument == "ImageRemoved" )
             {
                 if ( ImageRemoved != null )
                 {
-                    ImageRemoved( this, new ImageUploaderEventArgs( this.BinaryFileId ) );
-
+                    ImageRemoved( this, new ImageUploaderEventArgs( this.BinaryFileId, ImageUploaderEventArgs.ArgumentType.ImageRemoved ) );
                 }
+
                 this.BinaryFileId = 0;
             }
         }
@@ -691,20 +800,50 @@ Rock.controls.imageUploader.initialize({{
     public class ImageUploaderEventArgs : EventArgs
     {
         /// <summary>
-        /// Gets the field value.
+        /// Gets the binary file identifier of the Image that was Uploaded or Removed (see EventArgument)
         /// </summary>
         /// <value>
-        /// The field value.
+        /// The binary file identifier.
         /// </value>
         public int? BinaryFileId { get; private set; }
+
+        /// <summary>
+        /// Gets the event argument.
+        /// </summary>
+        /// <value>
+        /// The event argument.
+        /// </value>
+        public ArgumentType EventArgument { get; private set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public enum ArgumentType
+        {
+            ImageUploaded,
+            ImageRemoved
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ImageUploaderEventArgs"/> class.
         /// </summary>
         /// <param name="binaryFileId">The binary file identifier.</param>
-        public ImageUploaderEventArgs(int? binaryFileId) : base()
+        [Obsolete( "ImageUploaderEventArgs(binaryFileId, eventArgument) instead" )]
+        public ImageUploaderEventArgs( int? binaryFileId ) : base()
         {
             BinaryFileId = binaryFileId;
+            EventArgument = ArgumentType.ImageUploaded;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ImageUploaderEventArgs" /> class.
+        /// </summary>
+        /// <param name="binaryFileId">The binary file identifier.</param>
+        /// <param name="eventArgument">The event argument.</param>
+        public ImageUploaderEventArgs(int? binaryFileId, ArgumentType eventArgument ) : base()
+        {
+            BinaryFileId = binaryFileId;
+            EventArgument = eventArgument;
         }
     }
 }

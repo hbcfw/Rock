@@ -5,13 +5,13 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 // <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -45,6 +45,9 @@ namespace Rock.Client
 
         /// <summary />
         public DateTime? ApprovedOnDateTime { get; set; }
+
+        /// <summary />
+        public int? CampusId { get; set; }
 
         /// <summary />
         public int? CategoryId { get; set; }
@@ -139,6 +142,7 @@ namespace Rock.Client
             this.Answer = source.Answer;
             this.ApprovedByPersonAliasId = source.ApprovedByPersonAliasId;
             this.ApprovedOnDateTime = source.ApprovedOnDateTime;
+            this.CampusId = source.CampusId;
             this.CategoryId = source.CategoryId;
             this.Email = source.Email;
             this.EnteredDateTime = source.EnteredDateTime;

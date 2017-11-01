@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,8 +14,9 @@
 // limitations under the License.
 // </copyright>
 //
-using System.ComponentModel;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
@@ -88,6 +89,33 @@ namespace Rock.Web.UI.Controls
                 if ( HelpBlock != null )
                 {
                     HelpBlock.Text = value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the warning text.
+        /// </summary>
+        /// <value>
+        /// The warning text.
+        /// </value>
+        [
+        Bindable( true ),
+        Category( "Appearance" ),
+        DefaultValue( "" ),
+        Description( "The warning block." )
+        ]
+        public string Warning
+        {
+            get
+            {
+                return WarningBlock != null ? WarningBlock.Text : string.Empty;
+            }
+            set
+            {
+                if ( WarningBlock != null )
+                {
+                    WarningBlock.Text = value;
                 }
             }
         }
@@ -173,6 +201,14 @@ namespace Rock.Web.UI.Controls
         public HelpBlock HelpBlock { get; set; }
 
         /// <summary>
+        /// Gets or sets the warning block.
+        /// </summary>
+        /// <value>
+        /// The warning block.
+        /// </value>
+        public WarningBlock WarningBlock { get; set; }
+
+        /// <summary>
         /// Gets or sets the required field validator.
         /// </summary>
         /// <value>
@@ -203,6 +239,30 @@ namespace Rock.Web.UI.Controls
         #endregion
 
         /// <summary>
+        /// Gets or sets a value indicating whether the dropdownlist should allow a searc when used for single select
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [enhance for long list]; otherwise, <c>false</c>.
+        /// </value>
+        public bool EnhanceForLongLists
+        {
+            get { return ViewState["EnhanceForLongLists"] as bool? ?? false; }
+            set { ViewState["EnhanceForLongLists"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether [display drop as absolute].
+        /// </summary>
+        /// <value>
+        /// <c>true</c> if [display drop as absolute]; otherwise, <c>false</c>.
+        /// </value>
+        public bool DisplayEnhancedAsAbsolute
+        {
+            get { return ViewState["DisplayEnhancedAsAbsolute"] as bool? ?? false; }
+            set { ViewState["DisplayEnhancedAsAbsolute"] = value; }
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="RockDropDownList" /> class.
         /// </summary>
         public RockDropDownList()
@@ -210,6 +270,7 @@ namespace Rock.Web.UI.Controls
             RequiredFieldValidator = new RequiredFieldValidator();
             RequiredFieldValidator.ValidationGroup = this.ValidationGroup;
             HelpBlock = new HelpBlock();
+            WarningBlock = new WarningBlock();
         }
 
         /// <summary>
@@ -241,6 +302,43 @@ namespace Rock.Web.UI.Controls
         public void RenderBaseControl( HtmlTextWriter writer )
         {
             ( (WebControl)this ).AddCssClass( "form-control" );
+
+            if ( EnhanceForLongLists )
+            {
+                ( (WebControl)this ).AddCssClass( "chosen-select" );
+
+                var script = new System.Text.StringBuilder();
+                script.AppendFormat( @"
+    $('#{0}').chosen({{
+        width: '100%',
+        allow_single_deselect: true,
+        placeholder_text_multiple: ' ',
+        placeholder_text_single: ' '
+    }});
+", this.ClientID );
+
+                if ( DisplayEnhancedAsAbsolute )
+                {
+                    script.AppendFormat( @"
+    $( '#{0}').on('chosen:showing_dropdown', function( evt, params ) {{
+        $(this).next('.chosen-container').find('.chosen-drop').css('position','relative');
+    }});
+    $('#{0}').on('chosen:hiding_dropdown', function( evt, params ) {{
+        $(this).next('.chosen-container').find('.chosen-drop').css('position','absolute');
+    }});
+", this.ClientID );
+                }
+                
+                script.AppendFormat( @"
+    $( '#{0}').on('chosen:showing_dropdown chosen:hiding_dropdown', function( evt, params ) {{
+        // update the outer modal  
+        Rock.dialogs.updateModalScrollBar('{0}');
+    }});
+", this.ClientID );
+
+                ScriptManager.RegisterStartupScript( this, this.GetType(), "ChosenScript_" + this.ClientID, script.ToString(), true );
+            }
+
             base.RenderControl( writer );
 
             RenderDataValidator( writer );
@@ -276,7 +374,7 @@ namespace Rock.Web.UI.Controls
             base.LoadViewState( savedState );
             var savedAttributes = ViewState["ItemAttributes"] as List<Dictionary<string, string>>;
             int itemPosition = 0;
-            
+
             // make sure the list has the same number of items as it did when ViewState was saved
             if ( savedAttributes.Count == this.Items.Count )
             {

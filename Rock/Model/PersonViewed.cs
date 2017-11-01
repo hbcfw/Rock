@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,6 +29,7 @@ namespace Rock.Model
     /// Represents an instance of when a <see cref="Rock.Model.Person">Person's</see> person detail data was viewed in Rock.  Includes data on who was viewed, the person who viewed their record, and when/where their record
     /// was viewed.
     /// </summary>
+    [RockDomain( "CRM" )]
     [Table( "PersonViewed" )]
     [NotAudited]
     [DataContract]
@@ -94,14 +95,16 @@ namespace Rock.Model
         /// <value>
         /// A <see cref="Rock.Model.Person"/> entity representing the viewer.
         /// </value>
+        [LavaInclude]
         public virtual PersonAlias ViewerPersonAlias { get; set; }
-        
+
         /// <summary>
         /// Gets or sets the <see cref="Rock.Model.Person"/> entity of the individual who was viewed.
         /// </summary>
         /// <value>
         /// A <see cref="Rock.Model.Person"/> entity representing the person who was viewed.
         /// </value>
+        [LavaInclude]
         public virtual PersonAlias TargetPersonAlias { get; set; }
 
         #endregion

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,6 +14,7 @@
 // limitations under the License.
 // </copyright>
 //
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -22,6 +23,7 @@ using System.Runtime.Serialization;
 
 using Rock.Data;
 using Rock.Security;
+using Rock.Web.Cache;
 
 namespace Rock.Model
 {
@@ -29,6 +31,7 @@ namespace Rock.Model
     /// Represents a category or group of entity objects in Rock. A category can be used to group entity instances of <see cref="Rock.Model.EntityType">EntityTypes</see>. 
     /// For an EntityType to be categorizable the EntityType will need to implement the <see cref="Rock.Data.ICategorized"/> interface.
     /// </summary>
+    [RockDomain( "Core" )]
     [Table( "Category" )]
     [DataContract]
     public partial class Category : Model<Category>, IOrdered
@@ -146,6 +149,7 @@ namespace Rock.Model
         /// <value>
         /// The parent category
         /// </value>
+        [LavaInclude]
         public virtual Category ParentCategory { get; set; }
 
         /// <summary>
@@ -182,6 +186,39 @@ namespace Rock.Model
                 }
 
                 return base.ParentAuthority;
+            }
+        }
+
+        /// <summary>
+        /// A dictionary of actions that this class supports and the description of each.
+        /// </summary>
+        public override Dictionary<string, string> SupportedActions
+        {
+            get
+            {
+                var entityTypeCache = EntityTypeCache.Read( this.EntityTypeId );
+                if ( entityTypeCache == null && this.EntityType != null )
+                {
+                    entityTypeCache = EntityTypeCache.Read( this.EntityType.Id );
+                }
+
+                if ( entityTypeCache != null )
+                {
+                    switch( entityTypeCache.Name )
+                    {
+                        case "Rock.Model.Tag":
+                            {
+                                var supportedActions = new Dictionary<string, string>();
+                                supportedActions.Add( Authorization.VIEW, "The roles and/or users that have access to view." );
+                                supportedActions.Add( "Tag", "The roles and/or users that have access to tag items." );
+                                supportedActions.Add( Authorization.EDIT, "The roles and/or users that have access to edit." );
+                                supportedActions.Add( Authorization.ADMINISTRATE, "The roles and/or users that have access to administrate." );
+                                return supportedActions;
+                            }
+                    }
+                }
+
+                return base.SupportedActions;
             }
         }
 

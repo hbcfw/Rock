@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -89,7 +89,7 @@ namespace Rock.Rest.Controllers
         /// <param name="height">The height.</param>
         /// <param name="fullPath">The full path.</param>
         /// <returns></returns>
-        private static HttpResponseMessage ResizeAndSendImage( int? width, int? height, string fullPath )
+        private HttpResponseMessage ResizeAndSendImage( int? width, int? height, string fullPath )
         {
             if ( Path.GetExtension( fullPath ).Equals( ".svg", StringComparison.OrdinalIgnoreCase ) )
             {
@@ -100,31 +100,70 @@ namespace Rock.Rest.Controllers
             }
             else
             {
-                using ( Image image = Image.FromFile( fullPath ) )
-                {
-                    string mimeType = string.Empty;
-
-                    // try to figure out the MimeType by using the ImageCodeInfo class
-                    var codecs = ImageCodecInfo.GetImageEncoders();
-                    ImageCodecInfo codecInfo = codecs.FirstOrDefault( a => a.FormatID == image.RawFormat.Guid );
-                    if ( codecInfo != null )
+                try {
+                    using ( Image image = Image.FromFile( fullPath ) )
                     {
-                        mimeType = codecInfo.MimeType;
+                        string mimeType = string.Empty;
+
+                        // try to figure out the MimeType by using the ImageCodeInfo class
+                        var codecs = ImageCodecInfo.GetImageEncoders();
+                        ImageCodecInfo codecInfo = codecs.FirstOrDefault( a => a.FormatID == image.RawFormat.Guid );
+                        if ( codecInfo != null )
+                        {
+                            mimeType = codecInfo.MimeType;
+                        }
+
+                        // load the image into a stream, then use ImageResizer to resize it to the specified width and height (same technique as RockWeb GetImage.ashx.cs)
+                        var origImageStream = new MemoryStream();
+                        image.Save( origImageStream, image.RawFormat );
+                        origImageStream.Position = 0;
+                        var resizedStream = new MemoryStream();
+
+                        ImageBuilder.Current.Build( origImageStream, resizedStream, new ResizeSettings { Width = width ?? 100, Height = height ?? 100 } );
+
+                        HttpResponseMessage result = new HttpResponseMessage( HttpStatusCode.OK );
+                        resizedStream.Position = 0;
+                        result.Content = new StreamContent( resizedStream );
+                        result.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue( mimeType );
+
+                        if ( this.Request.GetQueryString( "timeStamp" ) != null )
+                        {
+                            // set the CacheControl to 365 days since the Request URL timestamp param will change if the file changes
+                            result.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue() { Public = true, MaxAge = new TimeSpan( 365, 0, 0, 0 ) };
+                        }
+
+                        return result;
+                    }
+                }
+                catch 
+                {
+                    
+                    // there was a problem with the image so send the default corrupt image warning back
+                    string imagePath = HttpContext.Current.Request.MapPath( "~/Assets/Images/corrupt-image.jpg" );
+                    
+                    // return a 404 if the file doesn't exist
+                    if ( !File.Exists( imagePath ) )
+                    {
+                        throw new HttpResponseException( new System.Net.Http.HttpResponseMessage( HttpStatusCode.NotFound ) );
                     }
 
-                    // load the image into a stream, then use ImageResizer to resize it to the specified width and height (same technique as RockWeb GetImage.ashx.cs)
-                    var origImageStream = new MemoryStream();
-                    image.Save( origImageStream, image.RawFormat );
-                    origImageStream.Position = 0;
-                    var resizedStream = new MemoryStream();
+                    using ( Image image = Image.FromFile( imagePath ) )
+                    {
+                        string mimeType = "image/jpg";
+                        var origImageStream = new MemoryStream();
+                        image.Save( origImageStream, image.RawFormat );
+                        origImageStream.Position = 0;
+                        var resizedStream = new MemoryStream();
 
-                    ImageBuilder.Current.Build( origImageStream, resizedStream, new ResizeSettings { Width = width ?? 100, Height = height ?? 100 } );
+                        ImageBuilder.Current.Build( origImageStream, resizedStream, new ResizeSettings { Width = width ?? 100, Height = height ?? 100 } );
 
-                    HttpResponseMessage result = new HttpResponseMessage( HttpStatusCode.OK );
-                    resizedStream.Position = 0;
-                    result.Content = new StreamContent( resizedStream );
-                    result.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue( mimeType );
-                    return result;
+                        HttpResponseMessage result = new HttpResponseMessage( HttpStatusCode.OK );
+                        resizedStream.Position = 0;
+                        result.Content = new StreamContent( resizedStream );
+                        result.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue( mimeType );
+
+                        return result;
+                    }
                 }
             }
         }

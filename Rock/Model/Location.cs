@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,9 +35,10 @@ namespace Rock.Model
     /// is also stackable/hierarchical. For example for a church's campus <seealso cref="Campus"/> can have multiple buildings or facilities, 
     /// each building can be multi story and a story can have multiple rooms.
     /// </summary>
+    [RockDomain( "Core" )]
     [Table( "Location" )]
     [DataContract]
-    public partial class Location : Model<Location>
+    public partial class Location : Model<Location>, IHasActiveFlag
     {
         #region Entity Properties
 
@@ -188,6 +189,16 @@ namespace Rock.Model
         public string PostalCode { get; set; }
 
         /// <summary>
+        /// Gets or sets the barcode.
+        /// </summary>
+        /// <value>
+        /// The barcode.
+        /// </value>
+        [MaxLength( 40 )]
+        [DataMember]
+        public string Barcode { get; set; }
+
+        /// <summary>
         /// Gets or sets the Local Assessor's parcel identification value that is linked to the location.
         /// </summary>
         /// <value>
@@ -226,7 +237,7 @@ namespace Rock.Model
         /// A <see cref="System.String"/> representing the result code that was returned by the address standardization service. If an address standardization has not been attempted for this location, 
         /// this value will be null.
         /// </value>
-        [MaxLength( 50 )]
+        [MaxLength( 200 )]
         [DataMember]
         public string StandardizeAttemptedResult { get; set; }
 
@@ -268,7 +279,7 @@ namespace Rock.Model
         /// A <see cref="System.String"/> representing the result code returned by the geocoding service from the most recent geocoding attempt. If geocoding has not been attempted for this location,
         /// the value will be null.
         /// </value>
-        [MaxLength( 50 )]
+        [MaxLength( 200 )]
         [DataMember]
         public string GeocodeAttemptedResult { get; set; }
 
@@ -309,6 +320,24 @@ namespace Rock.Model
         [DataMember]
         public int? ImageId { get; set; }
 
+        /// <summary>
+        /// Gets or sets a threshold that will prevent checkin unless a manager overrides
+        /// </summary>
+        /// <value>
+        /// The soft room threshold.
+        /// </value>
+        [DataMember]
+        public int? SoftRoomThreshold { get; set; }
+
+        /// <summary>
+        /// Gets or sets threshold that will prevent checkin (no option to override)
+        /// </summary>
+        /// <value>
+        /// The firm room threshold.
+        /// </value>
+        [DataMember]
+        public int? FirmRoomThreshold { get; set; }
+
         #endregion
 
         #region Virtual Properties
@@ -319,6 +348,7 @@ namespace Rock.Model
         /// <value>
         /// A Location object representing the parent location of the current location. If this Location does not have a parent Location, this value will be null.
         /// </value>
+        [LavaInclude]
         public virtual Location ParentLocation { get; set; }
 
         /// <summary>
@@ -367,6 +397,7 @@ namespace Rock.Model
         /// <value>
         /// A collection of <see cref="Rock.Model.GroupLocation"/> entities that reference this Location.
         /// </value>
+        [LavaInclude]
         public virtual ICollection<GroupLocation> GroupLocations
         {
             get { return _groupLocations ?? ( _groupLocations = new Collection<GroupLocation>() ); }
@@ -567,25 +598,29 @@ namespace Rock.Model
         /// </summary>
         /// <param name="latitude">A <see cref="System.Double"/> representing the latitude for this location.</param>
         /// <param name="longitude">A <see cref="System.Double"/>representing the longitude for this location.</param>
-        public void SetLocationPointFromLatLong( double latitude, double longitude )
+        public bool SetLocationPointFromLatLong( double latitude, double longitude )
         {
-            this.GeoPoint = DbGeography.FromText( string.Format( "POINT({0} {1})", longitude, latitude ) );
+            try
+            {
+                this.GeoPoint = DbGeography.FromText( string.Format( "POINT({0} {1})", longitude, latitude ) );
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         /// <summary>
         /// Returns a Google Maps link to use for this Location
         /// </summary>
-        /// <param name="title">A <see cref="System.String"/> containing the parameters needed by Google Maps to display this location.</param>
+        /// <param name="title">A unused <see cref="System.String"/> containing the location name label.</param>
         /// <returns>A <see cref="System.String"/> containing the link to Google Maps for this location.</returns>
         public virtual string GoogleMapLink( string title )
         {
             string qParm = this.GetFullStreetAddress();
-            if ( !string.IsNullOrWhiteSpace( title ) )
-            {
-                qParm += " (" + title + ")";
-            }
 
-            return "http://maps.google.com/maps?q=" +
+            return "https://maps.google.com/maps?q=" +
                 System.Web.HttpUtility.UrlEncode( qParm );
         }
 
@@ -605,6 +640,8 @@ namespace Rock.Model
                     binaryFile.IsTemporary = false;
                 }
             }
+
+            base.PreSaveChanges( dbContext, state );
         }
 
         /// <summary>
@@ -615,11 +652,11 @@ namespace Rock.Model
         /// </returns>
         public override string ToString()
         {
-            string result = this.Name;
+            string result = GetFullStreetAddress();
 
             if ( string.IsNullOrEmpty( result ) )
             {
-                result = GetFullStreetAddress();
+                result = this.Name;
             }
 
             if ( string.IsNullOrWhiteSpace( result ) )

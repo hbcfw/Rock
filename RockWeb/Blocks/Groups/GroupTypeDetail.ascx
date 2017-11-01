@@ -18,6 +18,7 @@
                     <Rock:HighlightLabel ID="hlType" runat="server" LabelType="Type" />
                 </div>
             </div>
+            <Rock:PanelDrawer ID="pdAuditDetails" runat="server"></Rock:PanelDrawer>
             <div class="panel-body">
 
                 <asp:HiddenField ID="hfGroupTypeId" runat="server" />
@@ -40,6 +41,7 @@
                 <div id="pnlEditDetails" runat="server">
 
                     <asp:ValidationSummary ID="valGroupTypeDetail" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
+                    <asp:CustomValidator ID="cvGroupType" runat="server" Display="None" />
 
                     <div class="row">
                         <div class="col-md-6">
@@ -71,42 +73,21 @@
                                         </Rock:Grid>
                                     </div>
                                 </Rock:RockControlWrapper>
+
+                                <Rock:GroupTypePicker ID="gtpInheritedGroupType" runat="server" Label="Inherited Group Type" 
+                                    Help="Group Type to inherit attributes from" AutoPostBack="true" OnSelectedIndexChanged="gtpInheritedGroupType_SelectedIndexChanged" />
+
                                 <div class="row">
                                     <div class="col-xs-6">
-                                        <Rock:RockCheckBox ID="cbTakesAttendance" runat="server" Label="Takes Attendance" Text="Yes" 
-                                            Help="Check this option if groups of this type should support taking and tracking attendance." />
-                                        <Rock:RockCheckBox ID="cbSendAttendanceReminder" runat="server" Label="Send Attendance Reminder" Text="Yes"
-                                            Help="Check this option if an email should be sent to the group leaders of these group types reminding them to enter attendance information." />
+                                        <Rock:RockDropDownList ID="ddlGroupCapacityRule" runat="server" Label="Group Capacity Rule" Help="Does this group type support group capacity and if so how is it enforced." />
                                     </div>
                                     <div class="col-xs-6">
-                                        <Rock:RockCheckBoxList ID="cblScheduleTypes" runat="server" Label="Group Schedule Options"
-                                            Help="The schedule option types to allow when editing groups of this type."/>
+                                        
                                     </div>
                                 </div>
-                                <Rock:RockControlWrapper ID="rcScheduleExclusions" runat="server" Label="Schedule Exclusions"
-                                    Help="The date ranges that groups of this type do not meet (regardless of their individual schedules).">
-                                    <div class="grid">
-                                        <Rock:Grid ID="gScheduleExclusions" runat="server" DisplayType="Light" ShowHeader="false" RowItemText="Exclusion">
-                                            <Columns>
-                                                <asp:TemplateField>
-                                                    <ItemTemplate>
-                                                        <%# ((DateTime)Eval("Value.Start")).ToShortDateString() %> - 
-                                                        <%# ((DateTime)Eval("Value.End")).ToShortDateString() %>
-                                                    </ItemTemplate>
-                                                </asp:TemplateField>
-                                                <Rock:EditField OnClick="gScheduleExclusions_Edit" />
-                                                <Rock:DeleteField OnClick="gScheduleExclusions_Delete" />
-                                            </Columns>
-                                        </Rock:Grid>
-                                    </div>
-                                </Rock:RockControlWrapper>
-                                <Rock:RockDropDownList ID="ddlAttendanceRule" runat="server" Label="Check-in Rule"
-                                    Help="The rule that check in should use when a person attempts to check in to a group of this type.  If 'None' is selected, user will not be added to group and is not required to belong to group.  If 'Add On Check In' is selected, user will be added to group if they don't already belong.  If 'Already Belongs' is selected, user must already be a member of the group or they will not be allowed to check in." />
-                                <Rock:RockDropDownList ID="ddlPrintTo" runat="server" Label="Print Using" 
-                                    Help="When printing check-in labels, should the device's printer or the location's printer be used?  Note: the device has a similiar setting which takes precedence over this setting.">
-                                    <asp:ListItem Text="Device Printer" Value="1" />
-                                    <asp:ListItem Text="Location Printer" Value="2" />
-                                </Rock:RockDropDownList>
+                                
+                                <Rock:RockCheckBox ID="cbGroupsRequireCampus" runat="server" Label="Groups Require a Campus" Text="Yes" 
+                                            Help="This setting will require that all groups of this type have a campus when adding and editing."/>
                             </div>
                             <div class="col-md-6">
                                 <div class="row">
@@ -132,10 +113,68 @@
                                         </Rock:Grid>
                                     </div>
                                 </Rock:RockControlWrapper>
-                                <Rock:GroupTypePicker ID="gtpInheritedGroupType" runat="server" Label="Inherited Group Type" 
-                                    Help="Group Type to inherit attributes from" AutoPostBack="true" OnSelectedIndexChanged="gtpInheritedGroupType_SelectedIndexChanged" />
+                                
                                 <Rock:RockCheckBox ID="cbDontInactivateMembers" runat="server" Label="Don't Inactivate Members" 
                                     Help="By default, whenever a person record is inactivated, all of that person's group memberships are also inactivated. Check this option if members in groups of this type should not be inactivated when their person record is inactivated." />
+                                <Rock:RockCheckBox ID="cbEnableIndexing" runat="server" Label="Enable Indexing" 
+                                    Help="Determines if groups of this type should be indexed." />
+                            </div>
+                        </div>
+                    </Rock:PanelWidget>
+
+                    <Rock:PanelWidget ID="wpAttendanceCheckin" runat="server" Title="Attendance / Check-in">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="row">
+                                    <div class="col-xs-6">
+                                        <Rock:RockCheckBox ID="cbTakesAttendance" runat="server" Label="Takes Attendance" Text="Yes" 
+                                                    Help="Check this option if groups of this type should support taking and tracking attendance." />
+                                        <Rock:RockCheckBox ID="cbWeekendService" runat="server" Label="Weekend Service" Text="Yes" 
+                                            Help="Check this option if attendance in groups of this type should be counted towards attending a weekend service." />
+                                        <Rock:RockCheckBox ID="cbSendAttendanceReminder" runat="server" Label="Send Attendance Reminder" Text="Yes"
+                                            Help="Check this option if an email should be sent to the group leaders of these group types reminding them to enter attendance information." />
+                                    </div>
+                                    <div class="col-xs-6">
+                                        <Rock:RockCheckBoxList ID="cblScheduleTypes" runat="server" Label="Group Schedule Options" Help="The schedule option types to allow when editing groups of this type."/>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-xs-6">
+                                        <Rock:RockCheckBox ID="cbGroupAttendanceRequiresLocation" runat="server" Label="Group Attendance Requires Location" Text="Yes" 
+                                                    Help="This option will require that all attendance occurrences have a location." />
+                                    </div>
+                                    <div class="col-xs-6">
+                                        <Rock:RockCheckBox ID="cbGroupAttendanceRequiresSchedule" runat="server" Label="Group Attendance Requires Schedule" Text="Yes" 
+                                                    Help="This option will require that all attendance occurrences have a schedule." />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <Rock:RockControlWrapper ID="rcScheduleExclusions" runat="server" Label="Schedule Exclusions"
+                                    Help="The date ranges that groups of this type do not meet (regardless of their individual schedules).">
+                                    <div class="grid">
+                                        <Rock:Grid ID="gScheduleExclusions" runat="server" DisplayType="Light" ShowHeader="false" RowItemText="Exclusion">
+                                            <Columns>
+                                                <asp:TemplateField>
+                                                    <ItemTemplate>
+                                                        <%# ((DateTime)Eval("Value.Start")).ToShortDateString() %> - 
+                                                        <%# ((DateTime)Eval("Value.End")).ToShortDateString() %>
+                                                    </ItemTemplate>
+                                                </asp:TemplateField>
+                                                <Rock:EditField OnClick="gScheduleExclusions_Edit" />
+                                                <Rock:DeleteField OnClick="gScheduleExclusions_Delete" />
+                                            </Columns>
+                                        </Rock:Grid>
+                                    </div>
+                                </Rock:RockControlWrapper>
+                                <Rock:RockDropDownList ID="ddlAttendanceRule" runat="server" Label="Check-in Rule"
+                                    Help="The rule that check in should use when a person attempts to check in to a group of this type.  If 'None' is selected, user will not be added to group and is not required to belong to group.  If 'Add On Check In' is selected, user will be added to group if they don't already belong.  If 'Already Belongs' is selected, user must already be a member of the group or they will not be allowed to check in." />
+                                <Rock:RockDropDownList ID="ddlPrintTo" runat="server" Label="Print Using" 
+                                    Help="When printing check-in labels, should the device's printer or the location's printer be used?  Note: the device has a similar setting which takes precedence over this setting.">
+                                    <asp:ListItem Text="Device Printer" Value="1" />
+                                    <asp:ListItem Text="Location Printer" Value="2" />
+                                </Rock:RockDropDownList>
                             </div>
                         </div>
                     </Rock:PanelWidget>
@@ -187,6 +226,7 @@
                                     <Rock:RockBoundField DataField="Name" HeaderText="Attribute" />
                                     <Rock:RockBoundField DataField="Description" HeaderText="Description" />
                                     <Rock:BoolField DataField="IsRequired" HeaderText="Required" />
+                                    <Rock:SecurityField TitleField="Name" />
                                     <Rock:EditField OnClick="gGroupMemberAttributes_Edit" />
                                     <Rock:DeleteField OnClick="gGroupMemberAttributes_Delete" />
                                 </Columns>
@@ -217,6 +257,7 @@
                                     <Rock:RockBoundField DataField="Name" HeaderText="Attribute" />
                                     <Rock:RockBoundField DataField="Description" HeaderText="Description" />
                                     <Rock:BoolField DataField="IsRequired" HeaderText="Required" />
+                                    <Rock:SecurityField TitleField="Name" />
                                     <Rock:EditField OnClick="gGroupAttributes_Edit" />
                                     <Rock:DeleteField OnClick="gGroupAttributes_Delete" />
                                 </Columns>
@@ -247,12 +288,29 @@
                                     <Rock:RockBoundField DataField="Name" HeaderText="Name" />
                                     <Rock:RockBoundField DataField="Description" HeaderText="Description" />
                                     <Rock:BoolField DataField="IsRequired" HeaderText="Required" />
+                                    <Rock:SecurityField TitleField="Name" />
                                     <Rock:EditField OnClick="gGroupTypeAttributes_Edit" />
                                     <Rock:DeleteField OnClick="gGroupTypeAttributes_Delete" />
                                 </Columns>
                             </Rock:Grid>
                         </div>
                     </Rock:PanelWidget>
+
+                    <Rock:PanelWidget ID="wpGroupTypeGroupRequirements" runat="server" Title="Group Requirements">
+                            <div class="grid">
+                                <Rock:Grid ID="gGroupTypeGroupRequirements" runat="server" AllowPaging="false" DisplayType="Light" RowItemText="Group Requirement" ShowConfirmDeleteDialog="false">
+                                    <Columns>
+                                        <Rock:RockBoundField DataField="GroupRequirementType.Name" HeaderText="Name" />
+                                        <Rock:RockBoundField DataField="GroupRole" HeaderText="Group Role" />
+                                        <Rock:BoolField DataField="MustMeetRequirementToAddMember" HeaderText="Required For New Members" />
+                                        <Rock:BoolField DataField="GroupRequirementType.CanExpire" HeaderText="Can Expire" />
+                                        <Rock:EnumField DataField="GroupRequirementType.RequirementCheckType" HeaderText="Type" />
+                                        <Rock:EditField OnClick="gGroupTypeGroupRequirements_Edit" />
+                                        <Rock:DeleteField OnClick="gGroupTypeGroupRequirements_Delete" />
+                                    </Columns>
+                                </Rock:Grid>
+                            </div>
+                        </Rock:PanelWidget>
 
                     <Rock:PanelWidget ID="wpMemberWorkflowTriggers" runat="server" Title="Group Member Workflows" >
                         <Rock:NotificationBox ID="NotificationBox3" runat="server" NotificationBoxType="Info" 
@@ -293,13 +351,15 @@
                                     Help="Check this option to include groups of this type in the GroupTreeView block's navigation control." />
                                 <Rock:RockCheckBox ID="cbShowConnectionStatus" runat="server" Label="Show Connection Status" Text="Yes" 
                                     Help="Check this option to show the person's connection status as a column in the group member list." />
+                                <Rock:RockCheckBox ID="cbShowMaritalStatus" runat="server" Label="Show Marital Status" Text="Yes" 
+                                    Help="Check this option to show the person's martial status as a column in the group member list." />
                             </div>
                         </div>
                     </Rock:PanelWidget>
 
                     <div class="actions">
-                        <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" />
-                        <asp:LinkButton ID="btnCancel" runat="server" AccessKey="c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="btnCancel_Click" />
+                        <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" ToolTip="Alt+s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" />
+                        <asp:LinkButton ID="btnCancel" runat="server" AccessKey="c" ToolTip="Alt+c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="btnCancel_Click" />
                     </div>
 
                 </div>
@@ -382,6 +442,23 @@
         <Rock:ModalDialog ID="dlgGroupMemberAttribute" runat="server" Title="Group Member Attributes" OnSaveClick="dlgGroupMemberAttribute_SaveClick" OnCancelScript="clearActiveDialog();" ValidationGroup="GroupMemberttributes">
             <Content>
                 <Rock:AttributeEditor ID="edtGroupMemberAttributes" runat="server" ShowActions="false" ValidationGroup="GroupMemberttributes" />
+            </Content>
+        </Rock:ModalDialog>
+
+        <!-- GroupType Group Requirements Modal Dialog -->
+        <Rock:ModalDialog ID="mdGroupTypeGroupRequirement" runat="server" Title="Group Requirement" OnSaveClick="mdGroupTypeGroupRequirement_SaveClick" OnCancelScript="clearActiveDialog();" ValidationGroup="vg_GroupTypeGroupRequirement">
+            <Content>
+                <asp:HiddenField ID="hfGroupTypeGroupRequirementGuid" runat="server" />
+
+                <Rock:NotificationBox id="nbDuplicateGroupRequirement" runat="server" NotificationBoxType="Warning" />
+
+                <asp:ValidationSummary ID="vsGroupTypeGroupRequirement" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" ValidationGroup="vg_GroupTypeGroupRequirement" />
+
+                <Rock:RockDropDownList ID="ddlGroupRequirementType" runat="server" Label="Group Requirement Type" Required="true" ValidationGroup="vg_GroupTypeGroupRequirement"/>
+
+                <Rock:GroupRolePicker ID="grpGroupRequirementGroupRole" runat="server" Label="Group Role" Help="Select the group role that this requirement applies to. Leave blank if it applies to all group roles." ValidationGroup="vg_GroupTypeGroupRequirement" />
+
+                <Rock:RockCheckBox ID="cbMembersMustMeetRequirementOnAdd" runat="server" Text="Members must meet this requirement before adding" Help="If this is enabled, a person can only become a group member if this requirement is met. Note: only applies to Data View and SQL type requirements since manual ones can't be checked until after the person is added." />
             </Content>
         </Rock:ModalDialog>
 

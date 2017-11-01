@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,6 +29,7 @@ namespace Rock.Model
     /// <summary>
     /// Represents a EventItemAudience.
     /// </summary>
+    [RockDomain( "Event" )]
     [Table( "EventItemAudience" )]
     [DataContract]
     public partial class EventItemAudience : Model<EventItemAudience>
@@ -44,10 +45,10 @@ namespace Rock.Model
         public int EventItemId { get; set; }
 
         /// <summary>
-        /// Gets or sets the Id of the <see cref="Rock.Model.Campus"/> that this EventItemAudience is associated with. This property is required.
+        /// Gets or sets the Id of the <see cref="Rock.Model.DefinedValue"/> that this EventItemAudience is associated with. This property is required.
         /// </summary>
         /// <value>
-        /// An <see cref="System.Int32"/> representing the Id of the <see cref="Rock.Model.Campus"/> that the EventItemAudience is associated with.
+        /// An <see cref="System.Int32"/> representing the Id of the <see cref="Rock.Model.DefinedValue"/> that the EventItemAudience is associated with.
         /// </value>
         [Required]
         [DataMember]

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,6 +31,7 @@ namespace Rock.Model
     /// Represents a batch or collection of <see cref="Rock.Model.FinancialTransaction">FinancialTransactions</see> for a specified date-time range, campus (if applicable) and transaction type.  A batch 
     /// has a known total value of all transactions that are included in the batch.
     /// </summary>
+    [RockDomain( "Finance" )]
     [Table( "FinancialBatch" )]
     [DataContract]
     public partial class FinancialBatch : Model<FinancialBatch>
@@ -161,6 +162,27 @@ namespace Rock.Model
 
         #endregion
 
+        #region ISecured overrides
+
+        /// <summary>
+        /// Gets the supported actions.
+        /// </summary>
+        /// <value>
+        /// The supported actions.
+        /// </value>
+        public override Dictionary<string, string> SupportedActions
+        {
+            get
+            {
+                var supportedActions = base.SupportedActions;
+                supportedActions.AddOrReplace( "Delete", "The roles and/or users that can delete a batch." );
+                supportedActions.AddOrReplace( "ReopenBatch", "The roles and/or users that can reopen a closed batch." );
+                return supportedActions;
+            }
+        }
+
+        #endregion ISecured overrides
+
         #region Public Methods
 
         /// <summary>
@@ -195,6 +217,31 @@ namespace Rock.Model
 
                 return result;
             }
+        }
+
+        /// <summary>
+        /// Determines whether [is valid batch status change] [the specified original status].
+        /// </summary>
+        /// <param name="origStatus">The original status.</param>
+        /// <param name="newStatus">The new status.</param>
+        /// <param name="currentPerson">The current person.</param>
+        /// <param name="errorMessage">The error message.</param>
+        /// <returns>
+        ///   <c>true</c> if [is valid batch status change] [the specified original status]; otherwise, <c>false</c>.
+        /// </returns>
+        public bool IsValidBatchStatusChange(BatchStatus origStatus, BatchStatus newStatus, Person currentPerson, out string errorMessage)
+        {
+            errorMessage = string.Empty;
+            if ( origStatus == BatchStatus.Closed && newStatus != BatchStatus.Closed )
+            {
+                if ( !this.IsAuthorized( "ReopenBatch", currentPerson ) )
+                {
+                    errorMessage = "User is not authorized to reopen a closed batch";
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         /// <summary>

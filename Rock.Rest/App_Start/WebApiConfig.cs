@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -50,6 +50,9 @@ namespace Rock.Rest
             // So, since Rock doesn't do TimeZones, we don't want Transmission of DateTimes to specify TimeZone either.
             config.Formatters.JsonFormatter.SerializerSettings.DateTimeZoneHandling = Newtonsoft.Json.DateTimeZoneHandling.Unspecified;
 
+            // register Swagger and its routes first
+            Rock.Rest.Swagger.SwaggerConfig.Register( config );
+
             // Add API route for dataviews
             config.Routes.MapHttpRoute(
                 name: "DataViewApi",
@@ -57,6 +60,19 @@ namespace Rock.Rest
                 defaults: new
                 {
                     action = "DataView"
+                } );
+
+            // Add API route for Launching a Workflow
+            config.Routes.MapHttpRoute(
+                name: "LaunchWorkflowApi",
+                routeTemplate: "api/{controller}/LaunchWorkflow/{id}",
+                defaults: new
+                {
+                    action = "LaunchWorkflow"
+                },
+                constraints: new
+                {
+                    httpMethod = new HttpMethodConstraint( new string[] { "POST" } ),
                 } );
 
             // Add API route for DeleteAttributeValue

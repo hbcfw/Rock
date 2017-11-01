@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,7 +32,7 @@ namespace Rock.Reporting.DataSelect.Person
     [Description( "Select the name of the Person's Spouse" )]
     [Export( typeof( DataSelectComponent ) )]
     [ExportMetadata( "ComponentName", "Select Person's Spouse's Name" )]
-    public class SpouseNameSelect : DataSelectComponent
+    public class SpouseNameSelect : DataSelectComponent, IRecipientDataSelect
     {
         #region Properties
 
@@ -146,10 +146,13 @@ namespace Rock.Reporting.DataSelect.Person
             var personSpouseQuery = new PersonService( context ).Queryable()
                 .Select( p => familyGroupMembers.Where( s => s.PersonId == p.Id && s.Person.MaritalStatusValueId == marriedDefinedValueId && s.GroupRole.Guid == adultGuid )
                     .SelectMany( m => m.Group.Members )
-                    .Where( fm => fm.PersonId != p.Id )
-                    .Where( m => m.GroupRole.Guid == adultGuid )
-                    .Where( m => m.Person.Gender != p.Gender )
-                    .Where( m => m.Person.MaritalStatusValueId == marriedDefinedValueId )
+                    .Where( m => 
+                        m.PersonId != p.Id &&
+                        m.GroupRole.Guid == adultGuid &&
+                        m.Person.Gender != p.Gender &&
+                        m.Person.MaritalStatusValueId == marriedDefinedValueId &&
+                        !m.Person.IsDeceased )
+                    .OrderBy( m => m.Group.Members.FirstOrDefault( x => x.PersonId == p.Id ).GroupOrder ?? int.MaxValue )
                     .Select( m => m.Person.NickName ).FirstOrDefault() );
 
             var selectSpouseExpression = SelectExpressionExtractor.Extract( personSpouseQuery, entityIdProperty, "p" );
@@ -199,5 +202,61 @@ namespace Rock.Reporting.DataSelect.Person
         }
 
         #endregion
+
+        #region IRecipientDataSelect implementation
+
+        /// <summary>
+        /// Gets the type of the recipient column field.
+        /// </summary>
+        /// <value>
+        /// The type of the recipient column field.
+        /// </value>
+        public Type RecipientColumnFieldType
+        {
+            get { return typeof( int ); }
+        }
+
+        /// <summary>
+        /// Gets the recipient person identifier expression.
+        /// </summary>
+        /// <param name="dbContext">The database context.</param>
+        /// <param name="entityIdProperty">The entity identifier property.</param>
+        /// <param name="selection">The selection.</param>
+        /// <returns></returns>
+        public Expression GetRecipientPersonIdExpression( System.Data.Entity.DbContext dbContext, MemberExpression entityIdProperty, string selection )
+        {
+            var rockContext = dbContext as RockContext;
+            if ( rockContext != null )
+            {
+                Guid adultGuid = Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT.AsGuid();
+                Guid marriedGuid = Rock.SystemGuid.DefinedValue.PERSON_MARITAL_STATUS_MARRIED.AsGuid();
+                int marriedDefinedValueId = DefinedValueCache.Read( marriedGuid ).Id;
+                Guid familyGuid = Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY.AsGuid();
+
+                var familyGroupMembers = new GroupMemberService( rockContext ).Queryable()
+                    .Where( m => m.Group.GroupType.Guid == familyGuid );
+
+                var personSpouseQuery = new PersonService( rockContext ).Queryable()
+                    .Select( p => familyGroupMembers.Where( s => s.PersonId == p.Id && s.Person.MaritalStatusValueId == marriedDefinedValueId && s.GroupRole.Guid == adultGuid )
+                        .SelectMany( m => m.Group.Members )
+                        .Where( m =>
+                            m.PersonId != p.Id &&
+                            m.GroupRole.Guid == adultGuid &&
+                            m.Person.Gender != p.Gender &&
+                            m.Person.MaritalStatusValueId == marriedDefinedValueId &&
+                            !m.Person.IsDeceased )
+                        .OrderBy( m => m.Group.Members.FirstOrDefault( x => x.PersonId == p.Id ).GroupOrder ?? int.MaxValue )
+                        .Select( m => m.Person.Id ).FirstOrDefault() );
+
+                var selectSpouseExpression = SelectExpressionExtractor.Extract( personSpouseQuery, entityIdProperty, "p" );
+
+                return selectSpouseExpression;
+            }
+
+            return null;
+        }
+
+        #endregion
+
     }
 }

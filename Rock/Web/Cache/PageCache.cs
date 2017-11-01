@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -266,6 +266,14 @@ namespace Rock.Web.Cache
         public bool AllowIndexing { get; set; }
 
         /// <summary>
+        /// Gets or sets the body CSS class.
+        /// </summary>
+        /// <value>
+        /// The body CSS class.
+        /// </value>
+        public string BodyCssClass { get; set; }
+
+        /// <summary>
         /// Gets the parent page.
         /// </summary>
         /// <value>
@@ -294,6 +302,21 @@ namespace Rock.Web.Cache
             get
             {
                 return LayoutCache.Read( LayoutId );
+            }
+        }
+
+        /// <summary>
+        /// Gets the site identifier of the Page's Layout
+        /// NOTE: This is needed so that Page Attributes qualified by SiteId work
+        /// </summary>
+        /// <value>
+        /// The site identifier.
+        /// </value>
+        public virtual int SiteId
+        {
+            get
+            {
+                return this.Layout?.SiteId ?? 0;
             }
         }
 
@@ -346,6 +369,12 @@ namespace Rock.Web.Cache
                         {
                             BlockService blockService = new BlockService( rockContext );
 
+                            // Load Site Blocks (blocks that should be shown on all pages of a site)
+                            var siteBlockIds = blockService
+                                .GetBySite( this.SiteId )
+                                .Select( b => b.Id )
+                                .ToList();
+
                             // Load Layout Blocks
                             var layoutBlockIds = blockService
                                 .GetByLayout( this.LayoutId )
@@ -358,7 +387,8 @@ namespace Rock.Web.Cache
                                 .Select( b => b.Id )
                                 .ToList();
 
-                            blockIds = layoutBlockIds.Union( pageBlockIds ).ToList();
+                            // NOTE: starting from the top of zone, starts with all Site Blocks, then Layout Blocks, then any page specific blocks
+                            blockIds = siteBlockIds.Union(layoutBlockIds).Union( pageBlockIds ).ToList();
                         }
                     }
                 }
@@ -463,6 +493,55 @@ namespace Rock.Web.Cache
 
         #endregion
 
+        #region Additional Properties 
+
+        /// <summary>
+        /// Gets the site name 
+        /// NOTE: This is mainly for backwards compatibility for how HtmlContentDetail did Lava for CurrentPage
+        /// </summary>
+        /// <value>
+        /// The site.
+        /// </value>
+        public string Site
+        {
+            get
+            {
+                return this.Layout?.Site?.Name;
+            }
+        }
+
+        /// <summary>
+        /// Gets the site theme.
+        /// NOTE: This is mainly for backwards compatibility for how HtmlContentDetail did Lava for CurrentPage
+        /// </summary>
+        /// <value>
+        /// The site theme.
+        /// </value>
+        public string SiteTheme
+        {
+            get
+            {
+                return this.Layout?.Site?.Theme;
+            }
+        }
+
+        /// <summary>
+        /// Gets the page icon.
+        /// NOTE: This is mainly for backwards compatibility for how HtmlContentDetail did Lava for CurrentPage
+        /// </summary>
+        /// <value>
+        /// The page icon.
+        /// </value>
+        public string PageIcon
+        {
+            get
+            {
+                return this.IconCssClass;
+            }
+        }
+
+        #endregion
+
         #region Public Methods
 
         /// <summary>
@@ -502,6 +581,7 @@ namespace Rock.Web.Cache
                 this.HeaderContent = page.HeaderContent;
                 this.IncludeAdminFooter = page.IncludeAdminFooter;
                 this.AllowIndexing = page.AllowIndexing;
+                this.BodyCssClass = page.BodyCssClass;
 
                 this.PageContexts = new Dictionary<string, string>();
                 if ( page.PageContexts != null )
@@ -928,6 +1008,25 @@ namespace Rock.Web.Cache
                 {
                     var page = cache[item.Key] as PageCache;
                     if ( page != null && page.LayoutId == layoutId )
+                    {
+                        page.FlushBlocks();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Flushes the block instances for all the pages that use a specific site.
+        /// </summary>
+        public static void FlushSiteBlocks( int siteId )
+        {
+            RockMemoryCache cache = RockMemoryCache.Default;
+            foreach ( var item in cache )
+            {
+                if ( item.Key.StartsWith( "Rock:Page:" ) )
+                {
+                    var page = cache[item.Key] as PageCache;
+                    if ( page != null && page.SiteId == siteId )
                     {
                         page.FlushBlocks();
                     }

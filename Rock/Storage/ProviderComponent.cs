@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,6 +35,17 @@ namespace Rock.Storage
         /// </summary>
         /// <param name="file">The file.</param>
         public abstract void SaveContent( BinaryFile file );
+
+        /// <summary>
+        /// Saves the binary file contents to the external storage medium associated with the provider.
+        /// </summary>
+        /// <param name="file">The file.</param>
+        /// <param name="fileSize">Size of the file.</param>
+        public virtual void SaveContent( BinaryFile file, out long? fileSize )
+        {
+            fileSize = null;
+            SaveContent( file );
+        }
 
         /// <summary>
         /// Deletes the content from the external storage medium associated with the provider.

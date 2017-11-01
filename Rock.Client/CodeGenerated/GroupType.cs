@@ -5,13 +5,13 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 // <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -41,6 +41,9 @@ namespace Rock.Client
         public bool AllowMultipleLocations { get; set; }
 
         /// <summary />
+        public bool AttendanceCountsAsWeekendService { get; set; }
+
+        /// <summary />
         public Rock.Client.Enums.PrintTo AttendancePrintTo { get; set; }
 
         /// <summary />
@@ -62,7 +65,19 @@ namespace Rock.Client
         public string ForeignKey { get; set; }
 
         /// <summary />
+        public bool GroupAttendanceRequiresLocation { get; set; }
+
+        /// <summary />
+        public bool GroupAttendanceRequiresSchedule { get; set; }
+
+        /// <summary />
+        public Rock.Client.Enums.GroupCapacityRule GroupCapacityRule { get; set; }
+
+        /// <summary />
         public string GroupMemberTerm { get; set; }
+
+        /// <summary />
+        public bool GroupsRequireCampus { get; set; }
 
         /// <summary />
         public string GroupTerm { get; set; }
@@ -78,6 +93,9 @@ namespace Rock.Client
 
         /// <summary />
         public int? InheritedGroupTypeId { get; set; }
+
+        /// <summary />
+        public bool IsIndexEnabled { get; set; }
 
         /// <summary />
         public bool IsSystem { get; set; }
@@ -107,6 +125,9 @@ namespace Rock.Client
 
         /// <summary />
         public bool ShowInNavigation { get; set; }
+
+        /// <summary />
+        public bool ShowMaritalStatus { get; set; }
 
         /// <summary />
         public bool TakesAttendance { get; set; }
@@ -146,6 +167,7 @@ namespace Rock.Client
             this.Id = source.Id;
             this.AllowedScheduleTypes = source.AllowedScheduleTypes;
             this.AllowMultipleLocations = source.AllowMultipleLocations;
+            this.AttendanceCountsAsWeekendService = source.AttendanceCountsAsWeekendService;
             this.AttendancePrintTo = source.AttendancePrintTo;
             this.AttendanceRule = source.AttendanceRule;
             this.DefaultGroupRoleId = source.DefaultGroupRoleId;
@@ -153,12 +175,17 @@ namespace Rock.Client
             this.EnableLocationSchedules = source.EnableLocationSchedules;
             this.ForeignGuid = source.ForeignGuid;
             this.ForeignKey = source.ForeignKey;
+            this.GroupAttendanceRequiresLocation = source.GroupAttendanceRequiresLocation;
+            this.GroupAttendanceRequiresSchedule = source.GroupAttendanceRequiresSchedule;
+            this.GroupCapacityRule = source.GroupCapacityRule;
             this.GroupMemberTerm = source.GroupMemberTerm;
+            this.GroupsRequireCampus = source.GroupsRequireCampus;
             this.GroupTerm = source.GroupTerm;
             this.GroupTypePurposeValueId = source.GroupTypePurposeValueId;
             this.IconCssClass = source.IconCssClass;
             this.IgnorePersonInactivated = source.IgnorePersonInactivated;
             this.InheritedGroupTypeId = source.InheritedGroupTypeId;
+            this.IsIndexEnabled = source.IsIndexEnabled;
             this.IsSystem = source.IsSystem;
             this.LocationSelectionMode = source.LocationSelectionMode;
             this.ModifiedAuditValuesAlreadyUpdated = source.ModifiedAuditValuesAlreadyUpdated;
@@ -168,6 +195,7 @@ namespace Rock.Client
             this.ShowConnectionStatus = source.ShowConnectionStatus;
             this.ShowInGroupList = source.ShowInGroupList;
             this.ShowInNavigation = source.ShowInNavigation;
+            this.ShowMaritalStatus = source.ShowMaritalStatus;
             this.TakesAttendance = source.TakesAttendance;
             this.CreatedDateTime = source.CreatedDateTime;
             this.ModifiedDateTime = source.ModifiedDateTime;
@@ -189,6 +217,9 @@ namespace Rock.Client
 
         /// <summary />
         public GroupTypeRole DefaultGroupRole { get; set; }
+
+        /// <summary />
+        public ICollection<GroupRequirement> GroupRequirements { get; set; }
 
         /// <summary />
         public DefinedValue GroupTypePurposeValue { get; set; }

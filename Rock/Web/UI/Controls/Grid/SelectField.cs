@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -36,9 +36,7 @@ namespace Rock.Web.UI.Controls
             : base()
         {
             this.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-            this.HeaderStyle.CssClass = "grid-select-field";
             this.ItemStyle.CssClass = "grid-select-field";
-
         }
 
         #region Properties
@@ -176,6 +174,25 @@ namespace Rock.Web.UI.Controls
         }
 
         /// <summary>
+        /// Gets or sets the header tooltip
+        /// </summary>
+        /// <value>
+        /// The header tooltip
+        /// </value>
+        public string HeaderTooltip
+        {
+            get
+            {
+                return ViewState["HeaderTooltip"] as string;
+            }
+
+            set
+            {
+                ViewState["HeaderTooltip"] = value;
+            }
+        }
+
+        /// <summary>
         /// Gets or sets the index of the column.
         /// </summary>
         /// <value>
@@ -192,6 +209,14 @@ namespace Rock.Web.UI.Controls
                 ViewState["ColumnIndex"] = value;
             }
         }
+
+        /// <summary>
+        /// Gets the header checkbox.
+        /// </summary>
+        /// <value>
+        /// The header checkbox.
+        /// </value>
+        public CheckBox HeaderCheckbox { get; internal set; }
 
         #endregion
 
@@ -353,10 +378,6 @@ namespace Rock.Web.UI.Controls
                         object selectValue = DataBinder.Eval( gridViewRow.DataItem, DataSelectedField );
                         cb.Checked = (bool)selectValue;
                     }
-                    else
-                    {
-                        cb.Checked =false;
-                    }
 
                     if ( !string.IsNullOrWhiteSpace( DataVisibleField ) )
                     {
@@ -400,15 +421,18 @@ namespace Rock.Web.UI.Controls
                     Literal l = new Literal();
                     l.Text = selectField.HeaderText;
                     cell.Controls.Add( l );
+                    cell.ToolTip = selectField.HeaderTooltip;
 
                     if ( selectField.SelectionMode == SelectionMode.Multiple && selectField.ShowHeader && selectField.ShowSelectAll )
                     {
                         string colIndex = selectField.ColumnIndex.ToString();
-                        CheckBox cb = new CheckBox();
+                        var cb = new CheckBox();
                         cb.ID = "cbSelectHead_" + colIndex;
                         cb.AddCssClass( "select-all" );
                         cell.AddCssClass( "grid-select-field" );
                         cell.Controls.Add( cb );
+
+                        selectField.HeaderCheckbox = cb;
                     }
                 }
             }

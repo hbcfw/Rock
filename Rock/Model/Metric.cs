@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +16,6 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Entity.ModelConfiguration;
@@ -29,6 +28,7 @@ namespace Rock.Model
     /// <summary>
     /// Metric POCO Entity.
     /// </summary>
+    [RockDomain( "Reporting" )]
     [Table( "Metric" )]
     [DataContract]
     public partial class Metric : Model<Metric>
@@ -113,6 +113,15 @@ namespace Rock.Model
         public string SourceSql { get; set; }
 
         /// <summary>
+        /// Gets or sets the Lava code that returns the data for the Metric.
+        /// </summary>
+        /// <value>
+        /// A <see cref="System.String" /> that represents the Lava code that returns the data for the Metric.
+        /// </value>
+        [DataMember]
+        public string SourceLava { get; set; }
+
+        /// <summary>
         /// Gets or sets the data view identifier.
         /// </summary>
         /// <value>
@@ -178,24 +187,35 @@ namespace Rock.Model
         public DateTime? LastRunDateTime { get; set; }
 
         /// <summary>
-        /// Gets or sets the entity type identifier.
+        /// Gets or sets a value indicating whether [enable analytics].
+        /// If this is enabled, a SQL View named 'AnalyticsFactMetric{{Metric.Name}}' will be made available that can be used by Analytic tools, such as Power BI
         /// </summary>
         /// <value>
-        /// The entity type identifier.
+        ///   <c>true</c> if [enable analytics]; otherwise, <c>false</c>.
         /// </value>
         [DataMember]
-        public int? EntityTypeId { get; set; }
+        public bool EnableAnalytics { get; set; }
 
         #endregion
 
         #region Virtual Properties
 
         /// <summary>
-        /// Gets or sets a collection that contains all the <see cref="MetricValue">Metric Values</see> (values) for this Metric.
+        /// Gets or sets the metric partitions.
         /// </summary>
         /// <value>
-        /// A collection of <see cref="Rock.Model.MetricValue">MetricValues</see> that are associated with this Metric.
+        /// The metric partitions.
         /// </value>
+        [LavaInclude]
+        public virtual ICollection<MetricPartition> MetricPartitions { get; set; }
+
+        /// <summary>
+        /// Gets or sets the metric values.
+        /// </summary>
+        /// <value>
+        /// The metric values.
+        /// </value>
+        [LavaInclude]
         public virtual ICollection<MetricValue> MetricValues { get; set; }
 
         /// <summary>
@@ -213,6 +233,7 @@ namespace Rock.Model
         /// <value>
         /// The data view.
         /// </value>
+        [LavaInclude]
         public virtual DataView DataView { get; set; }
 
         /// <summary>
@@ -221,6 +242,7 @@ namespace Rock.Model
         /// <value>
         /// The metric champion person alias.
         /// </value>
+        [LavaInclude]
         public virtual PersonAlias MetricChampionPersonAlias { get; set; }
 
         /// <summary>
@@ -229,6 +251,7 @@ namespace Rock.Model
         /// <value>
         /// The admin person alias.
         /// </value>
+        [LavaInclude]
         public virtual PersonAlias AdminPersonAlias { get; set; }
 
         /// <summary>
@@ -237,6 +260,7 @@ namespace Rock.Model
         /// <value>
         /// The schedule.
         /// </value>
+        [LavaInclude]
         public virtual Schedule Schedule { get; set; }
 
         /// <summary>
@@ -246,21 +270,18 @@ namespace Rock.Model
         /// The metric categories.
         /// </value>
         [DataMember]
-        public virtual ICollection<MetricCategory> MetricCategories
-        {
-            get { return _metricCategories ?? ( _metricCategories = new Collection<MetricCategory>() ); }
-            set { _metricCategories = value; }
-        }
-        private ICollection<MetricCategory> _metricCategories;
+        public virtual ICollection<MetricCategory> MetricCategories { get; set; }
 
         /// <summary>
-        /// Gets or sets the type of the entity.
+        /// Gets or sets the type of the numeric data that the values represent. Although all values
+        /// are stored as a decimal, specifying the type here allows entry screens to use appropriate
+        /// controls/validation when entering values.
         /// </summary>
         /// <value>
-        /// The type of the entity.
+        /// The type of the numeric data.
         /// </value>
-        [DataMember]
-        public virtual Model.EntityType EntityType { get; set; }
+        [LavaInclude]
+        public MetricNumericDataType NumericDataType { get; set; }
 
         #endregion
 
@@ -291,6 +312,36 @@ namespace Rock.Model
             return this.Title;
         }
 
+        /// <summary>
+        /// Return <c>true</c> if the user is authorized to perform the selected action on this object.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        /// <param name="person">The person.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified action is authorized; otherwise, <c>false</c>.
+        /// </returns>
+        public override bool IsAuthorized( string action, Person person )
+        {
+            bool? isAuthorized = Security.Authorization.AuthorizedForEntity( this, action, person );
+            if ( isAuthorized.HasValue )
+            {
+                return isAuthorized.Value;
+            }
+
+            if ( this.MetricCategories != null )
+            {
+                foreach ( var metricCategory in this.MetricCategories )
+                {
+                    if ( metricCategory.Category.IsAuthorized( action, person ) )
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return base.IsAuthorized(action, person);
+        }
+
         #endregion
     }
 
@@ -312,8 +363,32 @@ namespace Rock.Model
             this.HasOptional( p => p.MetricChampionPersonAlias ).WithMany().HasForeignKey( p => p.MetricChampionPersonAliasId ).WillCascadeOnDelete( false );
             this.HasOptional( p => p.AdminPersonAlias ).WithMany().HasForeignKey( p => p.AdminPersonAliasId ).WillCascadeOnDelete( false );
             this.HasOptional( p => p.Schedule ).WithMany().HasForeignKey( p => p.ScheduleId ).WillCascadeOnDelete( false );
-            this.HasOptional( a => a.EntityType ).WithMany().HasForeignKey( a => a.EntityTypeId ).WillCascadeOnDelete( false );
         }
+    }
+
+    #endregion
+
+    #region Enumerations
+
+    /// <summary>
+    /// The gender of a person
+    /// </summary>
+    public enum MetricNumericDataType
+    {
+        /// <summary>
+        /// Integer
+        /// </summary>
+        Integer = 0,
+
+        /// <summary>
+        /// Decimal
+        /// </summary>
+        Decimal = 1,
+
+        /// <summary>
+        /// Currency
+        /// </summary>
+        Currency = 2
     }
 
     #endregion

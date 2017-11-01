@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -124,7 +124,10 @@ namespace Rock.Security.ExternalAuthentication
 
                 if ( restResponse.StatusCode == HttpStatusCode.OK )
                 {
-                    string accessToken = HttpUtility.ParseQueryString( "?" + restResponse.Content )["access_token"];
+                    // As of March 28, 2017... the response is now in JSON format, not form values.  Facebook says 
+                    // they made this update to be compliant with section 5.1 of RFC 6749. https://developers.facebook.com/docs/apps/changelog
+                    dynamic facebookOauthResponse = JsonConvert.DeserializeObject<ExpandoObject>( restResponse.Content );
+                    string accessToken = facebookOauthResponse.access_token;
 
                     // Get information about the person who logged in using Facebook
                     restRequest = new RestRequest( Method.GET );
@@ -433,7 +436,7 @@ namespace Rock.Security.ExternalAuthentication
                             // If person does not have a photo, try to get their Facebook photo
                             if ( !person.PhotoId.HasValue )
                             {
-                                var restClient = new RestClient( string.Format( "https://graph.facebook.com/v2.2/{0}/picture?redirect=false&type=square&height=400&width=400", facebookId ) );
+                                var restClient = new RestClient( string.Format( "https://graph.facebook.com/v2.5/{0}/picture?redirect=false&type=square&height=400&width=400", facebookId ) );
                                 var restRequest = new RestRequest( Method.GET );
                                 restRequest.RequestFormat = DataFormat.Json;
                                 restRequest.AddHeader( "Accept", "application/json" );
@@ -466,6 +469,7 @@ namespace Rock.Security.ExternalAuthentication
                                                 binaryFile.BinaryFileType = fileType;
                                                 binaryFile.MimeType = "image/jpeg";
                                                 binaryFile.FileName = user.Person.NickName + user.Person.LastName + ".jpg";
+                                                binaryFile.FileSize = bytes.Length;
                                                 binaryFile.ContentStream = new MemoryStream( bytes );
 
                                                 rockContext.SaveChanges();
@@ -495,7 +499,7 @@ namespace Rock.Security.ExternalAuthentication
                                 restRequest.RequestFormat = DataFormat.Json;
                                 restRequest.AddHeader( "Accept", "application/json" );
 
-                                var restClient = new RestClient( string.Format( "https://graph.facebook.com/v2.2/{0}/friends", facebookId ) );
+                                var restClient = new RestClient( string.Format( "https://graph.facebook.com/v2.5/{0}/friends", facebookId ) );
                                 var restResponse = restClient.Execute( restRequest );
 
                                 if ( restResponse.StatusCode == HttpStatusCode.OK )

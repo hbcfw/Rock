@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,12 +22,13 @@ using System.Linq;
 using System.Text;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-
+using Newtonsoft.Json;
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
 using Rock.Web.Cache;
+using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
 namespace RockWeb.Blocks.Finance
@@ -37,11 +38,16 @@ namespace RockWeb.Blocks.Finance
     [Description( "Lists all financial batches and provides filtering by campus, status, etc." )]
     [LinkedPage( "Detail Page", order: 0 )]
     [BooleanField( "Show Accounting Code", "Should the accounting code column be displayed.", false, "", 1 )]
-    public partial class BatchList : Rock.Web.UI.RockBlock, IPostBackEventHandler
+    [BooleanField( "Show Accounts Column", "Should the accounts column be displayed.", true, "", 2 )]
+    public partial class BatchList : RockBlock, IPostBackEventHandler, ICustomGridColumns
     {
         #region Fields
 
         private RockDropDownList ddlAction;
+        public List<AttributeCache> AvailableAttributes { get; set; }
+
+        // Dictionaries to cache values for performance
+        private static Dictionary<int, FinancialAccount> _financialAccountLookup;
 
         #endregion
 
@@ -84,7 +90,7 @@ namespace RockWeb.Blocks.Finance
         Rock.dialogs.confirm('Are you sure you want to delete this batch?', function (result) {
             if (result) {
                 if ( $btn.closest('tr').hasClass('js-has-transactions') ) {
-                    Rock.dialogs.confirm('This batch has transactions. Are you sure that you want to delete this batch and all of it\'s transactions?', function (result) {
+                    Rock.dialogs.confirm('This batch has transactions. Are you sure that you want to delete this batch and all of its transactions?', function (result) {
                         if (result) {
                             window.location = e.target.href ? e.target.href : e.target.parentElement.href;
                         }
@@ -126,6 +132,32 @@ namespace RockWeb.Blocks.Finance
                 BindFilter();
                 BindGrid();
             }
+        }
+
+        /// <summary>
+        /// Restores the view-state information from a previous user control request that was saved by the <see cref="M:System.Web.UI.UserControl.SaveViewState" /> method.
+        /// </summary>
+        /// <param name="savedState">An <see cref="T:System.Object" /> that represents the user control state to be restored.</param>
+        protected override void LoadViewState( object savedState )
+        {
+            base.LoadViewState( savedState );
+
+            AvailableAttributes = ViewState["AvailableAttributes"] as List<AttributeCache>;
+
+            AddDynamicControls();
+        }
+
+        /// <summary>
+        /// Saves any user control view-state changes that have occurred since the last page postback.
+        /// </summary>
+        /// <returns>
+        /// Returns the user control's current view state. If there is no view state associated with the control, it returns null.
+        /// </returns>
+        protected override object SaveViewState()
+        {
+            ViewState["AvailableAttributes"] = AvailableAttributes;
+
+            return base.SaveViewState();
         }
 
         /// <summary>
@@ -179,6 +211,24 @@ namespace RockWeb.Blocks.Finance
         /// <param name="e">The <see cref="Rock.Web.UI.Controls.GridFilter.DisplayFilterValueArgs"/> instance containing the event data.</param>
         protected void gfBatchFilter_DisplayFilterValue( object sender, Rock.Web.UI.Controls.GridFilter.DisplayFilterValueArgs e )
         {
+            if ( AvailableAttributes != null )
+            {
+                var attribute = AvailableAttributes.FirstOrDefault( a => "Attribute_" + a.Key == e.Key );
+                if ( attribute != null )
+                {
+                    try
+                    {
+                        var values = JsonConvert.DeserializeObject<List<string>>( e.Value );
+                        e.Value = attribute.FieldType.Field.FormatFilterValues( attribute.QualifierValues, values );
+                        return;
+                    }
+                    catch
+                    {
+                        // intentionally ignore
+                    }
+                }
+            }
+
             switch ( e.Key )
             {
                 case "Row Limit":
@@ -260,6 +310,26 @@ namespace RockWeb.Blocks.Finance
             gfBatchFilter.SaveUserPreference( "Campus", campCampus.SelectedValue );
             gfBatchFilter.SaveUserPreference( "Contains Transaction Type", ddlTransactionType.SelectedValue );
 
+            if ( AvailableAttributes != null )
+            {
+                foreach ( var attribute in AvailableAttributes )
+                {
+                    var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
+                    if ( filterControl != null )
+                    {
+                        try
+                        {
+                            var values = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
+                            gfBatchFilter.SaveUserPreference( "Attribute_" + attribute.Key, attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
+                        }
+                        catch
+                        {
+                            // intentionally ignore
+                        }
+                    }
+                }
+            }
+
             BindGrid();
         }
 
@@ -276,7 +346,7 @@ namespace RockWeb.Blocks.Finance
             var batch = batchService.Get( e.RowKeyId );
             if ( batch != null )
             {
-                if ( UserCanEdit || batch.IsAuthorized( Rock.Security.Authorization.EDIT, CurrentPerson ) )
+                if ( batch.IsAuthorized( Rock.Security.Authorization.DELETE, CurrentPerson ) )
                 {
                     string errorMessage;
                     if ( !batchService.CanDelete( batch, out errorMessage ) )
@@ -303,6 +373,10 @@ namespace RockWeb.Blocks.Finance
 
                         rockContext.SaveChanges();
                     } );
+                }
+                else
+                {
+                    mdGridWarning.Show( "You are not authorized to delete the selected batch.", ModalAlertType.Warning);
                 }
             }
 
@@ -363,9 +437,9 @@ namespace RockWeb.Blocks.Finance
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        private void gBatchList_GridRebind( object sender, EventArgs e )
+        private void gBatchList_GridRebind( object sender, GridRebindEventArgs e )
         {
-            BindGrid();
+            BindGrid( e.IsExporting );
         }
 
         /// <summary>
@@ -399,6 +473,14 @@ namespace RockWeb.Blocks.Finance
                     {
                         var changes = new List<string>();
                         History.EvaluateChange( changes, "Status", batch.Status, newStatus );
+
+                        string errorMessage;
+                        if ( !batch.IsValidBatchStatusChange( batch.Status, newStatus, this.CurrentPerson, out errorMessage ) )
+                        {
+                            maWarningDialog.Show( errorMessage, ModalAlertType.Warning );
+                            return;
+                        }
+
                         batch.Status = newStatus;
 
                         if ( !batch.IsValid )
@@ -447,12 +529,23 @@ namespace RockWeb.Blocks.Finance
         {
             bool showAccountingCode = GetAttributeValue( "ShowAccountingCode" ).AsBoolean();
             tbAccountingCode.Visible = showAccountingCode;
-            gBatchList.Columns[4].Visible = showAccountingCode;
+            var accountingCodeColumn = gBatchList.ColumnsOfType<RockBoundField>().FirstOrDefault( a => a.DataField == "AccountingSystemCode" );
+            if ( accountingCodeColumn != null )
+            {
+                accountingCodeColumn.Visible = showAccountingCode;
+            }
 
             if ( showAccountingCode )
             {
                 string accountingCode = gfBatchFilter.GetUserPreference( "Accounting Code" );
                 tbAccountingCode.Text = !string.IsNullOrWhiteSpace( accountingCode ) ? accountingCode : string.Empty;
+            }
+
+            bool showAccountsColumn = GetAttributeValue( "ShowAccountsColumn" ).AsBoolean();
+            var accountsColumn = gBatchList.ColumnsOfType<RockBoundField>().FirstOrDefault( c => c.HeaderText == "Accounts" );
+            if ( accountsColumn != null )
+            {
+                accountsColumn.Visible = showAccountsColumn;
             }
         }
 
@@ -490,6 +583,9 @@ namespace RockWeb.Blocks.Finance
             campCampus.SetValue( gfBatchFilter.GetUserPreference( "Campus" ) );
 
             drpBatchDate.DelimitedValues = gfBatchFilter.GetUserPreference( "Date Range" );
+
+            BindAttributes();
+            AddDynamicControls();
         }
 
         /// <summary>
@@ -505,19 +601,43 @@ namespace RockWeb.Blocks.Finance
         /// <summary>
         /// Binds the grid.
         /// </summary>
-        private void BindGrid()
+        private void BindGrid( bool isExporting = false )
         {
+
+            var txnCountCol = gBatchList.ColumnsOfType<RockBoundField>().FirstOrDefault( c => c.DataField == "TransactionCount" );
+            if ( txnCountCol != null )
+            {
+                txnCountCol.HeaderText = isExporting ? "Transaction Count" :
+                    "<span class='hidden-print'>Transaction Count</span><span class='visible-print-inline'>Txns</span>";
+            }
+
+            var txnAmountCol = gBatchList.ColumnsOfType<CurrencyField>().FirstOrDefault( c => c.DataField == "TransactionAmount" );
+            if ( txnAmountCol != null )
+            {
+                txnAmountCol.HeaderText = isExporting ? "Transaction Amount" :
+                    "<span class='hidden-print'>Transaction Total</span><span class='visible-print-inline'>Txn Total</span>";
+            }
+
+            var accountsCol = gBatchList.ColumnsOfType<RockBoundField>().FirstOrDefault( c => c.HeaderText == "Accounts" );
+            if ( accountsCol != null )
+            {
+                accountsCol.DataField = isExporting ? "AccountSummaryText" : "AccountSummaryHtml";
+            }
+
             try
             {
-                var qry = GetQuery().AsNoTracking();
-                var batchRowQry = qry.Select( b => new BatchRow
+                var rockContext = new RockContext();
+                _financialAccountLookup = new FinancialAccountService( rockContext ).Queryable().AsNoTracking().ToList().ToDictionary( k => k.Id, v => v );
+
+                var financialBatchQry = GetQuery( rockContext ).AsNoTracking();
+
+                var batchRowQry = financialBatchQry.Select( b => new BatchRow
                 {
                     Id = b.Id,
                     BatchStartDateTime = b.BatchStartDateTime.Value,
                     Name = b.Name,
                     AccountingSystemCode = b.AccountingSystemCode,
                     TransactionCount = b.Transactions.Count(),
-                    TransactionAmount = b.Transactions.Sum( t => (decimal?)( t.TransactionDetails.Sum( d => (decimal?)d.Amount ) ?? 0.0M ) ) ?? 0.0M,
                     ControlAmount = b.ControlAmount,
                     CampusName = b.Campus != null ? b.Campus.Name : "",
                     Status = b.Status,
@@ -529,13 +649,12 @@ namespace RockWeb.Blocks.Finance
                         .Select( s => new BatchAccountSummary
                         {
                             AccountId = s.Key,
-                            AccountOrder = s.Max( d => d.Account.Order ),
-                            AccountName = s.Max( d => d.Account.Name ),
                             Amount = s.Sum( d => (decimal?)d.Amount ) ?? 0.0M
                         } )
-                        .OrderBy( s => s.AccountOrder )
                         .ToList()
                 } );
+
+                gBatchList.ObjectList = financialBatchQry.ToList().ToDictionary( k => k.Id.ToString(), v => v as object );
 
                 gBatchList.SetLinqDataSource( batchRowQry.AsNoTracking() );
                 gBatchList.EntityTypeId = EntityTypeCache.Read<Rock.Model.FinancialBatch>().Id;
@@ -543,7 +662,7 @@ namespace RockWeb.Blocks.Finance
 
                 RegisterJavaScriptForGridActions();
 
-                var qryTransactionDetails = qry.SelectMany( a => a.Transactions ).SelectMany( a => a.TransactionDetails );
+                var qryTransactionDetails = financialBatchQry.SelectMany( a => a.Transactions ).SelectMany( a => a.TransactionDetails );
                 var accountSummaryQry = qryTransactionDetails.GroupBy( a => a.Account ).Select( a => new
                 {
                     a.Key.Name,
@@ -569,10 +688,10 @@ namespace RockWeb.Blocks.Finance
         /// has not set any filters and they've imported N years worth of
         /// batch data into Rock.
         /// </summary>
+        /// <param name="rockContext">The rock context.</param>
         /// <returns></returns>
-        private IOrderedQueryable<FinancialBatch> GetQuery()
+        private IOrderedQueryable<FinancialBatch> GetQuery( RockContext rockContext )
         {
-            var rockContext = new RockContext();
             var batchService = new FinancialBatchService( rockContext );
             rockContext.Database.CommandTimeout = 90;
             var qry = batchService.Queryable()
@@ -634,6 +753,33 @@ namespace RockWeb.Blocks.Finance
                 qry = qry.Where( b => b.CampusId == campus.Id );
             }
 
+            // Filter query by any configured attribute filters
+            if ( AvailableAttributes != null && AvailableAttributes.Any() )
+            {
+                var attributeValueService = new AttributeValueService( rockContext );
+                var parameterExpression = attributeValueService.ParameterExpression;
+
+                foreach ( var attribute in AvailableAttributes )
+                {
+                    var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
+                    if ( filterControl != null )
+                    {
+                        var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
+                        var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
+                        if ( expression != null )
+                        {
+                            var attributeValues = attributeValueService
+                                .Queryable()
+                                .Where( v => v.Attribute.Id == attribute.Id );
+
+                            attributeValues = attributeValues.Where( parameterExpression, expression, null );
+
+                            qry = qry.Where( w => attributeValues.Select( v => v.EntityId ).Contains( w.Id ) );
+                        }
+                    }
+                }
+            }
+
             IOrderedQueryable<FinancialBatch> sortedQry = null;
 
             SortProperty sortProperty = gBatchList.SortProperty;
@@ -693,9 +839,24 @@ namespace RockWeb.Blocks.Finance
         public class BatchAccountSummary
         {
             public int AccountId { get; set; }
-            public int AccountOrder { get; set; }
-            public string AccountName { get; set; }
+            public int AccountOrder
+            {
+                get
+                {
+                    return _financialAccountLookup[this.AccountId].Order;
+                }
+            }
+
+            public string AccountName
+            {
+                get
+                {
+                    return _financialAccountLookup[this.AccountId].Name;
+                }
+            }
+
             public decimal Amount { get; set; }
+
             public override string ToString()
             {
                 return string.Format( "{0}: {1}", AccountName, Amount.FormatAsCurrency() );
@@ -709,9 +870,29 @@ namespace RockWeb.Blocks.Finance
             public string Name { get; set; }
             public string AccountingSystemCode { get; set; }
             public int TransactionCount { get; set; }
-            public decimal TransactionAmount { get; set; }
+
+            public decimal TransactionAmount
+            {
+                get
+                {
+                    return AccountSummaryList.Select( a => a.Amount ).Sum();
+                }
+            }
+
             public decimal ControlAmount { get; set; }
-            public List<BatchAccountSummary> AccountSummaryList { get; set; }
+            public List<BatchAccountSummary> AccountSummaryList
+            {
+                get
+                {
+                    return _accountSummaryList.OrderBy( a => a.AccountOrder ).ToList();
+                }
+                set
+                {
+                    _accountSummaryList = value;
+                }
+            }
+
+            private List<BatchAccountSummary> _accountSummaryList;
             public string CampusName { get; set; }
             public BatchStatus Status { get; set; }
             public bool UnMatchedTxns { get; set; }
@@ -726,6 +907,16 @@ namespace RockWeb.Blocks.Finance
             }
 
             public string AccountSummaryText
+            {
+                get
+                {
+                    var summary = new List<string>();
+                    AccountSummaryList.ForEach( a => summary.Add( a.ToString() ) );
+                    return summary.AsDelimited( Environment.NewLine );
+                }
+            }
+
+            public string AccountSummaryHtml
             {
                 get
                 {
@@ -786,5 +977,107 @@ namespace RockWeb.Blocks.Finance
         }
 
         #endregion
+
+        #region Attributes
+
+        /// <summary>
+        /// Binds the attributes.
+        /// </summary>
+        private void BindAttributes()
+        {
+            // Parse the attribute filters 
+            AvailableAttributes = new List<AttributeCache>();
+
+            int entityTypeId = new FinancialBatch().TypeId;
+            foreach ( var attributeModel in new AttributeService( new RockContext() ).Queryable()
+                .Where( a =>
+                    a.EntityTypeId == entityTypeId &&
+                    a.IsGridColumn )
+                .OrderBy( a => a.Order )
+                .ThenBy( a => a.Name ) )
+            {
+                AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+            }
+
+        }
+
+        /// <summary>
+        /// Adds the attribute columns.
+        /// </summary>
+        private void AddDynamicControls()
+        {
+            // Clear the filter controls
+            phAttributeFilters.Controls.Clear();
+
+            // Remove attribute columns
+            foreach ( var column in gBatchList.Columns.OfType<AttributeField>().ToList() )
+            {
+                gBatchList.Columns.Remove( column );
+            }
+
+            if ( AvailableAttributes != null )
+            {
+                foreach ( var attribute in AvailableAttributes )
+                {
+                    var control = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
+                    if ( control != null )
+                    {
+                        if ( control is IRockControl )
+                        {
+                            var rockControl = (IRockControl)control;
+                            rockControl.Label = attribute.Name;
+                            rockControl.Help = attribute.Description;
+                            phAttributeFilters.Controls.Add( control );
+                        }
+                        else
+                        {
+                            var wrapper = new RockControlWrapper();
+                            wrapper.ID = control.ID + "_wrapper";
+                            wrapper.Label = attribute.Name;
+                            wrapper.Controls.Add( control );
+                            phAttributeFilters.Controls.Add( wrapper );
+                        }
+
+                        string savedValue = gfBatchFilter.GetUserPreference( "Attribute_" + attribute.Key );
+                        if ( !string.IsNullOrWhiteSpace( savedValue ) )
+                        {
+                            try
+                            {
+                                var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
+                                attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, values );
+                            }
+                            catch
+                            {
+                                // intentionally ignore
+                            }
+                        }
+                    }
+
+                    bool columnExists = gBatchList.Columns.OfType<AttributeField>().FirstOrDefault( a => a.AttributeId == attribute.Id ) != null;
+                    if ( !columnExists )
+                    {
+                        AttributeField boundField = new AttributeField();
+                        boundField.DataField = attribute.Key;
+                        boundField.AttributeId = attribute.Id;
+                        boundField.HeaderText = attribute.Name;
+
+                        var attributeCache = Rock.Web.Cache.AttributeCache.Read( attribute.Id );
+                        if ( attributeCache != null )
+                        {
+                            boundField.ItemStyle.HorizontalAlign = attributeCache.FieldType.Field.AlignValue;
+                        }
+
+                        gBatchList.Columns.Add( boundField );
+                    }
+                }
+            }
+
+            // Add delete column
+            var deleteField = new DeleteField();
+            gBatchList.Columns.Add( deleteField );
+            deleteField.Click += gBatchList_Delete;
+        }
+
+        #endregion Attributes
     }
 }

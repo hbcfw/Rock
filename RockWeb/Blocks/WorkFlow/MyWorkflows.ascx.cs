@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -38,6 +38,7 @@ namespace RockWeb.Blocks.WorkFlow
     [DisplayName( "My Workflows" )]
     [Category( "WorkFlow" )]
     [Description( "Block to display the workflow types that user is authorized to view, and the activities that are currently assigned to the user." )]
+    [CategoryField( "Categories", "Optional Categories to limit display to.", true, "Rock.Model.WorkflowType", "", "", false, "", "" )]
     [LinkedPage( "Entry Page", "Page used to enter form information for a workflow." )]
     [LinkedPage( "Detail Page", "Page used to view status of a workflow." )]
     public partial class MyWorkflows : Rock.Web.UI.RockBlock
@@ -90,6 +91,9 @@ namespace RockWeb.Blocks.WorkFlow
                 WorkflowType workflowType = new WorkflowTypeService( new RockContext() ).Get( SelectedWorkflowTypeId.Value );
                 AddAttributeColumns( workflowType );
             }
+
+            this.BlockUpdated += Block_BlockUpdated;
+            this.AddConfigurationUpdateTrigger( upnlContent );
         }
 
         /// <summary>
@@ -266,11 +270,18 @@ namespace RockWeb.Blocks.WorkFlow
 
             int personId = CurrentPerson != null ? CurrentPerson.Id : 0;
 
-            // Get all of the workflow types
-            var allWorkflowTypes = new WorkflowTypeService( rockContext ).Queryable( "ActivityTypes" )
-                .OrderBy( w => w.Name )
-                .ToList();
+            var selectedCategories = new List<Guid>();
+            GetAttributeValue( "Categories" ).SplitDelimitedValues().ToList().ForEach( c => selectedCategories.Add( c.AsGuid() ) );
 
+            // Get all of the workflow types
+            var workTypesQry = new WorkflowTypeService( rockContext ).Queryable( "ActivityTypes" );
+
+            if ( selectedCategories.Count > 0 )
+            {
+                workTypesQry = workTypesQry.Where( a => a.CategoryId.HasValue && selectedCategories.Contains( a.Category.Guid ) );
+            }
+
+            var allWorkflowTypes = workTypesQry.OrderBy( w => w.Name ).ToList();
             // Get the authorized activities in all workflow types
             var authorizedActivityTypes = AuthorizedActivityTypes( allWorkflowTypes );
 
@@ -371,7 +382,18 @@ namespace RockWeb.Blocks.WorkFlow
 
             if ( selectedWorkflowType != null && workflowTypeCounts.Keys.Contains( selectedWorkflowType.Id ) )
             {
-                gWorkflows.DataSource = workflows.Where( w => w.WorkflowTypeId == selectedWorkflowType.Id ).ToList();
+                var workflowQry = workflows.Where( w => w.WorkflowTypeId == selectedWorkflowType.Id ).AsQueryable();
+
+                var sortProperty = gWorkflows.SortProperty;
+                if ( sortProperty != null )
+                {
+                    gWorkflows.DataSource = workflowQry.Sort( sortProperty ).ToList();
+                }
+                else
+                {
+                    gWorkflows.DataSource = workflowQry.OrderByDescending( s => s.CreatedDateTime ).ToList();
+                }
+
                 gWorkflows.DataBind();
                 gWorkflows.Visible = true;
 
@@ -432,8 +454,8 @@ namespace RockWeb.Blocks.WorkFlow
                     {
                         AttributeField boundField = new AttributeField();
                         boundField.DataField = dataFieldExpression;
+                        boundField.AttributeId = attribute.Id;
                         boundField.HeaderText = attribute.Name;
-                        boundField.SortExpression = string.Empty;
 
                         var attributeCache = Rock.Web.Cache.AttributeCache.Read( attribute.Id );
                         if ( attributeCache != null )

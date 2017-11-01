@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,9 +32,10 @@ namespace Rock.Model
     /// <summary>
     /// 
     /// </summary>
+    [RockDomain( "Event" )]
     [Table( "RegistrationInstance" )]
     [DataContract]
-    public partial class RegistrationInstance : Model<RegistrationInstance>
+    public partial class RegistrationInstance : Model<RegistrationInstance>, IHasActiveFlag
     {
 
         #region Entity Properties
@@ -124,7 +125,6 @@ namespace Rock.Model
         [DataMember]
         public int? AccountId { get; set; }
 
-
         /// <summary>
         /// Gets or sets the cost (if template is configured to allow cost on instance).
         /// </summary>
@@ -204,6 +204,15 @@ namespace Rock.Model
         [DataMember]
         public string AdditionalConfirmationDetails { get; set; }
 
+        /// <summary>
+        /// Optional workflow type to launch at end of registration
+        /// </summary>
+        /// <value>
+        /// The workflow type id.
+        /// </value>        
+        [DataMember]
+        public int? RegistrationWorkflowTypeId { get; set; }
+
         #endregion
 
         #region Virtual Properties
@@ -234,6 +243,15 @@ namespace Rock.Model
         /// </value>
         [DataMember]
         public virtual PersonAlias ContactPersonAlias { get; set; }
+
+        /// <summary>
+        /// Gets or sets the workflow type to launch at end of registration.
+        /// </summary>
+        /// <value>
+        /// The Workflow Type.
+        /// </value>
+        [DataMember]
+        public virtual WorkflowType RegistrationWorkflowType { get; set; }
 
         /// <summary>
         /// Gets or sets the registrations.
@@ -309,6 +327,7 @@ namespace Rock.Model
             this.HasRequired( i => i.RegistrationTemplate ).WithMany( t => t.Instances ).HasForeignKey( i => i.RegistrationTemplateId ).WillCascadeOnDelete( true );
             this.HasOptional( i => i.Account ).WithMany().HasForeignKey( i => i.AccountId ).WillCascadeOnDelete( false );
             this.HasOptional( i => i.ContactPersonAlias ).WithMany().HasForeignKey( i => i.ContactPersonAliasId ).WillCascadeOnDelete( false );
+            this.HasOptional( t => t.RegistrationWorkflowType ).WithMany().HasForeignKey( t => t.RegistrationWorkflowTypeId ).WillCascadeOnDelete( false );
         }
     }
 

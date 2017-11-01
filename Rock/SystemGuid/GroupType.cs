@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -75,5 +75,25 @@ namespace Rock.SystemGuid
         /// Organization Unit group type guid
         /// </summary>
         public const string GROUPTYPE_ORGANIZATION_UNIT = "AAB2E9F4-E828-4FEE-8467-73DC9DAB784C";
+
+        /// <summary>
+        /// Organization Unit group type guid
+        /// </summary>
+        public const string GROUPTYPE_WEEKLY_SERVICE_CHECKIN_AREA = "FEDD389A-616F-4A53-906C-63D8255631C5";
+
+        /// <summary>
+        /// Fundraising Opportunity group type guid
+        /// </summary>
+        public const string GROUPTYPE_FUNDRAISINGOPPORTUNITY = "4BE7FC44-332D-40A8-978E-47B7035D7A0C";
+
+        /// <summary>
+        /// General group type guid
+        /// </summary>
+        public const string GROUPTYPE_GENERAL = "8400497B-C52F-40AE-A529-3FCCB9587101";
+
+        /// <summary>
+        /// Communication List group type guid
+        /// </summary>
+        public const string GROUPTYPE_COMMUNICATIONLIST = "D1D95777-FFA3-CBB3-4A6D-658706DAED33";
     }
 }

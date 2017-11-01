@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -136,18 +136,10 @@ namespace RockWeb.Blocks.Core
             if ( hfCategoryId.Value.Equals( "0" ) )
             {
                 int? parentCategoryId = PageParameter( "ParentCategoryId" ).AsIntegerOrNull();
-                if ( parentCategoryId.HasValue )
-                {
-                    // Cancelling on Add, and we know the parentCategoryId, so we are probably in treeview mode, so navigate to the current page
-                    var qryParams = new Dictionary<string, string>();
-                    qryParams["CategoryId"] = parentCategoryId.ToString();
-                    NavigateToPage( RockPage.Guid, qryParams );
-                }
-                else
-                {
-                    // Cancelling on Add.  Return to Grid
-                    NavigateToParentPage();
-                }
+                // Cancelling on Add, and we know the parentCategoryId, so we are probably in treeview mode, so navigate to the current page
+                var qryParams = new Dictionary<string, string>();
+                qryParams["CategoryId"] = parentCategoryId.ToString();
+                NavigateToPage( RockPage.Guid, qryParams );
             }
             else
             {
@@ -220,6 +212,7 @@ namespace RockWeb.Blocks.Core
         {
             pnlEditDetails.Visible = editable;
             fieldsetViewDetails.Visible = !editable;
+            this.HideSecondaryBlocks( editable );
         }
 
         /// <summary>
@@ -252,6 +245,7 @@ namespace RockWeb.Blocks.Core
             }
 
             category.Name = tbName.Text;
+            category.Description = tbDescription.Text;
             category.ParentCategoryId = cpParentCategory.SelectedValueAsInt();
             category.IconCssClass = tbIconCssClass.Text;
             category.HighlightColor = tbHighlightColor.Text;
@@ -320,6 +314,7 @@ namespace RockWeb.Blocks.Core
             if ( !categoryId.Equals( 0 ) )
             {
                 category = categoryService.Get( categoryId );
+                pdAuditDetails.SetEntity( category, ResolveRockUrl( "~" ) );
             }
 
             if ( category == null )
@@ -331,6 +326,8 @@ namespace RockWeb.Blocks.Core
                 category.EntityTypeId = entityTypeId;
                 category.EntityTypeQualifierColumn = entityTypeQualifierProperty;
                 category.EntityTypeQualifierValue = entityTypeQualifierValue;
+                // hide the panel drawer that show created and last modified dates
+                pdAuditDetails.Visible = false;
             }
 
             if (category.EntityTypeId != entityTypeId || !category.IsAuthorized( Authorization.VIEW, CurrentPerson ) )
@@ -423,16 +420,7 @@ namespace RockWeb.Blocks.Core
             SetEditMode( true );
 
             tbName.Text = category.Name;
-
-            if ( category.EntityTypeId != 0 )
-            {
-                var entityType = EntityTypeCache.Read( category.EntityTypeId );
-                lblEntityTypeName.Text = entityType.Name;
-            }
-            else
-            {
-                lblEntityTypeName.Text = string.Empty;
-            }
+            tbDescription.Text = category.Description;
 
             var excludeCategoriesGuids = this.GetAttributeValue( "ExcludeCategories" ).SplitDelimitedValues().AsGuidList();
             List<int> excludedCategoriesIds = new List<int>();
@@ -457,10 +445,6 @@ namespace RockWeb.Blocks.Core
             cpParentCategory.RootCategoryId = rootCategory != null ? rootCategory.Id : (int?)null;
             cpParentCategory.SetValue( category.ParentCategoryId );
 
-            lblEntityTypeQualifierColumn.Visible = !string.IsNullOrWhiteSpace( category.EntityTypeQualifierColumn );
-            lblEntityTypeQualifierColumn.Text = category.EntityTypeQualifierColumn;
-            lblEntityTypeQualifierValue.Visible = !string.IsNullOrWhiteSpace( category.EntityTypeQualifierValue );
-            lblEntityTypeQualifierValue.Text = category.EntityTypeQualifierValue;
             tbIconCssClass.Text = category.IconCssClass;
             tbHighlightColor.Text = category.HighlightColor;
         }
@@ -488,7 +472,7 @@ namespace RockWeb.Blocks.Core
             }
 
             lblMainDetails.Text = new DescriptionList()
-                .Add( "Entity Type", category.EntityType.Name )
+                .Add( "Description", category.Description )
                 .Html;
 
         }

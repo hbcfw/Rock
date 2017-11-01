@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -209,18 +209,24 @@ namespace RockWeb.Blocks.Cms
             {
                 contentType = new ContentChannelType();
                 contentTypeService.Add( contentType );
+                contentType.CreatedByPersonAliasId = CurrentPersonAliasId;
+                contentType.CreatedDateTime = RockDateTime.Now;
             }
             else
             {
                 contentType = contentTypeService.Get( contentTypeId );
+                contentType.ModifiedByPersonAliasId = CurrentPersonAliasId;
+                contentType.ModifiedDateTime = RockDateTime.Now;
             }
 
             if ( contentType != null )
             {
                 contentType.Name = tbName.Text;
-                contentType.DateRangeType = (ContentChannelDateType)int.Parse( ddlDateRangeType.SelectedValue );
+                contentType.DateRangeType = ddlDateRangeType.SelectedValue.ConvertToEnum<ContentChannelDateType>();
                 contentType.IncludeTime = cbIncludeTime.Checked;
                 contentType.DisablePriority = cbDisablePriority.Checked;
+                contentType.DisableContentField = cbDisableContentField.Checked;
+                contentType.DisableStatus = cbDisableStatus.Checked;
 
                 if ( !Page.IsValid || !contentType.IsValid )
                 {
@@ -475,6 +481,9 @@ namespace RockWeb.Blocks.Cms
 
             edtItemAttributes.SetAttributeProperties( attribute, typeof( ContentChannelItem ) );
 
+            // always enable the display of the indexing option as the channel decides whether or not to index not the type
+            edtItemAttributes.IsIndexingEnabledVisible = true;
+
             ShowDialog( "ItemAttributes", true );
         }
 
@@ -613,10 +622,13 @@ namespace RockWeb.Blocks.Cms
             if ( !contentTypeId.Equals( 0 ) )
             {
                 contentType = GetContentChannelType( contentTypeId );
+                pdAuditDetails.SetEntity( contentType, ResolveRockUrl( "~" ) );
             }
             if ( contentType == null )
             {
                 contentType = new ContentChannelType { Id = 0 };
+                // hide the panel drawer that show created and last modified dates
+                pdAuditDetails.Visible = false;
             }
 
             string title = contentType.Id > 0 ?
@@ -629,8 +641,12 @@ namespace RockWeb.Blocks.Cms
             tbName.Text = contentType.Name;
             ddlDateRangeType.BindToEnum<ContentChannelDateType>();
             ddlDateRangeType.SetValue( (int)contentType.DateRangeType );
+            ddlDateRangeType_SelectedIndexChanged( null, null );
+
             cbIncludeTime.Checked = contentType.IncludeTime;
             cbDisablePriority.Checked = contentType.DisablePriority;
+            cbDisableContentField.Checked = contentType.DisableContentField;
+            cbDisableStatus.Checked = contentType.DisableStatus;
 
             // load attribute data 
             ChannelAttributesState = new List<Attribute>();
@@ -749,5 +765,14 @@ namespace RockWeb.Blocks.Cms
 
         #endregion
 
-}
+        /// <summary>
+        /// Handles the SelectedIndexChanged event of the ddlDateRangeType control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void ddlDateRangeType_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            cbIncludeTime.Visible = ddlDateRangeType.SelectedValueAsEnum<ContentChannelDateType>() != ContentChannelDateType.NoDates;
+        }
+    }
 }

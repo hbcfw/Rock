@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,7 +21,9 @@ using System.Data.Entity;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Web.UI;
+using Newtonsoft.Json.Linq;
 using Rock;
+using Rock.Attribute;
 using Rock.Data;
 using Rock.MergeTemplates;
 using Rock.Model;
@@ -37,6 +39,8 @@ namespace RockWeb.Blocks.Core
     [DisplayName( "Merge Template Entry" )]
     [Category( "Core" )]
     [Description( "Used for merging data into output documents, such as Word, Html, using a pre-defined template." )]
+    [IntegerField( "Database Timeout", "The number of seconds to wait before reporting a database timeout.", false, 180, order: 1 )]
+
     public partial class MergeTemplateEntry : RockBlock
     {
         #region Base Control Methods
@@ -52,6 +56,16 @@ namespace RockWeb.Blocks.Core
             // this event gets fired after block settings are updated. it's nice to repaint the screen if these settings would alter it
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlContent );
+
+            //// set postback timeout to whatever the DatabaseTimeout is plus an extra 5 seconds so that page doesn't timeout before the database does
+            //// note: this only makes a difference on Postback, not on the initial page visit
+            int databaseTimeout = GetAttributeValue( "DatabaseTimeout" ).AsIntegerOrNull() ?? 180;
+            var sm = ScriptManager.GetCurrent( this.Page );
+            if ( sm.AsyncPostBackTimeout < databaseTimeout + 5 )
+            {
+                sm.AsyncPostBackTimeout = databaseTimeout + 5;
+                Server.ScriptTimeout = databaseTimeout + 5;
+            }
         }
 
         /// <summary>
@@ -139,6 +153,11 @@ namespace RockWeb.Blocks.Core
             // NOTE: This is a full postback (not a partial like most other blocks)
 
             var rockContext = new RockContext();
+            int? databaseTimeoutSeconds = GetAttributeValue( "DatabaseTimeout" ).AsIntegerOrNull();
+            if ( databaseTimeoutSeconds != null && databaseTimeoutSeconds.Value > 0 )
+            {
+                rockContext.Database.CommandTimeout = databaseTimeoutSeconds.Value;
+            }
 
             List<object> mergeObjectsList = GetMergeObjectList( rockContext );
 
@@ -160,35 +179,12 @@ namespace RockWeb.Blocks.Core
                 return;
             }
 
-            var globalMergeFields = GlobalAttributesCache.GetMergeFields( this.CurrentPerson );
-            globalMergeFields.Add( "CurrentPerson", this.CurrentPerson );
-            globalMergeFields.Add( "Campuses", CampusCache.All() );
-
-            var contextObjects = new Dictionary<string, object>();
-            foreach ( var contextEntityType in RockPage.GetContextEntityTypes() )
-            {
-                var contextEntity = RockPage.GetCurrentContext( contextEntityType );
-                if ( contextEntity != null && contextEntity is DotLiquid.ILiquidizable )
-                {
-                    var type = Type.GetType( contextEntityType.AssemblyName ?? contextEntityType.Name );
-                    if ( type != null )
-                    {
-                        contextObjects.Add( type.Name, contextEntity );
-                    }
-                }
-
-            }
-
-            if ( contextObjects.Any() )
-            {
-                globalMergeFields.Add( "Context", contextObjects );
-            }
-
+            var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
             BinaryFile outputBinaryFileDoc = null;
 
             try
             {
-                outputBinaryFileDoc = mergeTemplateType.CreateDocument( mergeTemplate, mergeObjectsList, globalMergeFields );
+                outputBinaryFileDoc = mergeTemplateType.CreateDocument( mergeTemplate, mergeObjectsList, mergeFields );
 
                 if ( mergeTemplateType.Exceptions != null && mergeTemplateType.Exceptions.Any() )
                 {
@@ -288,7 +284,7 @@ namespace RockWeb.Blocks.Core
                     }
 
                     Guid familyGroupType = Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY.AsGuid();
-                    var qryFamilyGroupMembers = new GroupMemberService( rockContext ).Queryable()
+                    var qryFamilyGroupMembers = new GroupMemberService( rockContext ).Queryable( "GroupRole,Person" ).AsNoTracking()
                         .Where( a => a.Group.GroupType.Guid == familyGroupType )
                         .Where( a => qryPersons.Any( aa => aa.Id == a.PersonId ) );
 
@@ -301,7 +297,17 @@ namespace RockWeb.Blocks.Core
                         .Select( x => new
                         {
                             GroupId = x.Key,
-                            Persons = x.Select( xx => xx.Person ).Distinct()
+                            // Order People to match ordering in the GroupMembers.ascx block.
+                            Persons =
+                                    // Adult Male 
+                                    x.Where( xx => xx.GroupMember.GroupRole.Guid.Equals( new Guid( Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT ) ) &&
+                                    xx.GroupMember.Person.Gender == Gender.Male ).OrderByDescending( xx => xx.GroupMember.Person.BirthDate ).Select( xx => xx.Person )
+                                    // Adult Female
+                                    .Concat( x.Where( xx => xx.GroupMember.GroupRole.Guid.Equals( new Guid( Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT ) ) &&
+                                    xx.GroupMember.Person.Gender != Gender.Male ).OrderByDescending( xx => xx.GroupMember.Person.BirthDate ).Select( xx => xx.Person ) )
+                                    // non-adults
+                                    .Concat( x.Where( xx => !xx.GroupMember.GroupRole.Guid.Equals( new Guid( Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT ) ) )
+                                    .OrderByDescending( xx => xx.GroupMember.Person.BirthDate ).Select( xx => xx.Person ) )
                         } );
 
                     foreach ( var combinedFamilyItem in qryCombined )
@@ -331,7 +337,7 @@ namespace RockWeb.Blocks.Core
                             primaryGroupPerson.AdditionalLavaFields = primaryGroupPerson.AdditionalLavaFields ?? new Dictionary<string, object>();
                             if ( groupMember != null )
                             {
-                                primaryGroupPerson.AdditionalLavaFields.Add( "GroupMember", groupMember );
+                                primaryGroupPerson.AdditionalLavaFields.AddOrIgnore( "GroupMember", groupMember );
                             }
                         }
 
@@ -431,6 +437,21 @@ namespace RockWeb.Blocks.Core
                         IEntity mergeEntity = ( mergeObject as IEntity );
                         mergeEntity.AdditionalLavaFields = mergeEntity.AdditionalLavaFields ?? new Dictionary<string, object>();
                         object mergeValueObject = additionalMergeValue.Value;
+
+                        // if the mergeValueObject is a JArray (JSON Object), convert it into an ExpandoObject or List<ExpandoObject> so that Lava will work on it
+                        if ( mergeValueObject is JArray)
+                        {
+                            var jsonOfObject = mergeValueObject.ToJson();
+                            try
+                            {
+                                mergeValueObject = Rock.Lava.RockFilters.FromJSON( jsonOfObject );
+                            }
+                            catch ( Exception ex )
+                            {
+                                LogException( new Exception("MergeTemplateEntry couldn't do a FromJSON", ex) );
+                            }
+                        }
+
                         mergeEntity.AdditionalLavaFields.AddOrIgnore( additionalMergeValue.Key, mergeValueObject );
                     }
                     else if ( mergeObject is IDictionary<string, object> )
@@ -530,8 +551,8 @@ namespace RockWeb.Blocks.Core
         {
             var rockContext = new RockContext();
             List<object> mergeObjectsList = GetMergeObjectList( rockContext, 1 );
-            var globalMergeFields = GlobalAttributesCache.GetMergeFields( this.CurrentPerson );
-            globalMergeFields.Add( "CurrentPerson", this.CurrentPerson );
+
+            var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
 
             MergeTemplate mergeTemplate = new MergeTemplateService( rockContext ).Get( mtPicker.SelectedValue.AsInteger() );
             MergeTemplateType mergeTemplateType = null;
@@ -543,11 +564,11 @@ namespace RockWeb.Blocks.Core
             if ( mergeTemplateType != null )
             {
                 // have the mergeTemplateType generate the help text
-                lShowMergeFields.Text = mergeTemplateType.GetLavaDebugInfo( mergeObjectsList, globalMergeFields );
+                lShowMergeFields.Text = mergeTemplateType.GetLavaDebugInfo( mergeObjectsList, mergeFields );
             }
             else
             {
-                lShowMergeFields.Text = MergeTemplateType.GetDefaultLavaDebugInfo( mergeObjectsList, globalMergeFields );
+                lShowMergeFields.Text = MergeTemplateType.GetDefaultLavaDebugInfo( mergeObjectsList, mergeFields );
             }
         }
 

@@ -5,13 +5,13 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 // <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,10 +35,13 @@ namespace Rock.Client
         public int Id { get; set; }
 
         /// <summary />
+        public int? CategoryId { get; set; }
+
+        /// <summary />
         public string Description { get; set; }
 
         /// <summary />
-        public int EntityTypeId { get; set; }
+        public int? EntityTypeId { get; set; }
 
         /// <summary />
         public string EntityTypeQualifierColumn { get; set; }
@@ -51,6 +54,9 @@ namespace Rock.Client
 
         /// <summary />
         public string ForeignKey { get; set; }
+
+        /// <summary />
+        public bool IsActive { get; set; }
 
         /// <summary />
         public bool IsSystem { get; set; }
@@ -102,12 +108,14 @@ namespace Rock.Client
         public void CopyPropertiesFrom( Tag source )
         {
             this.Id = source.Id;
+            this.CategoryId = source.CategoryId;
             this.Description = source.Description;
             this.EntityTypeId = source.EntityTypeId;
             this.EntityTypeQualifierColumn = source.EntityTypeQualifierColumn;
             this.EntityTypeQualifierValue = source.EntityTypeQualifierValue;
             this.ForeignGuid = source.ForeignGuid;
             this.ForeignKey = source.ForeignKey;
+            this.IsActive = source.IsActive;
             this.IsSystem = source.IsSystem;
             this.ModifiedAuditValuesAlreadyUpdated = source.ModifiedAuditValuesAlreadyUpdated;
             this.Name = source.Name;
@@ -128,6 +136,9 @@ namespace Rock.Client
     /// </summary>
     public partial class Tag : TagEntity
     {
+        /// <summary />
+        public Category Category { get; set; }
+
         /// <summary />
         public EntityType EntityType { get; set; }
 

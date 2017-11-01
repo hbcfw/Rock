@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,6 +24,7 @@ using System.Web.UI;
 using Rock.Data;
 using Rock.Model;
 using Rock.Web.Cache;
+using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
 namespace Rock.Reporting.DataFilter.Person
@@ -34,7 +35,7 @@ namespace Rock.Reporting.DataFilter.Person
     [Description( "Filter people that are associated with any of the selected campuses." )]
     [Export( typeof( DataFilterComponent ) )]
     [ExportMetadata( "ComponentName", "Person Campuses Filter" )]
-    public class CampusesFilter : DataFilterComponent
+    public class CampusesFilter : DataFilterComponent, IUpdateSelectionFromPageParameters
     {
         #region Properties
 
@@ -58,6 +59,28 @@ namespace Rock.Reporting.DataFilter.Person
         public override string Section
         {
             get { return "Additional Filters"; }
+        }
+
+        /// <summary>
+        /// Gets the control class name.
+        /// </summary>
+        /// <value>
+        /// The name of the control class.
+        /// </value>
+        internal virtual string ControlClassName
+        {
+            get { return "js-campuses-picker"; }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether to include inactive campuses.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [include inactive]; otherwise, <c>false</c>.
+        /// </value>
+        internal virtual bool IncludeInactive
+        {
+            get { return true; }
         }
 
         #endregion
@@ -88,19 +111,19 @@ namespace Rock.Reporting.DataFilter.Person
         /// </value>
         public override string GetClientFormatSelection( Type entityType )
         {
-            return @"
-function() {
+            return string.Format( @"
+function() {{
     var result = 'Campuses';
-    var campusesPicker = $('.js-campuses-picker', $content);
-    var checkedCampuses = $('.js-campuses-picker', $content).find(':checked').closest('label');
-    if (checkedCampuses.length) {
+    var campusesPicker = $('.{0}', $content);
+    var checkedCampuses = $('.{0}', $content).find(':checked').closest('label');
+    if (checkedCampuses.length) {{
         var campusCommaList = checkedCampuses.map(function() { return $(this).text() }).get().join(',');
         result = 'Campuses: ' + campusCommaList;
-    }
+    }}
 
     return result;
-}
-";
+}}
+", ControlClassName );
         }
 
         /// <summary>
@@ -145,8 +168,8 @@ function() {
             CampusesPicker campusesPicker = new CampusesPicker();
             campusesPicker.ID = filterControl.ID + "_0";
             campusesPicker.Label = string.Empty;
-            campusesPicker.CssClass = "js-campuses-picker campuses-picker";
-            campusesPicker.Campuses = CampusCache.All();
+            campusesPicker.CssClass = $"{ControlClassName} campuses-picker";
+            campusesPicker.Campuses = CampusCache.All( IncludeInactive );
 
             filterControl.Controls.Add( campusesPicker );
 
@@ -251,10 +274,12 @@ function() {
                 }
 
                 GroupMemberService groupMemberService = new GroupMemberService( rockContext );
+                var groupTypeFamily = GroupTypeCache.GetFamilyGroupType();
+                int groupTypeFamilyId = groupTypeFamily != null ? groupTypeFamily.Id : 0;
 
                 var groupMemberServiceQry = groupMemberService.Queryable()
-                    .Where( xx => xx.Group.GroupType.Guid == new Guid( Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY ) )
-                    .Where( xx => xx.Group.CampusId.HasValue && campusIds.Contains( xx.Group.CampusId.Value ) );
+                    .Where( xx => xx.Group.GroupTypeId == groupTypeFamilyId )
+                    .Where( xx => campusIds.Contains( xx.Group.CampusId ?? 0 ) );
 
                 var qry = new PersonService( rockContext ).Queryable()
                     .Where( p => groupMemberServiceQry.Any( xx => xx.PersonId == p.Id ) );
@@ -267,6 +292,35 @@ function() {
             return null;
         }
 
+        /// <summary>
+        /// Updates the selection from page parameters.
+        /// </summary>
+        /// <param name="selection">The selection.</param>
+        /// <param name="rockBlock">The rock block.</param>
+        /// <returns></returns>
+        public string UpdateSelectionFromPageParameters( string selection, RockBlock rockBlock )
+        {
+            string[] selectionValues = selection?.Split( '|' ) ?? new string[] { "" };
+            if ( selectionValues.Length >= 1 )
+            {
+                // check for either a CampusId or CampusIds parameter
+                var campusIds = rockBlock.PageParameter( "CampusId" )?.SplitDelimitedValues().AsIntegerList();
+                campusIds = campusIds ?? rockBlock.PageParameter( "CampusIds" )?.SplitDelimitedValues().AsIntegerList() ?? new List<int>();
+
+                if ( campusIds.Any() )
+                {
+
+                    var selectedCampusGuids = campusIds.Select( a => CampusCache.Read( a ) ).Where( a => a != null ).Select( a => a.Guid ).ToList();
+
+                    selectionValues[0] = selectedCampusGuids.AsDelimited( "," );
+                    return selectionValues.ToList().AsDelimited( "|" );
+                }
+            }
+
+            return selection;
+        }
+
         #endregion
+
     }
 }

@@ -5,13 +5,13 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 // <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -38,6 +38,9 @@ namespace Rock.Client
         public int? CategoryId { get; set; }
 
         /// <summary />
+        public int? CompletedWorkflowRetentionPeriod { get; set; }
+
+        /// <summary />
         public string Description { get; set; }
 
         /// <summary />
@@ -61,6 +64,9 @@ namespace Rock.Client
         /// <summary />
         public Rock.Client.Enums.WorkflowLoggingLevel LoggingLevel { get; set; }
 
+        /// <summary />
+        public int? LogRetentionPeriod { get; set; }
+
         /// <summary>
         /// If the ModifiedByPersonAliasId is being set manually and should not be overwritten with current user when saved, set this value to true
         /// </summary>
@@ -70,10 +76,19 @@ namespace Rock.Client
         public string Name { get; set; }
 
         /// <summary />
+        public string NoActionMessage { get; set; }
+
+        /// <summary />
         public int Order { get; set; }
 
         /// <summary />
         public int? ProcessingIntervalSeconds { get; set; }
+
+        /// <summary />
+        public string SummaryViewText { get; set; }
+
+        /// <summary />
+        public string WorkflowIdPrefix { get; set; }
 
         /// <summary />
         public string WorkTerm { get; set; }
@@ -112,6 +127,7 @@ namespace Rock.Client
         {
             this.Id = source.Id;
             this.CategoryId = source.CategoryId;
+            this.CompletedWorkflowRetentionPeriod = source.CompletedWorkflowRetentionPeriod;
             this.Description = source.Description;
             this.ForeignGuid = source.ForeignGuid;
             this.ForeignKey = source.ForeignKey;
@@ -120,10 +136,14 @@ namespace Rock.Client
             this.IsPersisted = source.IsPersisted;
             this.IsSystem = source.IsSystem;
             this.LoggingLevel = source.LoggingLevel;
+            this.LogRetentionPeriod = source.LogRetentionPeriod;
             this.ModifiedAuditValuesAlreadyUpdated = source.ModifiedAuditValuesAlreadyUpdated;
             this.Name = source.Name;
+            this.NoActionMessage = source.NoActionMessage;
             this.Order = source.Order;
             this.ProcessingIntervalSeconds = source.ProcessingIntervalSeconds;
+            this.SummaryViewText = source.SummaryViewText;
+            this.WorkflowIdPrefix = source.WorkflowIdPrefix;
             this.WorkTerm = source.WorkTerm;
             this.CreatedDateTime = source.CreatedDateTime;
             this.ModifiedDateTime = source.ModifiedDateTime;

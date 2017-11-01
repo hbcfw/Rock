@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -39,6 +39,21 @@ namespace Rock
         public static string ToJson( this object obj )
         {
             return JsonConvert.SerializeObject( obj, Formatting.Indented,
+                new JsonSerializerSettings()
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                } );
+        }
+
+        /// <summary>
+        /// To the json.
+        /// </summary>
+        /// <param name="obj">The object.</param>
+        /// <param name="format">The format.</param>
+        /// <returns></returns>
+        public static string ToJson( this object obj, Formatting format )
+        {
+            return JsonConvert.SerializeObject( obj, format,
                 new JsonSerializerSettings()
                 {
                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore
@@ -93,10 +108,36 @@ namespace Rock
                 .Select( r => r.Key )
                 .ToList();
 
-            arrayKeys.ForEach( k => result[k] = ( (JArray)result[k] ).Values().Select( v => ( (JValue)v ).Value ).ToArray() );
+            arrayKeys.ForEach( k => result[k] = ( (JArray)result[k] ).ToObjectArray() );
             valueKeys.ForEach( k => result[k] = ToDictionary( result[k] as JObject ) );
 
             return result;
+        }
+
+        /// <summary>
+        /// Converts a JArray to a Object array
+        /// </summary>
+        /// <param name="jarray">The jarray.</param>
+        /// <returns></returns>
+        public static object[] ToObjectArray( this JArray jarray )
+        {
+            var valueList = new List<object>();
+
+            for( var i = 0; i < jarray.Count; i++ )
+            {
+                var obj = jarray[i];
+                if ( obj.GetType() == typeof( JObject ) )
+                {
+                    valueList.Add( ( (JObject)obj ).ToDictionary() );
+                }
+
+                if ( obj.GetType() == typeof( JValue ))
+                {
+                    valueList.Add( ( (JValue)obj ).Value );
+                }
+            }
+
+            return valueList.ToArray();
         }
 
         #endregion

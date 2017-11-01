@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -60,6 +60,14 @@ namespace Rock.Web.Cache
         public bool IsSystem { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether this blocktype is commonly used
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if this instance is common; otherwise, <c>false</c>.
+        /// </value>
+        public bool IsCommon { get; private set; }
+
+        /// <summary>
         /// Gets or sets the path.
         /// </summary>
         /// <value>
@@ -90,7 +98,7 @@ namespace Rock.Web.Cache
         /// <value>
         /// <c>true</c> if attributes have already been verified; otherwise, <c>false</c>.
         /// </value>
-        public bool IsInstancePropertiesVerified { get; internal set; }
+        public bool IsInstancePropertiesVerified { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether [checked security actions].
@@ -107,6 +115,7 @@ namespace Rock.Web.Cache
         /// The security actions.
         /// </value>
         public ConcurrentDictionary<string, string> SecurityActions { get; set; }
+        
 
         #endregion
 
@@ -148,6 +157,7 @@ namespace Rock.Web.Cache
                 SetCache( blockType.Guid.ToString(), blockType.Id, guidCachePolicy );
 
                 this.IsSystem = blockType.IsSystem;
+                this.IsCommon = blockType.IsCommon;
                 this.Path = blockType.Path;
                 this.Name = blockType.Name;
                 this.Description = blockType.Description;

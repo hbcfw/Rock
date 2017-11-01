@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -166,6 +166,27 @@ namespace Rock.Web.UI.Controls
         }
 
         /// <summary>
+        /// Gets or sets the warning text.
+        /// </summary>
+        /// <value>
+        /// The warning text.
+        /// </value>
+        public string Warning
+        {
+            get
+            {
+                EnsureChildControls();
+                return _textBox.Warning;
+            }
+            set
+            {
+                EnsureChildControls();
+                _textBox.Warning = value;
+                _dropDownList.Warning = string.Empty;
+            }
+        }
+
+        /// <summary>
         /// Gets or sets a value indicating whether this <see cref="IRockControl" /> is required.
         /// </summary>
         /// <value>
@@ -230,6 +251,26 @@ namespace Rock.Web.UI.Controls
             {
                 EnsureChildControls();
                 _textBox.HelpBlock = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets the warning block.
+        /// </summary>
+        /// <value>
+        /// The warning block.
+        /// </value>
+        public WarningBlock WarningBlock
+        {
+            get
+            {
+                EnsureChildControls();
+                return _textBox.WarningBlock;
+            }
+            set
+            {
+                EnsureChildControls();
+                _textBox.WarningBlock = value;
             }
         }
 
@@ -375,7 +416,10 @@ namespace Rock.Web.UI.Controls
     function updateTextOrDdlValue( e ) {
         var $row = e.closest('div.js-text-or-ddl-row');
         var newValue = $row.find('input.js-text-or-ddl-input:first').val();
-        if (newValue == '') {
+        if (!newValue || newValue == '' ) {
+            newValue = $row.find('textarea.js-text-or-ddl-input:first').val();
+        }
+        if (!newValue || newValue == '' ) {
             newValue = $row.find('select.js-text-or-ddl-input:first').val();
         } 
         $row.find('input:first').val(newValue);

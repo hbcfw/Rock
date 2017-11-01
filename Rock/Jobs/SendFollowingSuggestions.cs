@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -287,7 +287,7 @@ namespace Rock.Jobs
                             .Distinct()
                             .ToList();
 
-                        var appRoot = Rock.Web.Cache.GlobalAttributesCache.Read( rockContext ).GetValue( "ExternalApplicationRoot" );
+                        var appRoot = Rock.Web.Cache.GlobalAttributesCache.Read( rockContext ).GetValue( "PublicApplicationRoot" );
 
                         foreach ( var person in new PersonService( rockContext )
                             .Queryable().AsNoTracking()
@@ -335,13 +335,15 @@ namespace Rock.Jobs
                                 if ( personSuggestionNotices.Any() )
                                 {
                                     // Send the notice
-                                    var recipients = new List<RecipientData>();
                                     var mergeFields = new Dictionary<string, object>();
                                     mergeFields.Add( "Person", person );
                                     mergeFields.Add( "Suggestions", personSuggestionNotices.OrderBy( s => s.SuggestionType.Order ).ToList() );
-                                    recipients.Add( new RecipientData( person.Email, mergeFields ) );
-                                    Email.Send( systemEmailGuid.Value, recipients, appRoot );
-                                    followingSuggestionsEmailsSent += recipients.Count();
+
+                                    var emailMessage = new RockEmailMessage( systemEmailGuid.Value );
+                                    emailMessage.AddRecipient( new RecipientData( person.Email, mergeFields ) );
+                                    emailMessage.Send();
+
+                                    followingSuggestionsEmailsSent += 1;
                                     followingSuggestionsSuggestionsTotal += personSuggestionNotices.Count();
                                 }
 

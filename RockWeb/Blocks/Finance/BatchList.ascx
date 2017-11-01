@@ -20,6 +20,7 @@
                             <Rock:RockDropDownList ID="ddlTransactionType" runat="server"  Label="Contains Transaction Type" />
                             <Rock:RockTextBox ID="tbTitle" runat="server" Label="Title"></Rock:RockTextBox>
                             <Rock:RockTextBox ID="tbAccountingCode" runat="server" Label="Accounting Code"></Rock:RockTextBox>
+                            <asp:PlaceHolder ID="phAttributeFilters" runat="server" />
                         </Rock:GridFilter>
 
                         <Rock:ModalAlert ID="mdGridWarning" runat="server" />
@@ -37,7 +38,7 @@
                                         <span class='<%# (decimal)Eval("Variance") != 0 ? "label label-danger" : "" %>'><%# this.FormatValueAsCurrency((decimal)Eval("Variance")) %></span>
                                     </ItemTemplate>
                                 </Rock:RockTemplateField>
-                                <Rock:RockBoundField DataField="AccountSummaryText" HeaderText="Accounts" HtmlEncode="false" />
+                                <Rock:RockBoundField DataField="AccountSummaryHtml" HeaderText="Accounts" HtmlEncode="false" />
                                 <Rock:RockBoundField DataField="CampusName" HeaderText="Campus" SortExpression="Campus.Name" ColumnPriority="Desktop" />
                                 <Rock:RockTemplateField HeaderText="Status" SortExpression="Status" HeaderStyle-CssClass="grid-columnstatus" ItemStyle-CssClass="grid-columnstatus" FooterStyle-CssClass="grid-columnstatus" ItemStyle-HorizontalAlign="Center">
                                     <ItemTemplate>
@@ -45,7 +46,6 @@
                                     </ItemTemplate>
                                 </Rock:RockTemplateField>
                                 <Rock:RockBoundField DataField="Notes" HeaderText="Note" HtmlEncode="false" ColumnPriority="Desktop" />
-                                <Rock:DeleteField OnClick="gBatchList_Delete" />
                             </Columns>
                         </Rock:Grid>
                     </div>

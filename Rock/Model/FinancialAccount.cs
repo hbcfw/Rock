@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,9 +30,10 @@ namespace Rock.Model
     /// Represents an account that gifts/donations and other <see cref="Rock.Model.FinancialTransaction">Financial Transactions</see> are posted to.  
     /// FinancialAccounts are hierarchical and are orderable.
     /// </summary>
+    [RockDomain( "Finance" )]
     [Table( "FinancialAccount" )]
     [DataContract]
-    public partial class FinancialAccount : Model<FinancialAccount>, IOrdered
+    public partial class FinancialAccount : Model<FinancialAccount>, IOrdered, IHasActiveFlag
     {
         #region Entity Properties
 
@@ -234,6 +235,7 @@ namespace Rock.Model
         /// <value>
         /// A <see cref="System.String"/> representing the parent FinancialAccount.
         /// </value>
+        [LavaInclude]
         public virtual FinancialAccount ParentAccount { get; set; }
 
         /// <summary>
@@ -242,6 +244,7 @@ namespace Rock.Model
         /// <value>
         /// the <see cref="Rock.Model.Campus"/> that this FinancialAccount is associated with.
         /// </value>
+        [LavaInclude]
         public virtual Campus Campus { get; set; }
 
         /// <summary>

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,6 +27,29 @@ namespace Rock.Attribute
         private const string VALUE_PROMPT_KEY = "valueprompt";
         private const string DEFINED_TYPE_KEY = "definedtype";
         private const string CUSTOM_VALUES = "customvalues";
+        private const string ALLOW_HTML = "allowhtml";
+
+        /* Developer Note: When adding new params to a Field Attribute, we could just add new Properties instead to avoid backwards compatibily issues. 
+         * See AllowHtml below as an example, and the GroupList block for how to initialize it
+         */
+
+        /// <summary>
+        /// Sets a value indicating whether [allow HTML].
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [allow HTML]; otherwise, <c>false</c>.
+        /// </value>
+        public bool AllowHtml
+        {
+            get
+            {
+                return FieldConfigurationValues.GetValueOrNull( ALLOW_HTML ).AsBoolean();
+            }
+            set
+            {
+                FieldConfigurationValues.AddOrReplace( ALLOW_HTML, new Field.ConfigurationValue( value.ToString() ) );
+            }
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ValueListFieldAttribute"/> class.
@@ -37,7 +60,7 @@ namespace Rock.Attribute
         /// <param name="defaultValue">The default value.</param>
         /// <param name="valuePrompt">The text to display as a prompt in the label textbox.</param>
         /// <param name="definedTypeGuid">An Optional Defined Type Guid to select values from, otherwise values will be free-form text fields..</param>
-        /// <param name="customValues">Optional list of options to use for the values.  Format is either 'value1,value2,value3,...', or 'value1:text1,value2:text2,value3:text3,...'.</param>
+        /// <param name="customValues">Optional list of options to use for the values. Format is either 'value1,value2,value3,...', 'value1^text1,value2^text2,value3^text3,...', or a SQL Select statement that returns result set with a 'Value' and 'Text' column.</param>
         /// <param name="category">The category.</param>
         /// <param name="order">The order.</param>
         /// <param name="key">The key.</param>

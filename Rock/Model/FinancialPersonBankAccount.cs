@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,6 +32,7 @@ namespace Rock.Model
     /// Represents a relationship between a person and a bank account in Rock. A person can be related to multiple bank accounts
     /// but a bank account can only be related to an individual person in Rock.
     /// </summary>
+    [RockDomain( "Finance" )]
     [Table( "FinancialPersonBankAccount" )]
     [DataContract]
     public partial class FinancialPersonBankAccount : Model<FinancialPersonBankAccount>
@@ -78,6 +79,7 @@ namespace Rock.Model
         /// <value>
         /// The person alias.
         /// </value>
+        [LavaInclude]
         public virtual PersonAlias PersonAlias { get; set; }
 
         #endregion

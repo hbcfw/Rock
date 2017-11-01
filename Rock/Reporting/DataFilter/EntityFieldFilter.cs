@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -132,7 +132,7 @@ namespace Rock.Reporting.DataFilter
 
                 if ( clientFormatSelection != string.Empty )
                 {
-                    sb.AppendFormat( lineFormat, entityField.Name, clientFormatSelection );
+                    sb.AppendFormat( lineFormat, entityField.UniqueName, clientFormatSelection );
                 }
 
                 fieldIndex++;
@@ -145,6 +145,9 @@ namespace Rock.Reporting.DataFilter
             string scriptFormat = @"
     function {0}PropertySelection($content){{
         var selectedFieldName = $('select.entity-property-selection', $content).find(':selected').val();
+        if (!selectedFieldName || selectedFieldName == '') {{
+            selectedFieldName = '0'
+        }}
         var $selectedContent = $('[data-entity-field-name=' + selectedFieldName + ']', $content)
         var result = '';
         switch(selectedFieldName) {{
@@ -172,11 +175,12 @@ namespace Rock.Reporting.DataFilter
         {
             if ( values.Count > 0 && ddlProperty != null )
             {
-                // Prior to v1.1 attribute.Name was used instead of attribute.Key, because of that, strip spaces to attempt matching key
-                var entityField = entityFields.FirstOrDefault( f => f.Name == values[0].Replace( " ", "" ) );
+                var fieldSelection = values[0];
+                var entityField = entityFields.FindFromFilterSelection( fieldSelection );
+                
                 if ( entityField != null )
                 {
-                    string selectedProperty = entityField.Name;
+                    string selectedProperty = entityField.UniqueName;
                     if ( ddlProperty.Items.OfType<ListItem>().Any( a => a.Value == selectedProperty ) )
                     {
                         ddlProperty.SelectedValue = selectedProperty;
@@ -184,11 +188,11 @@ namespace Rock.Reporting.DataFilter
                     else
                     {
                         // if this EntityField is not available for the current person, but this dataview filter already has it configured, let them keep it
-                        ddlProperty.Items.Add( new ListItem( entityField.Title, entityField.Name ) );
+                        ddlProperty.Items.Add( new ListItem( entityField.Title, entityField.UniqueName ) );
                         ddlProperty.SelectedValue = selectedProperty;
                     }
 
-                    var control = controls.ToList().FirstOrDefault( c => c.ID.EndsWith( "_" + entityField.Name ) );
+                    var control = controls.ToList().FirstOrDefault( c => c.ID.EndsWith( "_" + entityField.UniqueName ) );
                     if ( control != null )
                     {
                         if ( values.Count > 1 && setFilterValues )
@@ -332,9 +336,12 @@ namespace Rock.Reporting.DataFilter
                 v.EntityId.HasValue &&
                 v.Value != string.Empty );
 
-            if (entityField.AttributeGuid.HasValue)
+            if ( entityField.AttributeGuid.HasValue )
             {
-                attributeValues = attributeValues.Where( v => v.Attribute.Guid == entityField.AttributeGuid );
+                var attributeCache = AttributeCache.Read( entityField.AttributeGuid.Value );
+                var attributeId = attributeCache != null ? attributeCache.Id : 0;
+
+                attributeValues = attributeValues.Where( v => v.AttributeId == attributeId );
             }
             else
             {

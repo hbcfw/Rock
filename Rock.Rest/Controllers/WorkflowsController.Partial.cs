@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,10 +35,9 @@ namespace Rock.Rest.Controllers
     public partial class WorkflowsController
     {
         /// <summary>
-        /// Gets the children.
+        /// Initiates a new workflow
         /// </summary>
-        /// <param name="id">The id.</param>
-        /// <param name="hidePageIds">List of pages that should not be included in results</param>
+        /// <param name="workflowTypeId">The workflow type identifier.</param>
         /// <returns></returns>
         [Authenticate, Secured]
         [HttpPost]
@@ -46,10 +45,9 @@ namespace Rock.Rest.Controllers
         public Rock.Model.Workflow WorkflowEntry( int workflowTypeId )
         {
             var rockContext = new Rock.Data.RockContext();
-            var workflowTypeService = new WorkflowTypeService( rockContext );
-            var workflowType = workflowTypeService.Get( workflowTypeId );
+            var workflowType = Web.Cache.WorkflowTypeCache.Read( workflowTypeId );
 
-            if ( workflowType != null )
+            if ( workflowType != null && ( workflowType.IsActive ?? true ) )
             {
                 var workflow = Rock.Model.Workflow.Activate( workflowType, "Workflow From REST" );
 

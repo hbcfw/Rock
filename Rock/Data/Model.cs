@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,7 +17,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Data.Entity.ModelConfiguration;
 using System.Linq;
 using System.Data.Services;
 using System.Runtime.Serialization;
@@ -26,6 +25,7 @@ using Rock.Attribute;
 using Rock.Model;
 using Rock.Security;
 using Rock.Web.Cache;
+using System.Text;
 
 namespace Rock.Data
 {
@@ -139,6 +139,7 @@ namespace Rock.Data
                 return string.Empty;
             }
         }
+
         /// <summary>
         /// Gets the modified by person identifier.
         /// </summary>
@@ -191,6 +192,15 @@ namespace Rock.Data
         [RockClientInclude("If the ModifiedByPersonAliasId is being set manually and should not be overwritten with current user when saved, set this value to true")]
         public virtual bool ModifiedAuditValuesAlreadyUpdated { get; set; }
 
+        /// <summary>
+        /// Gets or sets a field that can be used for custom sorting.
+        /// </summary>
+        /// <value>
+        /// The sort value.
+        /// </value>
+        [NotMapped]
+        public virtual object CustomSortValue { get; set; }
+
         #endregion
 
         #region Methods
@@ -202,6 +212,7 @@ namespace Rock.Data
         /// <param name="state"></param>
         public virtual void PreSaveChanges(  Rock.Data.DbContext dbContext, System.Data.Entity.EntityState state )
         {
+            PreSaveChanges( dbContext, dbContext.ChangeTracker.Entries<IModel>().Where( a => a.Entity == this ).FirstOrDefault(), state );
         }
 
         /// <summary>
@@ -214,6 +225,69 @@ namespace Rock.Data
             PreSaveChanges( dbContext, entry.State );
         }
 
+        /// <summary>
+        /// Method that will be called on an entity immediately after the item is saved by context
+        /// </summary>
+        /// <param name="dbContext">The database context.</param>
+        /// <param name="entry">The entry.</param>
+        /// <param name="state">The state.</param>
+        public virtual void PreSaveChanges( Rock.Data.DbContext dbContext, System.Data.Entity.Infrastructure.DbEntityEntry entry, System.Data.Entity.EntityState state )
+        {
+        }
+
+        /// <summary>
+        /// Posts the save changes.
+        /// </summary>
+        /// <param name="dbContext">The database context.</param>
+        public virtual void PostSaveChanges( Rock.Data.DbContext dbContext )
+        {
+        }
+
+        /// <summary>
+        /// Gets the created audit HTML.
+        /// </summary>
+        /// <param name="rootUrl">The root URL.</param>
+        /// <returns></returns>
+        public virtual string GetCreatedAuditHtml( string rootUrl )
+        {
+            return GetAuditHtml( CreatedByPersonAlias, CreatedDateTime, rootUrl );
+        }
+
+        /// <summary>
+        /// Gets the modified audit HTML.
+        /// </summary>
+        /// <param name="rootUrl">The root URL.</param>
+        /// <returns></returns>
+        public virtual string GetModifiedAuditHtml( string rootUrl )
+        {
+            return GetAuditHtml( ModifiedByPersonAlias, ModifiedDateTime, rootUrl );
+        }
+
+        /// <summary>
+        /// Gets the audit HTML.
+        /// </summary>
+        /// <param name="personAlias">The person alias.</param>
+        /// <param name="dateTime">The date time.</param>
+        /// <param name="rootUrl">The root URL.</param>
+        /// <returns></returns>
+        private string GetAuditHtml( PersonAlias personAlias, DateTime? dateTime, string rootUrl )
+        {
+            var sb = new StringBuilder();
+
+            if ( personAlias != null &&
+                personAlias.Person != null )
+            {
+                sb.AppendFormat( "<a href={0}Person/{1}>{2}</a>", rootUrl, personAlias.PersonId, personAlias.Person.FullName );
+
+                if ( dateTime.HasValue )
+                {
+                    sb.AppendFormat( " <small class='js-date-rollover' data-toggle='tooltip' data-placement='top' title='{0}'>({1})</small>", dateTime.Value.ToString(), dateTime.Value.ToRelativeDateString() );
+                }
+            }
+
+            return sb.ToString();
+        }
+        
         #endregion
 
         #region ISecured implementation
@@ -373,6 +447,8 @@ namespace Rock.Data
                 object item = base[key];
                 if ( item == null )
                 {
+                    var lavaSupportLevel = GlobalAttributesCache.Read().LavaSupportLevel; 
+                    
                     if (this.Attributes == null)
                     {
                         this.LoadAttributes();
@@ -388,6 +464,12 @@ namespace Rock.Data
                     // deprecated ( in v4.0 ), and only the new method of using the Attribute filter is 
                     // suported (e.g. {{ Person | Attribute:'BaptismDate' }} ), the remainder of this method 
                     // can be removed
+
+                    if ( lavaSupportLevel == Lava.LavaSupportLevel.NoLegacy )
+                    {
+                        return null;
+                    }
+                    
 
                     if ( this.Attributes != null )
                     {
@@ -411,6 +493,11 @@ namespace Rock.Data
                             var attribute = this.Attributes[attributeKey];
                             if ( attribute.IsAuthorized( Authorization.VIEW, null ) )
                             {
+                                if ( lavaSupportLevel == Lava.LavaSupportLevel.LegacyWithWarning )
+                                {
+                                    Rock.Model.ExceptionLogService.LogException( new Rock.Lava.LegacyLavaSyntaxDetectedException( this.GetType().GetFriendlyTypeName(), attributeKey ), System.Web.HttpContext.Current );
+                                }
+
                                 if ( unformatted )
                                 {
                                     return GetAttributeValueAsType( attribute.Key );
@@ -424,7 +511,7 @@ namespace Rock.Data
                                     return ( (Rock.Field.ILinkableFieldType)field ).UrlLink( value, attribute.QualifierValues );
                                 }
 
-                                return field.FormatValue( null, value, attribute.QualifierValues, false );
+                                return field.FormatValue( null, attribute.EntityTypeId, this.Id, value, attribute.QualifierValues, false );
                             }
                         }
                     }

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,6 +27,7 @@ namespace Rock.Model
     /// <summary>
     /// Represents a Type of <see cref="Rock.Model.ContentChannelType"/>.
     /// </summary>
+    [RockDomain( "CMS" )]
     [Table( "ContentChannelType" )]
     [DataContract]
     public partial class ContentChannelType : Model<ContentChannelType>
@@ -87,6 +88,25 @@ namespace Rock.Model
         [DataMember]
         public bool DisablePriority { get; set; }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether [disable content field].
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [disable content field]; otherwise, <c>false</c>.
+        /// </value>
+        [DataMember]
+        public bool DisableContentField { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether [disable status].
+        /// If this is set to True, all of the ContentChannelItems are "Approved"
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [disable status]; otherwise, <c>false</c>.
+        /// </value>
+        [DataMember]
+        public bool DisableStatus { get; set; }
+
         #endregion
 
         #region Virtual Properties
@@ -97,6 +117,7 @@ namespace Rock.Model
         /// <value>
         /// The channels.
         /// </value>
+        [LavaInclude]
         public virtual ICollection<ContentChannel> Channels { get; set; }
 
         /// <summary>
@@ -112,6 +133,7 @@ namespace Rock.Model
             {
                 var supportedActions = base.SupportedActions;
                 supportedActions.AddOrReplace( Rock.Security.Authorization.APPROVE, "The roles and/or users that have access to approve." );
+                supportedActions.AddOrReplace( Rock.Security.Authorization.INTERACT, "The roles and/or users that have access to intertact with the channel item." );
                 return supportedActions;
             }
         }
@@ -178,7 +200,12 @@ namespace Rock.Model
         /// <summary>
         /// Allows a date range (start - end date)
         /// </summary>
-        DateRange = 2
+        DateRange = 2,
+
+        /// <summary>
+        /// Hides Date Controls
+        /// </summary>
+        NoDates = 3
     }
 
     #endregion

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -36,6 +36,7 @@ namespace Rock.Model
     /// for long running workflows, or non persisted (see <see cref="Rock.Model.Workflow"/>for real-time processes (i.e. a wizard or triggered job).  A workflow can be triggered by a user/process
     /// performing an action or an entity being updated (through <see cref="Rock.Model.WorkflowTrigger">WorkflowTriggers</see>).
     /// </summary>
+    [RockDomain( "Workflow" )]
     [Table( "WorkflowType" )]
     [DataContract]
     public partial class WorkflowType : Model<WorkflowType>, IOrdered, ICategorized
@@ -60,6 +61,16 @@ namespace Rock.Model
         /// </value>
         [DataMember]
         public bool? IsActive { get; set; }
+
+        /// <summary>
+        /// Gets or sets the workflow identifier prefix.
+        /// </summary>
+        /// <value>
+        /// The workflow identifier prefix.
+        /// </value>
+        [MaxLength( 100 )]
+        [DataMember]
+        public string WorkflowIdPrefix { get; set; }
 
         /// <summary>
         /// Gets or sets the friendly Name of the WorkflowType. This property is required.
@@ -135,6 +146,42 @@ namespace Rock.Model
         /// </value>
         [DataMember]
         public bool IsPersisted { get; set; }
+
+        /// <summary>
+        /// Gets or sets the summary view text to be displayed when a workflow of this type has no form or has been completed. This field supports Lava.
+        /// </summary>
+        /// <value>
+        /// The summary view text.
+        /// </value>
+        [DataMember]
+        public string SummaryViewText { get; set; }
+
+        /// <summary>
+        /// Gets or sets the text to be displayed when a workflow of this type workflow is active, but does not have an active form. This field supports Lava.
+        /// </summary>
+        /// <value>
+        /// The summary view text.
+        /// </value>
+        [DataMember]
+        public string NoActionMessage { get; set; }
+
+        /// <summary>
+        /// Gets or sets the log retention period in days.
+        /// </summary>
+        /// <value>
+        /// The log retention period in days.
+        /// </value>
+        [DataMember]
+        public int? LogRetentionPeriod { get; set; }
+
+        /// <summary>
+        /// Gets or sets the completed workflow rention period in days.
+        /// </summary>
+        /// <value>
+        /// The completed workflow rention period in days.
+        /// </value>
+        [DataMember]
+        public int? CompletedWorkflowRetentionPeriod { get; set; }
 
         /// <summary>
         /// Gets or sets the logging level.
@@ -225,6 +272,37 @@ namespace Rock.Model
 
         #region Methods
 
+        /// <summary>
+        /// Pres the save changes.
+        /// </summary>
+        /// <param name="dbContext">The database context.</param>
+        /// <param name="state">The state.</param>
+        public override void PreSaveChanges( Rock.Data.DbContext dbContext, System.Data.Entity.EntityState state )
+        {
+            if ( state == System.Data.Entity.EntityState.Deleted )
+            {
+                // manually clear any registrations using this workflow type
+                foreach ( var template in new RegistrationTemplateService( dbContext as RockContext )
+                    .Queryable()
+                    .Where( r =>
+                        r.RegistrationWorkflowTypeId.HasValue &&
+                        r.RegistrationWorkflowTypeId.Value == this.Id ) )
+                {
+                    template.RegistrationWorkflowTypeId = null;
+                }
+
+                foreach ( var instance in new RegistrationInstanceService( dbContext as RockContext )
+                    .Queryable()
+                    .Where( r =>
+                        r.RegistrationWorkflowTypeId.HasValue &&
+                        r.RegistrationWorkflowTypeId.Value == this.Id ) )
+                {
+                    instance.RegistrationWorkflowTypeId = null;
+                }
+            }
+
+            base.PreSaveChanges( dbContext, state );
+        }
         /// <summary>
         /// Returns a <see cref="System.String" /> that represents this WorkflowType.
         /// </summary>

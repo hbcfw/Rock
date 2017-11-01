@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -81,23 +81,26 @@ namespace Rock.MergeTemplates
                 return null;
             }
 
-            var sourceTemplateStream = templateBinaryFile.ContentStream;
-
             // Start by creating a new document with the contents of the Template (so that Styles, etc get included)
-            using ( MemoryStream outputDocStream = new MemoryStream() )
+            XDocument sourceTemplateDocX;
+
+            // NOTE: On using multiple IDisposable, see https://stackoverflow.com/a/12603126/1755417 and https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/using-statement
+            using ( MemoryStream sourceTemplateStream = new MemoryStream(), outputDocStream = new MemoryStream() )
             {
-                sourceTemplateStream.CopyTo( outputDocStream );
+                templateBinaryFile.ContentStream.CopyTo( outputDocStream );
                 outputDocStream.Seek( 0, SeekOrigin.Begin );
 
                 // now that we have the outputdoc started, simplify the sourceTemplate
+                templateBinaryFile.ContentStream.CopyTo( sourceTemplateStream );
+                sourceTemplateStream.Seek( 0, SeekOrigin.Begin );
                 var simplifiedDoc = WordprocessingDocument.Open( sourceTemplateStream, true );
                 MarkupSimplifier.SimplifyMarkup( simplifiedDoc, this.simplifyMarkupSettingsAll );
 
                 //// simplify any nodes that have Lava in it that might not have been caught by the MarkupSimplifier
                 //// MarkupSimplifier only merges superfluous runs that are children of a paragraph
-                var simplifiedDocX = simplifiedDoc.MainDocumentPart.GetXDocument();
+                sourceTemplateDocX = simplifiedDoc.MainDocumentPart.GetXDocument();
                 OpenXmlRegex.Match(
-                                simplifiedDocX.Elements(),
+                                sourceTemplateDocX.Elements(),
                                 this.lavaRegEx,
                                 ( x, m ) =>
                                 {
@@ -114,7 +117,7 @@ namespace Rock.MergeTemplates
                                     }
                                 } );
 
-                XElement lastLavaNode = simplifiedDocX.DescendantNodes().OfType<XElement>().LastOrDefault( a => lavaRegEx.IsMatch( a.Value ) );
+                XElement lastLavaNode = sourceTemplateDocX.DescendantNodes().OfType<XElement>().LastOrDefault( a => lavaRegEx.IsMatch( a.Value ) );
 
                 // ensure there is a { Next } indicator after the last lava node in the template
                 if (lastLavaNode != null)
@@ -135,10 +138,6 @@ namespace Rock.MergeTemplates
                     }
                 }
 
-                simplifiedDoc.MainDocumentPart.PutXDocument();
-
-                sourceTemplateStream.Seek( 0, SeekOrigin.Begin );
-
                 bool? allSameParent = null;
 
                 using ( WordprocessingDocument outputDoc = WordprocessingDocument.Open( outputDocStream, true ) )
@@ -154,7 +153,7 @@ namespace Rock.MergeTemplates
                     {
                         if ( lastRecordIndex.HasValue && lastRecordIndex == recordIndex )
                         {
-                            // something went wrong, so throw to avoid spinning infinately
+                            // something went wrong, so throw to avoid spinning infinitely
                             throw new Exception( "Unexpected unchanged recordIndex" );
                         }
 
@@ -164,8 +163,7 @@ namespace Rock.MergeTemplates
                             sourceTemplateStream.Position = 0;
                             sourceTemplateStream.CopyTo( tempMergeTemplateStream );
                             tempMergeTemplateStream.Position = 0;
-                            var tempMergeWordDoc = WordprocessingDocument.Open( tempMergeTemplateStream, true );
-                            var tempMergeTemplateX = tempMergeWordDoc.MainDocumentPart.GetXDocument();
+                            var tempMergeTemplateX = new XDocument( sourceTemplateDocX );
                             var tempMergeTemplateBodyNode = tempMergeTemplateX.DescendantNodes().OfType<XElement>().FirstOrDefault( a => a.Name.LocalName.Equals( "body" ) );
 
                             // find all the Nodes that have a {% next %}.  
@@ -313,6 +311,15 @@ namespace Rock.MergeTemplates
                                         if ( lastParagraph != null )
                                         {
                                             lastParagraph.AddAfterSelf( pageBreak );
+
+                                            // Add page formatting for the page before the page break.
+                                            var lastSectPr = recordContainerNode.Nodes().OfType<XElement>().Where( a => a.Name.LocalName == "sectPr" ).LastOrDefault();
+                                            if ( lastSectPr != null )
+                                            {
+                                                var paragraphPropertiesXml = new Paragraph( new ParagraphProperties( new SectionProperties( lastSectPr.ToString() ) ) ).OuterXml;
+                                                var paragraphProperties = XElement.Parse( paragraphPropertiesXml, LoadOptions.None );
+                                                pageBreak.AddAfterSelf( paragraphProperties );
+                                            }
                                         }
                                     }
                                 }

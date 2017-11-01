@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,7 +20,7 @@ using System.Linq;
 using System.Web;
 using System.Web.UI.WebControls;
 using Rock.Attribute;
-using Rock.Model;
+using Rock.Field.Types;
 using Rock.Web.Cache;
 
 namespace Rock.Web.UI.Controls
@@ -33,6 +33,22 @@ namespace Rock.Web.UI.Controls
     /// </summary>
     public class AttributeField : RockBoundField
     {
+        /// <summary>
+        /// Gets or sets the attribute identifier.
+        /// </summary>
+        /// <value>
+        /// The attribute identifier.
+        /// </value>
+        public int? AttributeId
+        {
+            get { return ViewState["AttributeId"] as int?; }
+            set
+            {
+                ViewState["AttributeId"] = value;
+                this.SortExpression = string.Format( "attribute:{0}", value );
+            }
+        }
+
         /// <summary>
         /// Gets or sets a value indicating whether this <see cref="AttributeField"/> is condensed.
         /// </summary>
@@ -97,19 +113,49 @@ namespace Rock.Web.UI.Controls
                     dataItem.LoadAttributes();
                 }
 
+                AttributeCache attrib = null;
+                string rawValue = string.Empty;
+
                 bool exists = dataItem.Attributes.ContainsKey( this.DataField );
                 if ( exists )
                 {
-                    var attrib = dataItem.Attributes[this.DataField];
-                    string rawValue = dataItem.GetAttributeValue( this.DataField );
+                    attrib = dataItem.Attributes[this.DataField];
+                    rawValue = dataItem.GetAttributeValue( this.DataField );
+                }
+                else
+                {
+                    if ( AttributeId.HasValue )
+                    {
+                        attrib = dataItem.Attributes.Where( a => a.Value.Id == AttributeId.Value ).Select( a => a.Value ).FirstOrDefault();
+                        if ( attrib != null )
+                        {
+                            exists = true;
+                            rawValue = dataItem.GetAttributeValue( attrib.Key );
+                        }
+                    }
+                }
+
+                if ( exists )
+                {
+                    if ( attrib?.FieldType?.Field is BooleanFieldType )
+                    {
+                        if ( this.ItemStyle.HorizontalAlign != HorizontalAlign.Center )
+                        {
+                            this.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+                        }
+
+                        var boolValue = rawValue.AsBoolean();
+                        return boolValue ? "<i class=\"fa fa-check\"></i>" : string.Empty;
+                    }
+
                     if ( formatAsHtml )
                     {
-                        string resultHtml = attrib.FieldType.Field.FormatValueAsHtml( null, rawValue, attrib.QualifierValues, condensed );
+                        string resultHtml = attrib.FieldType.Field.FormatValueAsHtml( null, attrib.EntityTypeId, dataItem.Id, rawValue, attrib.QualifierValues, condensed );
                         return new HtmlString( resultHtml ?? string.Empty );
                     }
                     else
                     {
-                        string result = attrib.FieldType.Field.FormatValue( null, rawValue, attrib.QualifierValues, condensed );
+                        string result = attrib.FieldType.Field.FormatValue( null, attrib.EntityTypeId, dataItem.Id, rawValue, attrib.QualifierValues, condensed );
                         return result ?? string.Empty;
                     }
                 }
@@ -163,12 +209,10 @@ namespace Rock.Web.UI.Controls
     /// </summary>
     public class AttributeFieldObject : IHasAttributes
     {
-        int Id { get; set; }
-
-        int IHasAttributes.Id
-        {
-            get { throw new NotImplementedException(); }
-        }
+        /// <summary>
+        /// Gets the id.
+        /// </summary>
+        public int Id { get; set; }
 
         /// <summary>
         /// List of attributes associated with the object.  This property will not include the attribute values.

@@ -4,11 +4,10 @@
 
 <html class="no-js">
 <head runat="server">
-    <meta http-equiv="X-UA-Compatible" content="IE=10" />
     <title></title>
 
     <script src="<%# ResolveRockUrl("~/Scripts/modernizr.js", true) %>"></script>
-    <script src="<%# ResolveRockUrl("~/Scripts/jquery-1.10.2.min.js", true) %>"></script>
+    <script src="<%# ResolveRockUrl("~/Scripts/jquery-1.12.4.min.js", true) %>"></script>
 
     <link rel="stylesheet" href="<%# ResolveRockUrl("~~/Styles/bootstrap.css", true) %>" />
     <link rel="stylesheet" href="<%# ResolveRockUrl("~~/Styles/theme.css", true) %>" />
@@ -19,7 +18,6 @@
             height: auto;
             width: 100%;
             min-width: 100%;
-            background-color: #ffffff;
             margin: 0 0 0 0;
             padding: 0 0 0 0;
             vertical-align: top;
@@ -48,11 +46,9 @@
             </ProgressTemplate>
         </asp:UpdateProgress>
 
-        <main class="container">
-        
+        <main class="container-fluid">
             <!-- Start Content Area -->
             <Rock:Zone Name="Main" runat="server" />
-
         </main>
     </form>
 </body>

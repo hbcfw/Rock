@@ -1,11 +1,11 @@
-﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// <copyright>
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,6 +23,8 @@ using Rock;
 using Rock.Attribute;
 using Rock.Security;
 using System.Text;
+using System.Text.RegularExpressions;
+using Rock.Model;
 
 namespace RockWeb.Blocks.Security
 {
@@ -108,7 +110,7 @@ namespace RockWeb.Blocks.Security
 
                 lbLoginLogout.Text = "Logout";
                 
-                divProfilePhoto.Attributes.Add( "style", String.Format( "background-image: url('{0}'); background-size: cover; background-repeat: no-repeat;", Rock.Model.Person.GetPersonPhotoUrl( currentPerson, 200, 200 )));
+                divProfilePhoto.Attributes.Add( "style", String.Format( "background-image: url('{0}');", Rock.Model.Person.GetPersonPhotoUrl( currentPerson, 200, 200 )));
 
                 var navPagesString = GetAttributeValue( "LoggedInPageList" );
 
@@ -189,14 +191,15 @@ namespace RockWeb.Blocks.Security
                     Rock.Transactions.RockQueue.TransactionQueue.Enqueue( transaction );
                 }
 
-                FormsAuthentication.SignOut();
+                Authorization.SignOut();
 
                 // After logging out check to see if an anonymous user is allowed to view the current page.  If so
                 // redirect back to the current page, otherwise redirect to the site's default page
                 var currentPage = Rock.Web.Cache.PageCache.Read( RockPage.PageId );
                 if ( currentPage != null && currentPage.IsAuthorized(Authorization.VIEW, null))
                 {
-                    Response.Redirect( CurrentPageReference.BuildUrl() );
+                    string url = CurrentPageReference.BuildUrl( true );
+                    Response.Redirect( url );
                     Context.ApplicationInstance.CompleteRequest();
                 }
                 else

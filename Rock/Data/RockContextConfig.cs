@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,14 +20,18 @@ using System.Data.Entity.SqlServer;
 namespace Rock.Data
 {
     /// <summary>
-    /// Create a DbConfiguration that uses an execution strategy that will retry exceptions that are 
-    /// known to be possibley transient when working with SqlAzure
+    /// 
     /// </summary>
+    /// <seealso cref="System.Data.Entity.DbConfiguration" />
     public class RockContextConfig : DbConfiguration
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RockContextConfig"/> class.
+        /// </summary>
         public RockContextConfig()
         {
-            SetExecutionStrategy( "System.Data.SqlClient", () => new SqlAzureExecutionStrategy() );
+            // default Initializer is CreateDatabaseIfNotExists, so set it to NULL so that nothing happens if there isn't a database yet
+            this.SetDatabaseInitializer<RockContext>( null );
         }
     }
 }

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -34,6 +34,30 @@ namespace Rock.Web.UI.Controls
         private LinkButton _lbAddGroupMember;
 
         /// <summary>
+        /// Gets or sets a value indicating whether [show title].
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [show title]; otherwise, <c>false</c>.
+        /// </value>
+        public bool ShowTitle
+        {
+            get { return ViewState["ShowTitle"] as bool? ?? false; }
+            set { ViewState["ShowTitle"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether [show suffix].
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [show suffix]; otherwise, <c>false</c>.
+        /// </value>
+        public bool ShowSuffix
+        {
+            get { return ViewState["ShowSuffix"] as bool? ?? false; }
+            set { ViewState["ShowSuffix"] = value; }
+        }
+
+        /// <summary>
         /// Gets or sets a value indicating whether [require gender].
         /// </summary>
         /// <value>
@@ -43,6 +67,18 @@ namespace Rock.Web.UI.Controls
         {
             get { return ViewState["RequireGender"] as bool? ?? false; }
             set { ViewState["RequireGender"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether [require birthdate].
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [require birthdate]; otherwise, <c>false</c>.
+        /// </value>
+        public bool RequireBirthdate
+        {
+            get { return ViewState["RequireBirthdate"] as bool? ?? false; }
+            set { ViewState["RequireBirthdate"] = value; }
         }
 
         /// <summary>
@@ -67,6 +103,18 @@ namespace Rock.Web.UI.Controls
         {
             get { return ViewState["ShowGrade"] as bool? ?? false; }
             set { ViewState["ShowGrade"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether [show middle name].
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [show middle name]; otherwise, <c>false</c>.
+        /// </value>
+        public bool ShowMiddleName
+        {
+            get { return ViewState["ShowMiddleName"] as bool? ?? false; }
+            set { ViewState["ShowMiddleName"] = value; }
         }
 
         /// <summary>
@@ -108,7 +156,7 @@ namespace Rock.Web.UI.Controls
             Controls.Add( _lbAddGroupMember );
             _lbAddGroupMember.ID = this.ID + "_btnAddGroupMember";
             _lbAddGroupMember.Click += lbAddGroupMember_Click;
-            _lbAddGroupMember.AddCssClass( "add btn btn-xs btn-action" );
+            _lbAddGroupMember.AddCssClass( "add btn btn-xs btn-action pull-right" );
             _lbAddGroupMember.CausesValidation = false;
 
             var iAddFilter = new HtmlGenericControl( "i" );
@@ -152,18 +200,24 @@ namespace Rock.Web.UI.Controls
                 writer.Write( "Role" );
                 writer.RenderEndTag();
 
+                if ( this.ShowTitle )
+                {
                 writer.RenderBeginTag( HtmlTextWriterTag.Th );
                 writer.Write( "Title" );
                 writer.RenderEndTag();
+                }
 
                 writer.AddAttribute( HtmlTextWriterAttribute.Class, "required" );
                 writer.RenderBeginTag( HtmlTextWriterTag.Th );
                 writer.Write( "Name" );
                 writer.RenderEndTag();
 
+                if ( this.ShowSuffix )
+                {
                 writer.RenderBeginTag( HtmlTextWriterTag.Th );
                 writer.Write( "Suffix" );
                 writer.RenderEndTag();
+                }
 
                 writer.AddAttribute( HtmlTextWriterAttribute.Class, "required" );
                 writer.RenderBeginTag( HtmlTextWriterTag.Th );
@@ -178,6 +232,10 @@ namespace Rock.Web.UI.Controls
                 writer.Write( "Gender" );
                 writer.RenderEndTag();
 
+                if ( RequireBirthdate )
+                {
+                    writer.AddAttribute( HtmlTextWriterAttribute.Class, "required" );
+                }
                 writer.RenderBeginTag( HtmlTextWriterTag.Th );
                 writer.Write( "Birthdate" );
                 writer.RenderEndTag();
@@ -215,10 +273,7 @@ namespace Rock.Web.UI.Controls
                 writer.RenderBeginTag( HtmlTextWriterTag.Tfoot );
                 writer.RenderBeginTag( HtmlTextWriterTag.Tr );
 
-                writer.AddAttribute( HtmlTextWriterAttribute.Colspan, "8" );
-                writer.RenderBeginTag( HtmlTextWriterTag.Td );
-                writer.RenderEndTag();
-
+                writer.AddAttribute( HtmlTextWriterAttribute.Colspan, "9" );
                 writer.RenderBeginTag( HtmlTextWriterTag.Td );
                 _lbAddGroupMember.RenderControl( writer );
                 writer.RenderEndTag();

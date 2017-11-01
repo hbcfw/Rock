@@ -5,13 +5,13 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 // <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -38,10 +38,31 @@ namespace Rock.Client
         public string AdditionalMergeFieldsJson { get; set; }
 
         /// <summary />
+        public string BCCEmails { get; set; }
+
+        /// <summary />
+        public string CCEmails { get; set; }
+
+        /// <summary />
+        public int? CommunicationTemplateId { get; set; }
+
+        /// <summary />
+        public Rock.Client.Enums.CommunicationType CommunicationType { get; set; }
+
+        /// <summary />
+        public string EnabledLavaCommands { get; set; }
+
+        /// <summary />
         public Guid? ForeignGuid { get; set; }
 
         /// <summary />
         public string ForeignKey { get; set; }
+
+        /// <summary />
+        public string FromEmail { get; set; }
+
+        /// <summary />
+        public string FromName { get; set; }
 
         /// <summary />
         public DateTime? FutureSendDateTime { get; set; }
@@ -50,15 +71,33 @@ namespace Rock.Client
         public bool IsBulkCommunication { get; set; }
 
         /// <summary />
-        public string MediumDataJson { get; set; }
+        public int? ListGroupId { get; set; }
 
         /// <summary />
-        public int? MediumEntityTypeId { get; set; }
+        public string Message { get; set; }
+
+        /// <summary />
+        public string MessageMetaData { get; set; }
 
         /// <summary>
         /// If the ModifiedByPersonAliasId is being set manually and should not be overwritten with current user when saved, set this value to true
         /// </summary>
         public bool ModifiedAuditValuesAlreadyUpdated { get; set; }
+
+        /// <summary />
+        public string Name { get; set; }
+
+        /// <summary />
+        public string PushMessage { get; set; }
+
+        /// <summary />
+        public string PushSound { get; set; }
+
+        /// <summary />
+        public string PushTitle { get; set; }
+
+        /// <summary />
+        public string ReplyToEmail { get; set; }
 
         /// <summary />
         public DateTime? ReviewedDateTime { get; set; }
@@ -70,13 +109,28 @@ namespace Rock.Client
         public int? ReviewerPersonAliasId { get; set; }
 
         /// <summary />
+        public Rock.Client.Enums.SegmentCriteria SegmentCriteria { get; set; }
+
+        /// <summary />
+        public string Segments { get; set; }
+
+        /// <summary />
         public int? SenderPersonAliasId { get; set; }
+
+        /// <summary />
+        public int? SMSFromDefinedValueId { get; set; }
+
+        /// <summary />
+        public string SMSMessage { get; set; }
 
         /// <summary />
         public Rock.Client.Enums.CommunicationStatus Status { get; set; }
 
         /// <summary />
         public string Subject { get; set; }
+
+        /// <summary />
+        public string UrlReferrer { get; set; }
 
         /// <summary>
         /// Leave this as NULL to let Rock set this
@@ -112,19 +166,37 @@ namespace Rock.Client
         {
             this.Id = source.Id;
             this.AdditionalMergeFieldsJson = source.AdditionalMergeFieldsJson;
+            this.BCCEmails = source.BCCEmails;
+            this.CCEmails = source.CCEmails;
+            this.CommunicationTemplateId = source.CommunicationTemplateId;
+            this.CommunicationType = source.CommunicationType;
+            this.EnabledLavaCommands = source.EnabledLavaCommands;
             this.ForeignGuid = source.ForeignGuid;
             this.ForeignKey = source.ForeignKey;
+            this.FromEmail = source.FromEmail;
+            this.FromName = source.FromName;
             this.FutureSendDateTime = source.FutureSendDateTime;
             this.IsBulkCommunication = source.IsBulkCommunication;
-            this.MediumDataJson = source.MediumDataJson;
-            this.MediumEntityTypeId = source.MediumEntityTypeId;
+            this.ListGroupId = source.ListGroupId;
+            this.Message = source.Message;
+            this.MessageMetaData = source.MessageMetaData;
             this.ModifiedAuditValuesAlreadyUpdated = source.ModifiedAuditValuesAlreadyUpdated;
+            this.Name = source.Name;
+            this.PushMessage = source.PushMessage;
+            this.PushSound = source.PushSound;
+            this.PushTitle = source.PushTitle;
+            this.ReplyToEmail = source.ReplyToEmail;
             this.ReviewedDateTime = source.ReviewedDateTime;
             this.ReviewerNote = source.ReviewerNote;
             this.ReviewerPersonAliasId = source.ReviewerPersonAliasId;
+            this.SegmentCriteria = source.SegmentCriteria;
+            this.Segments = source.Segments;
             this.SenderPersonAliasId = source.SenderPersonAliasId;
+            this.SMSFromDefinedValueId = source.SMSFromDefinedValueId;
+            this.SMSMessage = source.SMSMessage;
             this.Status = source.Status;
             this.Subject = source.Subject;
+            this.UrlReferrer = source.UrlReferrer;
             this.CreatedDateTime = source.CreatedDateTime;
             this.ModifiedDateTime = source.ModifiedDateTime;
             this.CreatedByPersonAliasId = source.CreatedByPersonAliasId;
@@ -144,10 +216,13 @@ namespace Rock.Client
         public List<string> AdditionalMergeFields { get; set; }
 
         /// <summary />
-        public Dictionary<string, string> MediumData { get; set; }
+        public ICollection<CommunicationAttachment> Attachments { get; set; }
 
         /// <summary />
-        public EntityType MediumEntityType { get; set; }
+        public CommunicationTemplate CommunicationTemplate { get; set; }
+
+        /// <summary />
+        public Group ListGroup { get; set; }
 
         /// <summary />
         public ICollection<CommunicationRecipient> Recipients { get; set; }
@@ -157,6 +232,9 @@ namespace Rock.Client
 
         /// <summary />
         public PersonAlias SenderPersonAlias { get; set; }
+
+        /// <summary />
+        public DefinedValue SMSFromDefinedValue { get; set; }
 
         /// <summary>
         /// NOTE: Attributes are only populated when ?loadAttributes is specified. Options for loadAttributes are true, false, 'simple', 'expanded' 

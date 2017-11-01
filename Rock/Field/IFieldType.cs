@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -76,6 +76,18 @@ namespace Rock.Field
         string FormatValue( Control parentControl, string value, Dictionary<string, ConfigurationValue> configurationValues, bool condensed );
 
         /// <summary>
+        /// Formats the value.
+        /// </summary>
+        /// <param name="parentControl">The parent control.</param>
+        /// <param name="entityTypeId">The entity type identifier.</param>
+        /// <param name="entityId">The entity identifier.</param>
+        /// <param name="value">The value.</param>
+        /// <param name="configurationValues">The configuration values.</param>
+        /// <param name="condensed">if set to <c>true</c> [condensed].</param>
+        /// <returns></returns>
+        string FormatValue( Control parentControl, int? entityTypeId, int? entityId, string value, Dictionary<string, ConfigurationValue> configurationValues, bool condensed );
+
+        /// <summary>
         /// Formats the value as HTML.
         /// </summary>
         /// <param name="parentControl">The parent control.</param>
@@ -84,6 +96,18 @@ namespace Rock.Field
         /// <param name="condensed">if set to <c>true</c> [condensed].</param>
         /// <returns></returns>
         string FormatValueAsHtml( Control parentControl, string value, Dictionary<string, ConfigurationValue> configurationValues, bool condensed = false );
+
+        /// <summary>
+        /// Formats the value as HTML.
+        /// </summary>
+        /// <param name="parentControl">The parent control.</param>
+        /// <param name="entityTypeId">The entity type identifier.</param>
+        /// <param name="entityId">The entity identifier.</param>
+        /// <param name="value">The value.</param>
+        /// <param name="configurationValues">The configuration values.</param>
+        /// <param name="condensed">if set to <c>true</c> [condensed].</param>
+        /// <returns></returns>
+        string FormatValueAsHtml( Control parentControl, int? entityTypeId, int? entityId, string value, Dictionary<string, ConfigurationValue> configurationValues, bool condensed = false );
 
         /// <summary>
         /// Returns the value using the most appropriate datatype
@@ -103,9 +127,26 @@ namespace Rock.Field
         /// <returns></returns>
         object SortValue( Control parentControl, string value, Dictionary<string, ConfigurationValue> configurationValues );
 
+        /// <summary>
+        /// Setting to determine whether the value from this control is sensitive.  This is used for determining
+        /// whether or not the value of this attribute is logged when changed.
+        /// </summary>
+        /// <returns>
+        ///   <c>false</c> By default, any field is not sensitive.
+        /// </returns>
+        bool IsSensitive();
+
         #endregion
 
         #region Edit Control
+
+        /// <summary>
+        /// Gets a value indicating whether this field has a control to configure the default value
+        /// </summary>
+        /// <value>
+        /// <c>true</c> if this instance has default control; otherwise, <c>false</c>.
+        /// </value>
+        bool HasDefaultControl { get; }
 
         /// <summary>
         /// Creates an HTML control.
@@ -170,6 +211,20 @@ namespace Rock.Field
         /// <param name="filterMode">The filter mode.</param>
         /// <returns></returns>
         List<string> GetFilterValues( Control filterControl, Dictionary<string, ConfigurationValue> configurationValues, FilterMode filterMode );
+
+        /// <summary>
+        /// Gets the filter compare value.
+        /// </summary>
+        /// <param name="control">The control.</param>
+        /// <param name="filterMode">The filter mode.</param>
+        /// <returns></returns>
+        string GetFilterCompareValue( Control control, FilterMode filterMode );
+
+        /// <summary>
+        /// Gets the equal to compare value (types that don't support an equalto comparison (i.e. singleselect) should return null
+        /// </summary>
+        /// <returns></returns>
+        string GetEqualToCompareValue();
 
         /// <summary>
         /// Sets the filter value.

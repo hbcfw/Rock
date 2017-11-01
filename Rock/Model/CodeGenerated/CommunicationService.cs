@@ -5,13 +5,13 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 // <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -89,18 +89,36 @@ namespace Rock.Model
         {
             target.Id = source.Id;
             target.AdditionalMergeFieldsJson = source.AdditionalMergeFieldsJson;
+            target.BCCEmails = source.BCCEmails;
+            target.CCEmails = source.CCEmails;
+            target.CommunicationTemplateId = source.CommunicationTemplateId;
+            target.CommunicationType = source.CommunicationType;
+            target.EnabledLavaCommands = source.EnabledLavaCommands;
             target.ForeignGuid = source.ForeignGuid;
             target.ForeignKey = source.ForeignKey;
+            target.FromEmail = source.FromEmail;
+            target.FromName = source.FromName;
             target.FutureSendDateTime = source.FutureSendDateTime;
             target.IsBulkCommunication = source.IsBulkCommunication;
-            target.MediumDataJson = source.MediumDataJson;
-            target.MediumEntityTypeId = source.MediumEntityTypeId;
+            target.ListGroupId = source.ListGroupId;
+            target.Message = source.Message;
+            target.MessageMetaData = source.MessageMetaData;
+            target.Name = source.Name;
+            target.PushMessage = source.PushMessage;
+            target.PushSound = source.PushSound;
+            target.PushTitle = source.PushTitle;
+            target.ReplyToEmail = source.ReplyToEmail;
             target.ReviewedDateTime = source.ReviewedDateTime;
             target.ReviewerNote = source.ReviewerNote;
             target.ReviewerPersonAliasId = source.ReviewerPersonAliasId;
+            target.SegmentCriteria = source.SegmentCriteria;
+            target.Segments = source.Segments;
             target.SenderPersonAliasId = source.SenderPersonAliasId;
+            target.SMSFromDefinedValueId = source.SMSFromDefinedValueId;
+            target.SMSMessage = source.SMSMessage;
             target.Status = source.Status;
             target.Subject = source.Subject;
+            target.UrlReferrer = source.UrlReferrer;
             target.CreatedDateTime = source.CreatedDateTime;
             target.ModifiedDateTime = source.ModifiedDateTime;
             target.CreatedByPersonAliasId = source.CreatedByPersonAliasId;

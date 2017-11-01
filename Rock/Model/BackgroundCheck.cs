@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,6 +28,7 @@ namespace Rock.Model
     /// <summary>
     /// 
     /// </summary>
+    [RockDomain( "CRM" )]
     [Table( "BackgroundCheck" )]
     [DataContract]
     public partial class BackgroundCheck : Model<BackgroundCheck>
@@ -53,7 +54,7 @@ namespace Rock.Model
         /// </value>
         [DataMember]
         public int? WorkflowId { get; set; }
-    
+
         /// <summary>
         /// Gets or sets the request date.
         /// </summary>
@@ -109,6 +110,7 @@ namespace Rock.Model
         /// <value>
         /// The person alias.
         /// </value>
+        [LavaInclude]
         public virtual Model.PersonAlias PersonAlias { get; set; }
 
         /// <summary>
@@ -117,6 +119,7 @@ namespace Rock.Model
         /// <value>
         /// The workflow.
         /// </value>
+        [LavaInclude]
         public virtual Model.Workflow Workflow { get; set; }
 
         /// <summary>
@@ -125,6 +128,7 @@ namespace Rock.Model
         /// <value>
         /// The response document.
         /// </value>
+        [LavaInclude]
         public virtual Model.BinaryFile ResponseDocument { get; set; }
 
         #endregion
@@ -142,7 +146,7 @@ namespace Rock.Model
         /// </summary>
         public BackgroundCheckConfiguration()
         {
-            this.HasRequired( p => p.PersonAlias ).WithMany().HasForeignKey( p => p.PersonAliasId ).WillCascadeOnDelete(true);
+            this.HasRequired( p => p.PersonAlias ).WithMany().HasForeignKey( p => p.PersonAliasId ).WillCascadeOnDelete( true );
             this.HasOptional( p => p.Workflow ).WithMany().HasForeignKey( p => p.WorkflowId ).WillCascadeOnDelete( true );
             this.HasOptional( p => p.ResponseDocument ).WithMany().HasForeignKey( p => p.ResponseDocumentId ).WillCascadeOnDelete( false );
         }

@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -48,7 +48,7 @@ namespace RockWeb.Blocks.Event
     [LinkedPage( "Registration Instance Page", "The page to view registration details", true, "", "", 1 )]
     [LinkedPage( "Group Detail Page", "The page for viewing details about a group", true, "", "", 2 )]
     [LinkedPage( "Content Item Detail Page", "The page for viewing details about a content item", true, "", "", 3 )]
-    public partial class EventItemOccurrenceList : RockBlock, ISecondaryBlock
+    public partial class EventItemOccurrenceList : RockBlock, ISecondaryBlock, ICustomGridColumns
     {
         #region Properties
 
@@ -88,12 +88,17 @@ namespace RockWeb.Blocks.Event
                     gCalendarItemOccurrenceList.Actions.AddClick += gCalendarItemOccurrenceList_Add;
                     gCalendarItemOccurrenceList.GridRebind += gCalendarItemOccurrenceList_GridRebind;
 
-                    var registrationCol = gCalendarItemOccurrenceList.Columns[3] as HyperLinkField;
-                    registrationCol.DataNavigateUrlFormatString = LinkedPageUrl("RegistrationInstancePage") + "?RegistrationInstanceId={0}";
+                    var registrationField = gCalendarItemOccurrenceList.ColumnsOfType<HyperLinkField>().FirstOrDefault( a => a.HeaderText == "Registration" );
+                    if ( registrationField != null )
+                    {
+                        registrationField.DataNavigateUrlFormatString = LinkedPageUrl( "RegistrationInstancePage" ) + "?RegistrationInstanceId={0}";
+                    }
 
-                    var groupCol = gCalendarItemOccurrenceList.Columns[4] as HyperLinkField;
-                    groupCol.DataNavigateUrlFormatString = LinkedPageUrl("GroupDetailPage") + "?GroupId={0}";
-
+                    var groupField = gCalendarItemOccurrenceList.ColumnsOfType<HyperLinkField>().FirstOrDefault( a => a.HeaderText == "Group" );
+                    if ( groupField != null )
+                    {
+                        groupField.DataNavigateUrlFormatString = LinkedPageUrl( "GroupDetailPage" ) + "?GroupId={0}";
+                    }
                 }
             }
         }
@@ -196,6 +201,29 @@ namespace RockWeb.Blocks.Event
         }
 
         /// <summary>
+        /// Handles the Copy event of the gCalendarItemOccurrenceList control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
+        protected void gCalendarItemOccurrenceList_Copy( object sender, RowEventArgs e )
+        {
+            using ( RockContext rockContext = new RockContext() )
+            {
+                EventItemOccurrenceService eventItemOccurrenceService = new EventItemOccurrenceService( rockContext );
+                EventItemOccurrence eventItemOccurrence = eventItemOccurrenceService.Get( e.RowKeyId );
+                if ( eventItemOccurrence != null )
+                {
+                    var qryParams = new Dictionary<string, string>();
+                    qryParams.Add( "EventCalendarId", PageParameter( "EventCalendarId" ) );
+                    qryParams.Add( "EventItemId", _eventItem.Id.ToString() );
+                    qryParams.Add( "EventItemOccurrenceId", "0" );
+                    qryParams.Add( "CopyFromId", eventItemOccurrence.Id.ToString() );
+                    NavigateToLinkedPage( "DetailPage", qryParams );
+                }
+            }
+        }
+
+        /// <summary>
         /// Handles the RowSelected event of the gCalendarItemOccurrenceList control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
@@ -218,7 +246,7 @@ namespace RockWeb.Blocks.Event
         }
 
         /// <summary>
-        /// Handles the Delete event of the gCampusDetails control.
+        /// Handles the Delete event of the gCalendarItemOccurrenceList control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
@@ -246,7 +274,7 @@ namespace RockWeb.Blocks.Event
         }
 
         /// <summary>
-        /// Handles the GridRebind event of the gCampusDetails control.
+        /// Handles the GridRebind event of the gCalendarItemOccurrenceList control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
@@ -288,7 +316,7 @@ namespace RockWeb.Blocks.Event
 
                 var rockContext = new RockContext();
 
-                var qry = new EventItemOccurrenceService(  rockContext )
+                var qry = new EventItemOccurrenceService( rockContext )
                     .Queryable().AsNoTracking()
                     .Where( c => c.EventItemId == _eventItem.Id );
 
@@ -327,7 +355,7 @@ namespace RockWeb.Blocks.Event
                 if ( !string.IsNullOrWhiteSpace( tbContact.Text ) )
                 {
                     eventItemOccurrences = eventItemOccurrences
-                        .Where( i => 
+                        .Where( i =>
                             i.ContactPersonAlias != null &&
                             i.ContactPersonAlias.Person != null &&
                             i.ContactPersonAlias.Person.FullName.Contains( tbContact.Text ) )
@@ -410,10 +438,10 @@ namespace RockWeb.Blocks.Event
 
         private string FormatContentItems( IEnumerable<ContentChannelItem> items )
         {
-            var qryParams = new Dictionary<string, string> { { "ContentItemId", "" }};
+            var qryParams = new Dictionary<string, string> { { "ContentItemId", "" } };
 
             var itemLinks = new List<string>();
-            foreach( var item in items )
+            foreach ( var item in items )
             {
                 qryParams["ContentItemId"] = item.Id.ToString();
                 itemLinks.Add( string.Format( "<a href='{0}'>{1}</a> ({2})", LinkedPageUrl( "ContentItemDetailPage", qryParams ), item.Title, item.ContentChannelType.Name ) );
@@ -442,6 +470,5 @@ namespace RockWeb.Blocks.Event
             public DateTime? NextStartDateTime { get; set; }
             public List<DateTime> StartDateTimes { get; set; }
         }
-
-}
+    }
 }

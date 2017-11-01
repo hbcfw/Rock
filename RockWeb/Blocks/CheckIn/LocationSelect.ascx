@@ -23,8 +23,14 @@
             <div class="scroller">
 
                 <div class="control-group checkin-body-container">
-                    <label class="control-label">Select Location</label>
+                    <label class="control-label"><asp:Literal ID="lCaption" runat="server" /></label>
                     <div class="controls">
+                        <asp:Panel ID="pnlNoOptions" runat="server" Visible="false">
+                            <h4><asp:Literal ID="lNoOptions" runat="server" /></h4>
+                            <div class="actions">
+                                <asp:LinkButton CssClass="btn btn-primary btn-checkin" ID="btnNoOptionOk" runat="server" OnClick="btnNoOptionOk_Click" Text="Ok" />
+                            </div>
+                        </asp:Panel>
                         <asp:Repeater ID="rSelection" runat="server" OnItemCommand="rSelection_ItemCommand">
                             <ItemTemplate>
                                 <Rock:BootstrapButton ID="lbSelect" runat="server" CommandArgument='<%# Eval("Location.Id") %>' CssClass="btn btn-primary btn-large btn-block btn-checkin-select" DataLoadingText="Loading..." ><%# Container.DataItem.ToString() %><%# FormatCount( (int)Eval("Location.Id") ) %></Rock:BootstrapButton>

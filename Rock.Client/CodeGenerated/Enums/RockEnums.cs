@@ -5,13 +5,13 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 // <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,6 +25,7 @@ using System.Collections.Generic;
 
 namespace Rock.Client.Enums
 {
+    #pragma warning disable CS1591
     /// <summary>
     /// </summary>
     public enum AttendanceGraphBy
@@ -77,6 +78,8 @@ namespace Rock.Client.Enums
     {
         Layout = 0x0,
         Page = 0x1,
+        Site = 0x2,
+        None = 0x3,
     }
 
     /// <summary>
@@ -116,6 +119,16 @@ namespace Rock.Client.Enums
 
     /// <summary>
     /// </summary>
+    public enum CommunicationType
+    {
+        RecipientPreference = 0x0,
+        Email = 0x1,
+        SMS = 0x2,
+        PushNotification = 0x3,
+    }
+
+    /// <summary>
+    /// </summary>
     [Flags]
     public enum ComparisonType
     {
@@ -141,6 +154,7 @@ namespace Rock.Client.Enums
     {
         SingleDate = 0x1,
         DateRange = 0x2,
+        NoDates = 0x3,
     }
 
     /// <summary>
@@ -224,12 +238,11 @@ namespace Rock.Client.Enums
 
     /// <summary>
     /// </summary>
-    public enum GiversViewBy
+    public enum GroupCapacityRule
     {
-        Giver = 0x0,
-        Adults = 0x1,
-        Children = 0x2,
-        Family = 0x3,
+        None = 0x0,
+        Hard = 0x1,
+        Soft = 0x2,
     }
 
     /// <summary>
@@ -299,6 +312,15 @@ namespace Rock.Client.Enums
 
     /// <summary>
     /// </summary>
+    public enum MetricNumericDataType
+    {
+        Integer = 0x0,
+        Decimal = 0x1,
+        Currency = 0x2,
+    }
+
+    /// <summary>
+    /// </summary>
     public enum MetricValueType
     {
         Measure = 0x0,
@@ -311,6 +333,16 @@ namespace Rock.Client.Enums
     {
         Success = 0x0,
         Fail = 0x1,
+    }
+
+    /// <summary>
+    /// </summary>
+    public enum NotificationClassification
+    {
+        Success = 0x0,
+        Info = 0x1,
+        Warning = 0x2,
+        Danger = 0x3,
     }
 
     /// <summary>
@@ -394,6 +426,7 @@ namespace Rock.Client.Enums
         MobilePhone = 0x8,
         HomePhone = 0x9,
         WorkPhone = 0xa,
+        Grade = 0xb,
     }
 
     /// <summary>
@@ -447,12 +480,47 @@ namespace Rock.Client.Enums
 
     /// <summary>
     /// </summary>
+    public enum SegmentCriteria
+    {
+        All = 0x0,
+        Any = 0x1,
+    }
+
+    /// <summary>
+    /// </summary>
+    public enum SignatureDocumentAction
+    {
+        Email = 0x0,
+        Embed = 0x1,
+    }
+
+    /// <summary>
+    /// </summary>
+    public enum SignatureDocumentStatus
+    {
+        None = 0x0,
+        Sent = 0x1,
+        Signed = 0x2,
+        Cancelled = 0x3,
+        Expired = 0x4,
+    }
+
+    /// <summary>
+    /// </summary>
     public enum SpecialRole
     {
         None = 0x0,
         AllUsers = 0x1,
         AllAuthenticatedUsers = 0x2,
         AllUnAuthenticatedUsers = 0x3,
+    }
+
+    /// <summary>
+    /// </summary>
+    public enum TagType
+    {
+        Inline = 0x1,
+        Block = 0x2,
     }
 
     /// <summary>
@@ -485,4 +553,5 @@ namespace Rock.Client.Enums
         ImmediatePostSave = 0x4,
     }
 
+    #pragma warning restore CS1591
 }

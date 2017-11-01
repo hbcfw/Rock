@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -168,9 +168,12 @@ namespace RockWeb.Blocks.Reporting
             if ( grdDataFilters.Visible )
             {
                 var selectCols = grdDataFilters.Columns.OfType<SelectField>().ToArray();
-                var selectedDataFieldGuids = selectCols[0].SelectedKeys.OfType<Guid>();
-                var configurableDataFieldGuids = selectCols[1].SelectedKeys.OfType<Guid>();
-                var togglableDataFieldGuids = selectCols[2].SelectedKeys.OfType<Guid>();
+                var isVisibleField = selectCols.First( a => a.DataSelectedField == "IsVisible" );
+                var isConfigurableField = selectCols.First( a => a.DataSelectedField == "IsConfigurable" );
+                var isTogglableField = selectCols.First( a => a.DataSelectedField == "IsTogglable" );
+                var selectedDataFieldGuids = isVisibleField.SelectedKeys.OfType<Guid>();
+                var configurableDataFieldGuids = isConfigurableField.SelectedKeys.OfType<Guid>();
+                var togglableDataFieldGuids = isTogglableField.SelectedKeys.OfType<Guid>();
 
                 this.SetAttributeValue( "SelectedDataFieldGuids", selectedDataFieldGuids.Select( a => a.ToString() ).ToList().AsDelimited( "|" ) );
                 this.SetAttributeValue( "ConfigurableDataFieldGuids", configurableDataFieldGuids.Select( a => a.ToString() ).ToList().AsDelimited( "|" ) );
@@ -356,13 +359,17 @@ namespace RockWeb.Blocks.Reporting
                     {
                         string selectionUserPreference = null;
                         bool? checkedUserPreference = null;
-                        if ( setSelection && filterIsVisible && filterIsConfigurable )
+                        if ( setSelection && filterIsVisible )
                         {
-                            selectionUserPreference = this.GetUserPreference( string.Format( "{0}_{1}_Selection", GetReportDataKeyPrefix(), filterControl.DataViewFilterGuid.ToString( "N" ) ) );
-                        }
-                        else if ( setSelection && filterIsVisible && !filterIsConfigurable )
-                        {
-                            checkedUserPreference = this.GetUserPreference( string.Format( "{0}_{1}_Checked", GetReportDataKeyPrefix(), filterControl.DataViewFilterGuid.ToString( "N" ) ) ).AsBooleanOrNull();
+                            if ( filterIsConfigurable )
+                            {
+                                selectionUserPreference = this.GetUserPreference( string.Format( "{0}_{1}_Selection", GetReportDataKeyPrefix(), filterControl.DataViewFilterGuid.ToString( "N" ) ) );
+                            }
+
+                            if ( filterControl.ShowCheckbox )
+                            {
+                                checkedUserPreference = this.GetUserPreference( string.Format( "{0}_{1}_Checked", GetReportDataKeyPrefix(), filterControl.DataViewFilterGuid.ToString( "N" ) ) ).AsBooleanOrNull();
+                            }
                         }
 
                         if ( checkedUserPreference.HasValue )
@@ -370,65 +377,65 @@ namespace RockWeb.Blocks.Reporting
                             filterControl.SetCheckBoxChecked( checkedUserPreference.Value );
                         }
 
-                        if ( filterIsVisible && !filterIsConfigurable )
+                        if ( setSelection )
                         {
-                            // not configurable so just label it with the selection summary
-                            filterControl.Label = component.FormatSelection( reportEntityTypeModel, filter.Selection );
-                        }
-                        else if ( component is Rock.Reporting.DataFilter.PropertyFilter )
-                        {
-                            // a configurable property filter
-                            var propertyFilter = component as Rock.Reporting.DataFilter.PropertyFilter;
-                            if ( setSelection )
+                            var selection = filter.Selection;
+                            if ( !string.IsNullOrWhiteSpace( selectionUserPreference ) )
                             {
-                                var selection = filter.Selection;
-
-                                if ( !string.IsNullOrWhiteSpace( selectionUserPreference ) )
+                                if ( component is Rock.Reporting.DataFilter.PropertyFilter )
                                 {
-                                    selection = propertyFilter.UpdateSelectionFromUserPreferenceSelection( selection, selectionUserPreference );
+                                    selection = ( component as Rock.Reporting.DataFilter.PropertyFilter ).UpdateSelectionFromUserPreferenceSelection( selection, selectionUserPreference );
                                 }
-
-                                selection = propertyFilter.UpdateSelectionFromPageParameters( selection, this );
-
-                                try
-                                {
-                                    filterControl.SetSelection( selection );
-                                }
-                                catch ( Exception ex )
-                                {
-                                    this.LogException( new Exception( "Exception setting selection for DataViewFilter: " + filter.Guid, ex ) );
-                                }
-                            }
-                        }
-                        else
-                        {
-                            if ( setSelection )
-                            {
-                                var selection = filter.Selection;
-                                if ( !string.IsNullOrWhiteSpace( selectionUserPreference ) )
+                                else
                                 {
                                     selection = selectionUserPreference;
                                 }
-
-                                if ( component is Rock.Reporting.DataFilter.IUpdateSelectionFromPageParameters )
-                                {
-                                    selection = ( component as Rock.Reporting.DataFilter.IUpdateSelectionFromPageParameters ).UpdateSelectionFromPageParameters( selection, this );
-                                }
-
-                                filterControl.SetSelection( selection );
-
-                                try
-                                {
-                                    filterControl.SetSelection( selection );
-                                }
-                                catch ( Exception ex )
-                                {
-                                    this.LogException( new Exception( "Exception setting selection for DataViewFilter: " + filter.Guid, ex ) );
-                                }
                             }
 
-                            // a configurable data filter
+                            if ( component is Rock.Reporting.DataFilter.IUpdateSelectionFromPageParameters )
+                            {
+                                selection = ( component as Rock.Reporting.DataFilter.IUpdateSelectionFromPageParameters ).UpdateSelectionFromPageParameters( selection, this );
+                            }
+
+                            try
+                            {
+                                filterControl.SetSelection( selection );
+                            }
+                            catch ( Exception ex )
+                            {
+                                this.LogException( new Exception( "Exception setting selection for DataViewFilter: " + filter.Guid, ex ) );
+                            }
+                        }
+
+                        if (!filterIsConfigurable )
+                        {
+                            // not configurable so just label it with the selection summary
+                            filterControl.Label = component.FormatSelection( reportEntityTypeModel, filter.Selection );
+
+                            // configuration not visible, so set the selection to what it was in the dataview when it was saved, even if setSelection=False
+                            filterControl.SetSelection( filter.Selection );
+                        }
+                        else if ( component is Rock.Reporting.DataFilter.PropertyFilter )
+                        {
+                            // Property Filters already render a Label based on the selected Property Field, so leave the filter control label blank
+                            filterControl.Label = string.Empty;
+                        }
+                        else
+                        {
                             filterControl.Label = component.GetTitle( reportEntityTypeModel );
+                        }
+
+                        if ( component is Rock.Reporting.DataFilter.OtherDataViewFilter )
+                        {
+                            // don't include the actual DataView Picker filter, just the child filters
+                            parentControl.Controls.Remove( filterControl );
+
+                            Rock.Reporting.DataFilter.OtherDataViewFilter otherDataViewFilter = component as Rock.Reporting.DataFilter.OtherDataViewFilter;
+                            var otherDataView = otherDataViewFilter.GetSelectedDataView( filter.Selection );
+                            if ( otherDataView != null )
+                            {
+                                CreateFilterControl( parentControl, otherDataView.DataViewFilter, reportEntityType, setSelection, selectedDataFieldGuids, configurableDataFieldGuids, togglableDataFieldGuids, rockContext );
+                            }
                         }
                     }
                 }
@@ -590,7 +597,7 @@ namespace RockWeb.Blocks.Reporting
         /// <summary>
         /// Binds the data filters grid in the Settings dialog
         /// </summary>
-        protected void BindDataFiltersGrid( bool selectAll )
+        protected void BindDataFiltersGrid( bool selectDefault )
         {
             var rockContext = new RockContext();
             var reportService = new ReportService( rockContext );
@@ -620,15 +627,13 @@ namespace RockWeb.Blocks.Reporting
                 foreach ( var groupedFilter in filters.Where( a => a.FilterExpressionType != FilterExpressionType.Filter ) )
                 {
                     groupedFilter.Title = string.Format( "[{0}]", groupedFilter.FilterExpressionType.ConvertToString() );
-                    groupedFilter.Summary = filters.Where( a => a.ParentFilter == groupedFilter ).Select( a => a.Summary ?? string.Empty ).ToList().AsDelimited( ", ", groupedFilter.FilterExpressionType == FilterExpressionType.GroupAny ? " or " : " and " );
                 }
-
 
                 ddlPersonIdField.Visible = report.EntityTypeId != EntityTypeCache.GetId<Rock.Model.Person>();
                 ddlPersonIdField.Items.Clear();
                 ddlPersonIdField.Items.Add( new ListItem() );
-                ddlPersonIdField.Items.Add( new ListItem( "Id", "Id") );
-                foreach (var reportField in report.ReportFields)
+                ddlPersonIdField.Items.Add( new ListItem( "Id", "Id" ) );
+                foreach ( var reportField in report.ReportFields )
                 {
                     ddlPersonIdField.Items.Add( new ListItem( reportField.ColumnHeaderText, reportField.ColumnHeaderText ) );
                 }
@@ -638,17 +643,24 @@ namespace RockWeb.Blocks.Reporting
 
                 grdDataFilters.Visible = true;
                 mdConfigure.ServerSaveLink.Disabled = false;
-                grdDataFilters.DataSource = filters.Select( a => new
+                grdDataFilters.DataSource = filters.Select( a =>
                 {
-                    a.Guid,
-                    a.Title,
-                    a.TitlePath,
-                    a.Summary,
-                    a.FilterExpressionType,
-                    a.ParentFilter,
-                    ShowAsFilter = selectAll || selectedDataFieldGuids.Contains( a.Guid ),
-                    IsConfigurable = selectAll || configurableDataFieldGuids.Contains( a.Guid ),
-                    IsTogglable = selectAll || togglableDataFieldGuids.Contains( a.Guid )
+                    var result = new
+                    {
+                        a.Guid,
+                        a.Title,
+                        a.TitlePath,
+                        a.Summary,
+                        a.FilterExpressionType,
+                        a.ParentFilter,
+                        IsVisible = selectDefault || selectedDataFieldGuids.Contains( a.Guid ),
+                        IsConfigurable = selectDefault || configurableDataFieldGuids.Contains( a.Guid ),
+                        IsTogglable = selectDefault || togglableDataFieldGuids.Contains( a.Guid ),
+                        FilterInfo = a,
+                        ParentDataView = a.FromOtherDataView
+                    };
+
+                    return result;
                 } );
 
                 grdDataFilters.DataBind();
@@ -664,13 +676,26 @@ namespace RockWeb.Blocks.Reporting
         /// </summary>
         private class FilterInfo
         {
+            public FilterInfo( DataViewFilter dataViewFilter )
+            {
+                DataViewFilter = dataViewFilter;
+            }
+
+            private DataViewFilter DataViewFilter { get; set; }
+
             /// <summary>
             /// Gets or sets the unique identifier.
             /// </summary>
             /// <value>
             /// The unique identifier.
             /// </value>
-            public Guid Guid { get; set; }
+            public Guid Guid
+            {
+                get
+                {
+                    return this.DataViewFilter.Guid;
+                }
+            }
 
             /// <summary>
             /// Gets or sets the title.
@@ -714,7 +739,36 @@ namespace RockWeb.Blocks.Reporting
             /// <value>
             /// The summary.
             /// </value>
-            public string Summary { get; set; }
+            public string Summary
+            {
+                get
+                {
+                    string result;
+                    if ( FilterExpressionType != FilterExpressionType.Filter )
+                    {
+                        var childFilters = this.FilterList.Where( a => a.ParentFilter == this ).ToList();
+                        var parentSummaries = childFilters.Select( a => a.Summary ?? string.Empty ).ToList().AsDelimited( ", ", this.FilterExpressionType == FilterExpressionType.GroupAny ? " OR " : " AND " );
+                        if ( childFilters.Count > 1 )
+                        {
+                            result = string.Format( "( {0} )", parentSummaries );
+                        }
+                        else
+                        {
+                            result = parentSummaries;
+                        }
+                    }
+                    else if ( this.Component != null )
+                    {
+                        result = this.Component.FormatSelection( this.ReportEntityTypeModel, this.Selection );
+                    }
+                    else
+                    {
+                        result = "-";
+                    }
+
+                    return result;
+                }
+            }
 
             /// <summary>
             /// Gets or sets the type of the filter expression.
@@ -722,7 +776,13 @@ namespace RockWeb.Blocks.Reporting
             /// <value>
             /// The type of the filter expression.
             /// </value>
-            public FilterExpressionType FilterExpressionType { get; set; }
+            public FilterExpressionType FilterExpressionType
+            {
+                get
+                {
+                    return this.DataViewFilter.ExpressionType;
+                }
+            }
 
             /// <summary>
             /// Gets or sets the parent filter.
@@ -730,7 +790,59 @@ namespace RockWeb.Blocks.Reporting
             /// <value>
             /// The parent filter.
             /// </value>
-            public FilterInfo ParentFilter { get; set; }
+            public FilterInfo ParentFilter
+            {
+                get
+                {
+                    return this.DataViewFilter.ParentId.HasValue ? this.FilterList.FirstOrDefault( a => a.Guid == this.DataViewFilter.Parent.Guid ) : null;
+                }
+            }
+
+            /// <summary>
+            /// Gets or sets the filter list.
+            /// </summary>
+            /// <value>
+            /// The filter list.
+            /// </value>
+            public List<FilterInfo> FilterList { get; internal set; }
+
+            /// <summary>
+            /// Gets or sets the component.
+            /// </summary>
+            /// <value>
+            /// The component.
+            /// </value>
+            public DataFilterComponent Component { get; internal set; }
+
+            /// <summary>
+            /// Gets or sets the report entity type model.
+            /// </summary>
+            /// <value>
+            /// The report entity type model.
+            /// </value>
+            public Type ReportEntityTypeModel { get; internal set; }
+
+            /// <summary>
+            /// Gets or sets from other data view.
+            /// </summary>
+            /// <value>
+            /// From other data view.
+            /// </value>
+            public string FromOtherDataView { get; set; }
+
+            /// <summary>
+            /// Gets or sets the selection.
+            /// </summary>
+            /// <value>
+            /// The selection.
+            /// </value>
+            public string Selection
+            {
+                get
+                {
+                    return this.DataViewFilter.Selection;
+                }
+            }
 
             /// <summary>
             /// Returns a <see cref="System.String" /> that represents this instance.
@@ -758,13 +870,15 @@ namespace RockWeb.Blocks.Reporting
             var reportEntityTypeCache = EntityTypeCache.Read( reportEntityType );
             var reportEntityTypeModel = reportEntityTypeCache.GetEntityType();
 
-            var filterInfo = new FilterInfo();
-            filterInfo.Guid = filter.Guid;
-            filterInfo.FilterExpressionType = filter.ExpressionType;
-            filterInfo.ParentFilter = filter.ParentId.HasValue ? filterList.FirstOrDefault( a => a.Guid == filter.Parent.Guid ) : null;
+            var filterInfo = new FilterInfo( filter );
+            filterInfo.FilterList = filterList;
+
             if ( entityType != null )
             {
                 var component = Rock.Reporting.DataFilterContainer.GetComponent( entityType.Name );
+                filterInfo.Component = component;
+                filterInfo.ReportEntityTypeModel = reportEntityTypeModel;
+
                 if ( component != null )
                 {
                     if ( component is Rock.Reporting.DataFilter.EntityFieldFilter )
@@ -789,13 +903,30 @@ namespace RockWeb.Blocks.Reporting
                     {
                         filterInfo.Title = component.GetTitle( reportEntityType.GetType() );
                     }
-
-                    filterInfo.Summary = component.FormatSelection( reportEntityTypeModel, filter.Selection );
-
                 }
             }
 
             filterList.Add( filterInfo );
+
+            if ( filterInfo.Component is Rock.Reporting.DataFilter.OtherDataViewFilter )
+            {
+                Rock.Reporting.DataFilter.OtherDataViewFilter otherDataViewFilter = filterInfo.Component as Rock.Reporting.DataFilter.OtherDataViewFilter;
+                var otherDataView = otherDataViewFilter.GetSelectedDataView( filterInfo.Selection );
+                if ( otherDataView != null )
+                {
+                    var otherDataViewFilterList = new List<FilterInfo>();
+                    GetFilterListRecursive( otherDataViewFilterList, otherDataView.DataViewFilter, reportEntityType );
+                    foreach ( var otherFilter in otherDataViewFilterList )
+                    {
+                        if ( otherFilter.FromOtherDataView == null )
+                        {
+                            otherFilter.FromOtherDataView = otherDataView.Name;
+                        }
+                    }
+
+                    filterList.AddRange( otherDataViewFilterList );
+                }
+            }
 
             foreach ( var childFilter in filter.ChildFilters )
             {
@@ -813,7 +944,29 @@ namespace RockWeb.Blocks.Reporting
             var dataItem = e.Row.DataItem;
             if ( dataItem != null )
             {
-                if ( (FilterExpressionType)dataItem.GetPropertyValue( "FilterExpressionType" ) != FilterExpressionType.Filter )
+                var hideCheckboxes = false;
+                if ( ( FilterExpressionType ) dataItem.GetPropertyValue( "FilterExpressionType" ) != FilterExpressionType.Filter )
+                {
+                    // Don't show Checkboxes for any of the Grouped Filter types
+                    hideCheckboxes = true;
+                }
+                else
+                {
+                    var filterInfo = e.Row.DataItem.GetPropertyValue( "FilterInfo" ) as FilterInfo;
+                    if ( filterInfo != null )
+                    {
+                        var otherDataViewFilter = filterInfo.Component as Rock.Reporting.DataFilter.OtherDataViewFilter;
+
+                        if ( otherDataViewFilter != null && otherDataViewFilter.GetSelectedDataView( filterInfo.Selection ) != null )
+                        {
+                            // Don't show the Row (or Checkboxes) for any of the OtherDataView filters
+                            e.Row.Visible = false;
+                            hideCheckboxes = true;
+                        }
+                    }
+                }
+
+                if ( hideCheckboxes )
                 {
                     foreach ( var selectField in grdDataFilters.Columns.OfType<SelectField>() )
                     {

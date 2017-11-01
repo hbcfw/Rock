@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,13 +16,16 @@
 //
 using System;
 using System.Collections.Generic;
+using System.Data.Entity;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Web;
 using System.Web.UI.WebControls;
+using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
+using Rock.Web.Cache;
 
 namespace Rock
 {
@@ -65,12 +68,15 @@ namespace Rock
             List<string> strings = new List<string>();
             foreach ( T item in items )
             {
-                string itemString = item.ToString();
-                if ( HtmlEncode )
+                if ( item != null )
                 {
-                    itemString = HttpUtility.HtmlEncode( itemString );
+                    string itemString = item.ToString();
+                    if ( HtmlEncode )
+                    {
+                        itemString = HttpUtility.HtmlEncode( itemString );
+                    }
+                    strings.Add( itemString );
                 }
-                strings.Add( itemString );
             }
 
             if ( finalDelimiter != null && strings.Count > 1 )
@@ -80,6 +86,21 @@ namespace Rock
             else
             {
                 return String.Join( delimiter, strings.ToArray() );
+            }
+        }
+
+        /// <summary>
+        /// Adds the specified item.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="items">The items.</param>
+        /// <param name="item">The item.</param>
+        /// <param name="IgnoreIfExists">if set to <c>true</c> [ignore if exists].</param>
+        public static void Add<T>( this List<T> items, T item, bool IgnoreIfExists )
+        {
+            if ( !IgnoreIfExists || !items.Contains( item ) )
+            {
+                items.Add( item );
             }
         }
 
@@ -149,6 +170,19 @@ namespace Rock
                     itemStack.Push( child );
                 }
             }
+        }
+
+        /// <summary>
+        /// Takes the last n items from a List.
+        /// http://stackoverflow.com/questions/3453274/using-linq-to-get-the-last-n-elements-of-a-collection
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="source">The source.</param>
+        /// <param name="N">The n.</param>
+        /// <returns></returns>
+        public static IEnumerable<T> TakeLast<T>( this IEnumerable<T> source, int N )
+        {
+            return source.Skip( Math.Max( 0, source.Count() - N ) );
         }
 
         #endregion GenericCollection Extensions
@@ -325,6 +359,52 @@ namespace Rock
         /// <returns></returns>
         public static IOrderedQueryable<T> Sort<T>( this IQueryable<T> source, Rock.Web.UI.Controls.SortProperty sortProperty )
         {
+            if ( sortProperty.Property.StartsWith( "attribute:" ) )
+            {
+                var itemType = typeof( T );
+                var attributeCache = AttributeCache.Read( sortProperty.Property.Substring( 10 ).AsInteger() );
+                if ( attributeCache != null && typeof( IModel ).IsAssignableFrom( typeof( T ) ) )
+                {
+                    var entityIds = new List<int>();
+
+                    var models = new List<IModel>();
+                    source.ToList().ForEach( i => models.Add( i as IModel ) );
+                    var ids = models.Select( m => m.Id ).ToList();
+
+                    var field = attributeCache.FieldType.Field;
+
+                    using ( var rockContext = new RockContext() )
+                    {
+                        foreach ( var attributeValue in new AttributeValueService( rockContext )
+                            .Queryable().AsNoTracking()
+                            .Where( v =>
+                                v.AttributeId == attributeCache.Id &&
+                                v.EntityId.HasValue &&
+                                ids.Contains( v.EntityId.Value ) )
+                            .ToList() )
+                        {
+                            var model = models.FirstOrDefault( m => m.Id == attributeValue.EntityId.Value );
+                            if ( model != null )
+                            {
+                                model.CustomSortValue = field.SortValue( null, attributeValue.Value, attributeCache.QualifierValues );
+                            }
+                        }
+                    }
+
+                    var result = new List<T>();
+                    if ( sortProperty.Direction == SortDirection.Ascending )
+                    {
+                        models.OrderBy( m => m.CustomSortValue ).ToList().ForEach( m => result.Add( (T)m ) );
+                    }
+                    else
+                    {
+                        models.OrderByDescending( m => m.CustomSortValue ).ToList().ForEach( m => result.Add( (T)m ) );
+                    }
+
+                    return result.AsQueryable().OrderBy( r => 0 );
+                }
+            }
+
             string[] columns = sortProperty.Property.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries );
 
             IOrderedQueryable<T> qry = null;
@@ -351,6 +431,7 @@ namespace Rock
             }
 
             return qry;
+            
         }
 
         /// <summary>
@@ -373,6 +454,34 @@ namespace Rock
                 .Where( a => a.Attribute.Key == attributeKey )
                 .Where( a => a.Attribute.EntityTypeId == entityTypeId )
                 .Where( a => a.Value == attributeValue )
+                .Select( a => a.EntityId );
+
+            var result = source.Where( a => avs.Contains( ( a as T ).Id ) );
+            return result;
+        }
+
+        /// <summary>
+        /// Filters a Query to rows that have matching attribute values that meet the condition
+        /// NOTE: Make sure your predicate references 'Attribute.Key' and not 'AttributeKey'
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="source">The source.</param>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="predicate">The predicate.</param>
+        /// <returns></returns>
+        public static IQueryable<T> WhereAttributeValue<T>( this IQueryable<T> source, RockContext rockContext, Expression<Func<AttributeValue, bool>> predicate ) where T : Rock.Data.Model<T>, new()
+        {
+            /*
+              Example: 
+              var qryPerson = new PersonService( rockContext ).Queryable().Where( a => a.FirstName == "Bob" )
+                .WhereAttributeValue( rockContext, a => a.Attribute.Key == "IsAwesome" && a.ValueAsBoolean == true );
+            */
+
+            int entityTypeId = Rock.Web.Cache.EntityTypeCache.GetId( typeof( T ) ) ?? 0;
+
+            var avs = new AttributeValueService( rockContext ).Queryable()
+                .Where( a => a.Attribute.EntityTypeId == entityTypeId )
+                .Where( predicate )
                 .Select( a => a.EntityId );
 
             var result = source.Where( a => avs.Contains( ( a as T ).Id ) );
@@ -407,7 +516,7 @@ namespace Rock
         /// <param name="dictionary">The dictionary.</param>
         /// <param name="key">The key.</param>
         /// <param name="value">The value.</param>
-        public static void AddOrReplace<TKey, TValue>( this Dictionary<TKey, TValue> dictionary, TKey key, TValue value )
+        public static void AddOrReplace<TKey, TValue>( this IDictionary<TKey, TValue> dictionary, TKey key, TValue value )
         {
             if ( !dictionary.ContainsKey( key ) )
             {
@@ -436,6 +545,31 @@ namespace Rock
         }
 
         /// <summary>
+        /// Adds if not empty.
+        /// </summary>
+        /// <param name="dictionary">The dictionary.</param>
+        /// <param name="key">The key.</param>
+        /// <param name="value">The value.</param>
+        /// <param name="replace">if set to <c>true</c> [replace].</param>
+        public static void AddIfNotBlank( this IDictionary<string, string> dictionary, string key, string value, bool replace = true ) 
+        {
+            if ( value.IsNotNullOrWhitespace() )
+            {
+                if ( !dictionary.ContainsKey( key ) )
+                {
+                    dictionary.Add( key, value );
+                }
+                else
+                {
+                    if ( replace )
+                    {
+                        dictionary[key] = value;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Gets value for the specified key, or null if the dictionary doesn't contain the key
         /// </summary>
         /// <typeparam name="TKey">The type of the key.</typeparam>
@@ -452,6 +586,82 @@ namespace Rock
             else
             {
                 return default( TValue );
+            }
+        }
+
+        /// <summary>
+        /// Gets the value or null.
+        /// </summary>
+        /// <typeparam name="TKey">The type of the key.</typeparam>
+        /// <param name="dictionary">The dictionary.</param>
+        /// <param name="key">The key.</param>
+        /// <returns></returns>
+        public static int? GetValueOrNull<TKey>( this IDictionary<TKey, int> dictionary, TKey key )
+        {
+            if ( dictionary.ContainsKey( key ) )
+            {
+                return dictionary[key];
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets the value or null.
+        /// </summary>
+        /// <typeparam name="TKey">The type of the key.</typeparam>
+        /// <param name="dictionary">The dictionary.</param>
+        /// <param name="key">The key.</param>
+        /// <returns></returns>
+        public static decimal? GetValueOrNull<TKey>( this IDictionary<TKey, decimal> dictionary, TKey key )
+        {
+            if ( dictionary.ContainsKey( key ) )
+            {
+                return dictionary[key];
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets the value or null.
+        /// </summary>
+        /// <typeparam name="TKey">The type of the key.</typeparam>
+        /// <param name="dictionary">The dictionary.</param>
+        /// <param name="key">The key.</param>
+        /// <returns></returns>
+        public static double? GetValueOrNull<TKey>( this IDictionary<TKey, double> dictionary, TKey key )
+        {
+            if ( dictionary.ContainsKey( key ) )
+            {
+                return dictionary[key];
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets the value or null.
+        /// </summary>
+        /// <typeparam name="TKey">The type of the key.</typeparam>
+        /// <param name="dictionary">The dictionary.</param>
+        /// <param name="key">The key.</param>
+        /// <returns></returns>
+        public static Guid? GetValueOrNull<TKey>( this IDictionary<TKey, Guid> dictionary, TKey key )
+        {
+            if ( dictionary.ContainsKey( key ) )
+            {
+                return dictionary[key];
+            }
+            else
+            {
+                return null;
             }
         }
 

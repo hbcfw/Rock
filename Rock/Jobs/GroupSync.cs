@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -36,6 +36,7 @@ namespace Rock.Jobs
     /// Job to run quick SQL queries on a schedule
     /// </summary>
     [DisallowConcurrentExecution]
+    [BooleanField("Require Password Reset On New Logins", "Determines if new logins should be created in such a way that the individual will need to reset the password on their first login.", Key = "RequirePasswordReset")]
     public class GroupSync : IJob
     {
         /// <summary> 
@@ -59,6 +60,9 @@ namespace Rock.Jobs
         public virtual void Execute( IJobExecutionContext context )
         {
             JobDataMap dataMap = context.JobDetail.JobDataMap;
+
+            bool requirePasswordReset = dataMap.GetBoolean( "RequirePasswordReset" );
+
             int groupsSynced = 0;
             int groupsChanged = 0;
 
@@ -133,7 +137,7 @@ namespace Rock.Jobs
 
                                 if ( syncGroup.WelcomeSystemEmailId.HasValue )
                                 {
-                                    SendWelcomeEmail( syncGroup.WelcomeSystemEmailId.Value, sourceItem, syncGroup, syncGroup.AddUserAccountsDuringSync ?? false );
+                                    SendWelcomeEmail( syncGroup.WelcomeSystemEmailId.Value, sourceItem, syncGroup, syncGroup.AddUserAccountsDuringSync ?? false, requirePasswordReset );
                                 }
                             }
 
@@ -168,7 +172,7 @@ namespace Rock.Jobs
                     resultMessage = string.Format( "{0} groups were sync'ed", groupsSynced );
                 }
 
-                resultMessage += string.Format( " and {0} groups where changed", groupsChanged );
+                resultMessage += string.Format( " and {0} groups were changed", groupsChanged );
 
                 context.Result = resultMessage;
             }
@@ -187,7 +191,8 @@ namespace Rock.Jobs
         /// <param name="personId">The person identifier.</param>
         /// <param name="syncGroup">The synchronize group.</param>
         /// <param name="createLogin">if set to <c>true</c> [create login].</param>
-        private void SendWelcomeEmail( int systemEmailId, int personId, Group syncGroup, bool createLogin )
+        /// <param name="requirePasswordReset">if set to <c>true</c> [require password reset].</param>
+        private void SendWelcomeEmail( int systemEmailId, int personId, Group syncGroup, bool createLogin, bool requirePasswordReset )
         {
 
             using ( var rockContext = new RockContext() )
@@ -224,15 +229,17 @@ namespace Rock.Jobs
                                 EntityTypeCache.Read( Rock.SystemGuid.EntityType.AUTHENTICATION_DATABASE.AsGuid() ).Id,
                                 username,
                                 newPassword,
-                                true );
+                                true,
+                                requirePasswordReset );
                         }
                         mergeFields.Add( "Person", recipient );
                         mergeFields.Add( "NewPassword", newPassword );
                         mergeFields.Add( "CreateLogin", createLogin );
                         recipients.Add( new RecipientData( recipient.Email, mergeFields ) );
 
-                        var appRoot = Rock.Web.Cache.GlobalAttributesCache.Read( rockContext ).GetValue( "ExternalApplicationRoot" );
-                        Email.Send( systemEmail.Guid, recipients, appRoot );
+                        var emailMessage = new RockEmailMessage( systemEmail.Guid );
+                        emailMessage.SetRecipients( recipients );
+                        emailMessage.Send();
                     }
                 }
             }
@@ -250,20 +257,16 @@ namespace Rock.Jobs
             {
                 using ( var rockContext = new RockContext() )
                 {
-                    SystemEmailService emailService = new SystemEmailService( rockContext );
-
-                    var systemEmail = emailService.Get( systemEmailId );
-
+                    var systemEmail = new SystemEmailService( rockContext ).Get( systemEmailId );
                     if ( systemEmail != null )
                     {
-                        var recipients = new List<RecipientData>();
                         var mergeFields = new Dictionary<string, object>();
                         mergeFields.Add( "Group", syncGroup );
                         mergeFields.Add( "Person", recipient );
-                        recipients.Add( new RecipientData( recipient.Email, mergeFields ) );
 
-                        var appRoot = Rock.Web.Cache.GlobalAttributesCache.Read( rockContext ).GetValue( "ExternalApplicationRoot" );
-                        Email.Send( systemEmail.Guid, recipients, appRoot );
+                        var emailMessage = new RockEmailMessage( systemEmail );
+                        emailMessage.AddRecipient( new RecipientData( recipient.Email, mergeFields ) );
+                        emailMessage.Send();
                     }
                 }
             }

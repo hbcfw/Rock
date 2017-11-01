@@ -3,8 +3,17 @@
 <asp:UpdatePanel runat="server" ID="upnlHtmlContent" ChildrenAsTriggers="false" UpdateMode="Conditional">
     <ContentTemplate>
 
+<%--
+        <asp:HiddenField ID="hfEntityValue" runat="server" />
+
+        <span style="display:none">
+            <asp:LinkButton ID="lbQuickEdit" runat="server" OnClick="lbQuickEdit_Click"></asp:LinkButton>
+        </span>
+--%>
+
         <Rock:NotificationBox ID="nbApprovalRequired" runat="server" NotificationBoxType="Info" Text="Your changes will not be visible until they are reviewed and approved." Visible="false" />
-        <asp:Literal ID="lHtmlContent" runat="server" />
+        <%--<div class="html-content-view">--%><asp:Literal ID="lHtmlContent" runat="server" /><%--</div>--%>
+
 
         <%-- Edit Panel --%>
         <asp:Panel ID="pnlEditModel" runat="server" Visible="false">
@@ -15,6 +24,7 @@
                         <ContentTemplate>
                             <asp:HiddenField ID="hfVersion" runat="server" />
                             <asp:Panel ID="pnlEdit" runat="server" Visible="false">
+                                <Rock:NotificationBox ID="nbInvalidHtml" runat="server" NotificationBoxType="Warning" Visible="false" />
 
                                 <!-- Approval -->
                                 <asp:UpdatePanel ID="upnlApproval" runat="server">
@@ -47,8 +57,7 @@
                                 <Rock:DateRangePicker ID="drpDateRange" runat="server" Label="Display from" />
 
                                 <Rock:HtmlEditor ID="htmlEditor" runat="server" ResizeMaxWidth="720" Height="140" />
-                                <Rock:CodeEditor ID="ceHtml" runat="server" EditorHeight="280" />
-
+                                
                                 <Rock:RockCheckBox ID="cbOverwriteVersion" runat="server" Text="Don't save as a new version" />
 
                             </asp:Panel>

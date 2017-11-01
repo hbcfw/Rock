@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright 2013 by the Spark Development Network
+// Copyright by the Spark Development Network
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// http://www.rockrms.com/license
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -244,7 +244,8 @@ $('.template-form > .panel-body').on('validation-error', function() {
                     a.IsSharedValue,
                     a.ShowCurrentValue,
                     a.IsRequired,
-                    a.IsGridField
+                    a.IsGridField,
+                    a.ShowOnWaitlist
                 } )
                 .ToList();
             _gFields.DataBind();
@@ -347,6 +348,11 @@ $('.template-form > .panel-body').on('validation-error', function() {
             isGridField.HeaderText = "Show on Grid";
             _gFields.Columns.Add( isGridField );
 
+            var showOnWaitListField = new BoolField();
+            showOnWaitListField.DataField = "ShowOnWaitlist";
+            showOnWaitListField.HeaderText = "Show on Wait List";
+            _gFields.Columns.Add( showOnWaitListField );
+
             var editField = new EditField();
             editField.Click += gFields_Edit;
             _gFields.Columns.Add( editField );
@@ -378,8 +384,7 @@ $('.template-form > .panel-body').on('validation-error', function() {
             writer.AddAttribute( HtmlTextWriterAttribute.Class, "filter-toggle pull-left" );
             writer.RenderBeginTag( HtmlTextWriterTag.Div );
 
-            writer.AddAttribute("class", "panel-title");
-            writer.RenderBeginTag( HtmlTextWriterTag.H3 );
+            writer.RenderBeginTag( HtmlTextWriterTag.Div );
             _lblFormName.Text = _tbFormName.Text;
             _lblFormName.RenderControl( writer );
 
